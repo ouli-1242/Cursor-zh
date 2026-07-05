@@ -17,15 +17,27 @@ Cursor 的官方界面中仍有不少英文文案，尤其是设置页、Agent �
 
 ## 支持平台与产物
 
-预编译产物位于 `dist` 目录：
+预编译产物位于 `dist` 目录。GitHub Release 推荐上传压缩包，不建议直接上传 macOS / Linux 裸二进制文件：
 
-| 文件 | 平台 | 架构 |
+| Release 文件 | 平台 | 架构 |
+| --- | --- | --- |
+| `cursor-chinese-win-x64.zip` | Windows | x64 |
+| `cursor-chinese-macos-arm64.tar.gz` | macOS | Apple Silicon |
+| `cursor-chinese-macos-x64.tar.gz` | macOS | Intel |
+| `cursor-chinese-linux-x64.tar.gz` | Linux | x64 |
+| `cursor-chinese-linux-arm64.tar.gz` | Linux | arm64 |
+
+本地构建后也会保留未压缩的裸二进制：
+
+| 本地文件 | 平台 | 架构 |
 | --- | --- | --- |
 | `cursor-chinese-win-x64.exe` | Windows | x64 |
 | `cursor-chinese-macos-arm64` | macOS | Apple Silicon |
 | `cursor-chinese-macos-x64` | macOS | Intel |
 | `cursor-chinese-linux-x64` | Linux | x64 |
 | `cursor-chinese-linux-arm64` | Linux | arm64 |
+
+> macOS / Linux 的可执行权限依赖 POSIX 文件模式。浏览器下载裸文件时可能丢失 `+x` 权限，Finder 会显示成“文稿”。使用 `.tar.gz` 发布包可以保留权限。
 
 兼容性说明：
 
@@ -39,36 +51,41 @@ Cursor 的官方界面中仍有不少英文文案，尤其是设置页、Agent �
 
 ### 方式一：运行预编译成品
 
-根据系统选择对应文件：
+根据系统选择对应 Release 包，解压后运行对应文件：
 
 macOS Apple Silicon：
 
 ```bash
-./dist/cursor-chinese-macos-arm64
+tar -xzf cursor-chinese-macos-arm64.tar.gz
+./cursor-chinese-macos-arm64
 ```
 
 macOS Intel：
 
 ```bash
-./dist/cursor-chinese-macos-x64
+tar -xzf cursor-chinese-macos-x64.tar.gz
+./cursor-chinese-macos-x64
 ```
 
 Windows：
 
 ```powershell
-.\dist\cursor-chinese-win-x64.exe
+Expand-Archive .\cursor-chinese-win-x64.zip
+.\cursor-chinese-win-x64\cursor-chinese-win-x64.exe
 ```
 
 Linux x64：
 
 ```bash
-./dist/cursor-chinese-linux-x64
+tar -xzf cursor-chinese-linux-x64.tar.gz
+./cursor-chinese-linux-x64
 ```
 
 Linux arm64：
 
 ```bash
-./dist/cursor-chinese-linux-arm64
+tar -xzf cursor-chinese-linux-arm64.tar.gz
+./cursor-chinese-linux-arm64
 ```
 
 运行后按提示选择：
@@ -128,6 +145,20 @@ npm run build:mac
 ```bash
 npm run build:linux
 ```
+
+生成 GitHub Release 上传包：
+
+```bash
+npm run build:release
+```
+
+如果已经执行过 `npm run build`，只重新打包发布文件：
+
+```bash
+npm run pack:release
+```
+
+该命令会在 `dist` 目录生成 `.tar.gz`、`.zip` 和 `SHA256SUMS`。发布到 GitHub 时上传这些压缩包即可。
 
 ## 工作逻辑
 
@@ -226,6 +257,23 @@ product.json.backup
 ```bash
 xattr -cr /Applications/Cursor.app
 codesign --force --deep --sign - /Applications/Cursor.app
+```
+
+### macOS 下载后显示为“文稿”
+
+这是下载裸二进制时常见的权限问题，不是文件内容损坏。推荐从 GitHub Release 下载 `.tar.gz`，解压后运行：
+
+```bash
+tar -xzf cursor-chinese-macos-arm64.tar.gz
+./cursor-chinese-macos-arm64
+```
+
+如果已经下载的是裸文件，可以手动补权限：
+
+```bash
+chmod +x cursor-chinese-macos-arm64
+xattr -d com.apple.quarantine cursor-chinese-macos-arm64 2>/dev/null || true
+./cursor-chinese-macos-arm64
 ```
 
 ### Cursor 更新后英文又出现

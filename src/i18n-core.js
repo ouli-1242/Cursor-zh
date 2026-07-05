@@ -284,7 +284,7 @@ function writeFileSafe(filePath, content, encoding = 'utf8') {
  * 使用内存中的文件内容更新 product.json 校验值（避免写回后立刻读盘失败）
  * @param {string | Buffer} fileContent
  */
-function fixProductHash(fileContent, productJsonPath) {
+function fixProductHash(fileContent, productJsonPath, checksumFileName = 'workbench.desktop.main.js') {
     const contentBuffer = Buffer.isBuffer(fileContent)
         ? fileContent
         : Buffer.from(fileContent, 'utf8');
@@ -298,7 +298,7 @@ function fixProductHash(fileContent, productJsonPath) {
 
     if (productJson.checksums) {
         for (const key in productJson.checksums) {
-            if (key.endsWith('workbench.desktop.main.js')) {
+            if (key.endsWith(checksumFileName)) {
                 const oldHash = productJson.checksums[key];
                 const algo = detectHashAlgo(oldHash);
                 const newHash = crypto.createHash(algo)
@@ -349,6 +349,235 @@ function fixMacGatekeeper(appPath) {
     }
 }
 
+// Glass / Agent 独立 bundle 中常见的新版 UI 片段。
+// 这些替换只在附加 JS 文件里执行，避免为了新窗口文案扩大 desktop 主文件的短词替换面。
+const auxiliaryInterfaceReplacements = [
+    ['"<span class=cursor-settings-new-badge>NEW"', '"<span class=cursor-settings-new-badge>新"'],
+    ['children:"NEW"', 'children:"新"'],
+    ['"<div>New project"', '"<div>新建项目"'],
+    ['"<div>Open project"', '"<div>打开项目"'],
+    ['"<div>Clone repo"', '"<div>克隆仓库"'],
+    ['"<div>Connect via SSH"', '"<div>通过 SSH 连接"'],
+    ['"<div>New Window"', '"<div>新窗口"'],
+    ['"<span>Recent projects"', '"<span>最近项目"'],
+    ['"<div class=empty-screen-view-all>View all (<!>)"', '"<div class=empty-screen-view-all>查看全部 (<!>)"'],
+    ['`Open project: ${n.projectName}`', '`打开项目：${n.projectName}`'],
+    ['"Open project"', '"打开项目"'],
+    ['"Clone repo"', '"克隆仓库"'],
+    ['"Connect via SSH"', '"通过 SSH 连接"'],
+    ['"Connect via WSL"', '"通过 WSL 连接"'],
+    ['"Try a new window for running parallel agents"', '"尝试使用新窗口运行并行智能体"'],
+    ['"Plan New Idea"', '"规划新想法"'],
+    ["'Plan New Idea'", "'规划新想法'"],
+    ['`Plan New Idea`', '`规划新想法`'],
+    ['label:"Plan New Idea"', 'label:"规划新想法"'],
+    ['title:"Plan New Idea"', 'title:"规划新想法"'],
+    ['children:"Plan New Idea"', 'children:"规划新想法"'],
+    ['"Ask questions without making changes..."', '"提问但不修改..."'],
+    ["'Ask questions without making changes...'", "'提问但不修改...'"],
+    ['`Ask questions without making changes...`', '`提问但不修改...`'],
+    ['placeholder:"Ask questions without making changes..."', 'placeholder:"提问但不修改..."'],
+    ['description:"Ask questions without making changes"', 'description:"提问但不修改"'],
+    ['label:"Ask"', 'label:"对话"'],
+    ['title:"Ask"', 'title:"对话"'],
+    ['children:"Ask"', 'children:"对话"'],
+    ['label:"Local"', 'label:"本地"'],
+    ['title:"Local"', 'title:"本地"'],
+    ['children:"Local"', 'children:"本地"'],
+    ['label:"Cursor Local"', 'label:"Cursor 本地"'],
+    ['title:"Cursor Local"', 'title:"Cursor 本地"'],
+    ['children:"Cursor Local"', 'children:"Cursor 本地"'],
+    ['label:"Ultra Plan"', 'label:"Ultra 套餐"'],
+    ['title:"Ultra Plan"', 'title:"Ultra 套餐"'],
+    ['children:"Ultra Plan"', 'children:"Ultra 套餐"'],
+    ['label:"New Agent"', 'label:"新建智能体"'],
+    ['title:"New Agent"', 'title:"新建智能体"'],
+    ['children:"New Agent"', 'children:"新建智能体"'],
+    ['"aria-label":"New Agent"', '"aria-label":"新建智能体"'],
+    ['"Open New Agent Chat"', '"打开新智能体聊天"'],
+    ['original:"Open New Agent Chat"', 'original:"打开新智能体聊天"'],
+    ['"New Agent in Project"', '"在项目中新建智能体"'],
+    ['children:"New Agent in Project"', 'children:"在项目中新建智能体"'],
+    ['heading:"New Agent with Model"', 'heading:"使用模型新建智能体"'],
+    ['title:"New Agent with Model"', 'title:"使用模型新建智能体"'],
+    ['title:"New Agent with Query"', 'title:"使用查询新建智能体"'],
+    ['title:"New Agent with Context"', 'title:"使用上下文新建智能体"'],
+    ['title:"New Agent (preserve editor panel)"', 'title:"新建智能体（保留编辑器面板）"'],
+    ['description:"New Agents Window (Glass)"', 'description:"新建智能体窗口"'],
+    ['metadata:{description:"New Agents Window (Glass)"}', 'metadata:{description:"新建智能体窗口"}'],
+    ['`New Agent in ${tr}`', '`在 ${tr} 中新建智能体`'],
+    ['`New Agent in ${ti.name}`', '`在 ${ti.name} 中新建智能体`'],
+    ['`New Agent in ${n.displayName}`', '`在 ${n.displayName} 中新建智能体`'],
+    ['label:"Search"', 'label:"搜索"'],
+    ['title:"Search"', 'title:"搜索"'],
+    ['children:"Search"', 'children:"搜索"'],
+    ['placeholder:"Search"', 'placeholder:"搜索"'],
+    ['label:"Automations"', 'label:"自动化"'],
+    ['title:"Automations"', 'title:"自动化"'],
+    ['children:"Automations"', 'children:"自动化"'],
+    ['s===void 0?"Automations"', 's===void 0?"自动化"'],
+    ['label:"Marketplace"', 'label:"插件市场"'],
+    ['title:"Marketplace"', 'title:"插件市场"'],
+    ['children:"Marketplace"', 'children:"插件市场"'],
+    ['name:Je(9469,"Repositories")', 'name:Je(9469,"代码库")'],
+    ['name:ot(9469,"Repositories")', 'name:ot(9469,"代码库")'],
+    ['collectionLabel:"Repositories"', 'collectionLabel:"代码库"'],
+    ['label:"Repositories"', 'label:"代码库"'],
+    ['title:"Repositories"', 'title:"代码库"'],
+    ['children:"Repositories"', 'children:"代码库"'],
+    ['label:"Editor Window"', 'label:"编辑器窗口"'],
+    ['title:"Editor Window"', 'title:"编辑器窗口"'],
+    ['children:"Editor Window"', 'children:"编辑器窗口"'],
+    ['"aria-label":"Editor Window"', '"aria-label":"编辑器窗口"'],
+    ['label:"Open Editor Window"', 'label:"打开编辑器窗口"'],
+    ['title:"Open Editor Window"', 'title:"打开编辑器窗口"'],
+    ['children:"Open Editor Window"', 'children:"打开编辑器窗口"'],
+    ['label:"Open in Editor Window"', 'label:"在编辑器窗口中打开"'],
+    ['title:"Open in Editor Window"', 'title:"在编辑器窗口中打开"'],
+    ['children:"Open in Editor Window"', 'children:"在编辑器窗口中打开"'],
+    ['"Open in Editor Window"', '"在编辑器窗口中打开"'],
+    ['"Import from Editor Window"', '"从编辑器窗口导入"'],
+    ['`Import from Editor Window (${S})`', '`从编辑器窗口导入 (${S})`'],
+    ['label:"Multitask"', 'label:"多任务"'],
+    ['title:"Multitask"', 'title:"多任务"'],
+    ['children:"Multitask"', 'children:"多任务"'],
+    ['"Multitask"', '"多任务"'],
+    ['message:"Failed to start multitasking."', 'message:"启动多任务失败。"'],
+    ['"Starting Multitask"', '"正在启动多任务"'],
+    ['"Start Multitasking"', '"启动多任务"'],
+    ['title:"Run tasks in parallel"', 'title:"并行运行任务"'],
+    ['label:"Open Agents Window on startup"', 'label:"启动时打开智能体窗口"'],
+    ['description:"When launching Cursor, open Agents Window by default"', 'description:"启动 Cursor 时默认打开智能体窗口"'],
+    ['label:"Split Up"', 'label:"向上拆分"'],
+    ['label:"Split Down"', 'label:"向下拆分"'],
+    ['label:"Split Left"', 'label:"向左拆分"'],
+    ['label:"Split Right"', 'label:"向右拆分"'],
+    ['Je(3511,"Split Up")', 'Je(3511,"向上拆分")'],
+    ['Je(3512,"Split Down")', 'Je(3512,"向下拆分")'],
+    ['Je(3513,"Split Left")', 'Je(3513,"向左拆分")'],
+    ['Je(3514,"Split Right")', 'Je(3514,"向右拆分")'],
+    ['Je(3515,"Split in Group")', 'Je(3515,"在组内拆分")'],
+    ['ot(3511,"Split Up")', 'ot(3511,"向上拆分")'],
+    ['ot(3512,"Split Down")', 'ot(3512,"向下拆分")'],
+    ['ot(3513,"Split Left")', 'ot(3513,"向左拆分")'],
+    ['ot(3514,"Split Right")', 'ot(3514,"向右拆分")'],
+    ['ot(3515,"Split in Group")', 'ot(3515,"在组内拆分")'],
+    ['"Upgrade to Ultra Plan for near unlimited use, or set a Spend Limit for overages."', '"升级到 Ultra 套餐以获得近乎无限的使用量，或设置超额消费限额。"'],
+    ['detail:"Upgrade to Ultra Plan for near unlimited use, or set a Spend Limit for overages."', 'detail:"升级到 Ultra 套餐以获得近乎无限的使用量，或设置超额消费限额。"'],
+    ['"Search branches..."', '"搜索分支..."'],
+    ['placeholder:"Search branches..."', 'placeholder:"搜索分支..."'],
+    ['"Loading branches..."', '"正在加载分支..."'],
+    ['"No branches found"', '"未找到分支"'],
+    ['"No branches available"', '"暂无可用分支"'],
+    ['"Searching..."', '"正在搜索..."'],
+    ['"Loading more..."', '"正在加载更多..."'],
+    ['"Load more"', '"加载更多"'],
+    ['title:"Current Branch"', 'title:"当前分支"'],
+    ['"Current Branch"', '"当前分支"'],
+    ['"Select branch"', '"选择分支"'],
+    ['"Select Agent Branch"', '"选择智能体分支"'],
+    ['"Tracked repositories"', '"已跟踪代码库"'],
+    ['"Repositories and branches"', '"代码库和分支"'],
+    ['"Branches"', '"分支"'],
+    ['"Recent"', '"最近"'],
+    ['children:"Current"', 'children:"当前"'],
+    ['children:"Recent"', 'children:"最近"'],
+    ['title:"Pull Requests"', 'title:"拉取请求"'],
+    ['label:"Review Provider"', 'label:"评审提供方"'],
+    ['label:"PR Link Destination"', 'label:"PR 链接打开位置"'],
+    ['"Open pull request links inside Cursor or in the default browser"', '"在 Cursor 内或默认浏览器中打开拉取请求链接"'],
+    ['return`Choose ${BtT(n)} for pull request links on web and desktop`', 'return`选择 ${BtT(n)} 作为网页和桌面端 PR 链接打开方式`'],
+    ['`${e[0]} or ${e[1]}`', '`${e[0]} 或 ${e[1]}`'],
+    ['`${e.slice(0,-1).join(", ")}, or ${e[e.length-1]}`', '`${e.slice(0,-1).join("、")}，或 ${e[e.length-1]}`'],
+    ['return n==="externalBrowser"?"Default browser":"Inside Cursor"', 'return n==="externalBrowser"?"默认浏览器":"Cursor 内打开"'],
+    ['{id:"inApp",label:"Inside Cursor"},{id:"externalBrowser",label:"Default browser"}', '{id:"inApp",label:"Cursor 内打开"},{id:"externalBrowser",label:"默认浏览器"}'],
+    ['label:"Team default"', 'label:"团队默认值"'],
+    ['"Open chat as editor tabs is unavailable while non-chat content is placed in the Secondary Side Bar."', '"当辅助侧边栏中放置了非聊天内容时，无法以编辑器标签页打开聊天。"'],
+    ['label:"Open chat as editor tabs"', 'label:"以编辑器标签页打开聊天"'],
+    ['description:"Show chats as editor tabs inside the chat area instead of the legacy stacked view"', 'description:"在聊天区域内以编辑器标签页显示聊天，而不是旧版堆叠视图"'],
+    ['label:"Ignored Files"', 'label:"忽略的文件"'],
+    ['description:"Glob patterns for files where Cursor Tab will not suggest"', 'description:"Cursor Tab 不提供建议的文件 Glob 匹配模式"'],
+    ['placeholder:"e.g., *.md, **/generated/**"', 'placeholder:"例如：*.md, **/generated/**"'],
+    ['title:"Configure Ignored Files"', 'title:"配置忽略文件"'],
+];
+
+/**
+ * 新版 Cursor 会把 Agent / Glass 窗口拆到 workbench.glass.main.js。
+ * 这里只处理可选附加 bundle，复用安全字典和短词保护，避免复制完整主流程。
+ */
+function translateAuxiliaryJsFile(filePath, productJsonPath) {
+    if (!filePath || !fs.existsSync(filePath)) return { processed: false, hashFixed: false };
+
+    const fileName = path.basename(filePath);
+    console.log(`\n⚙️  正在处理附加窗口代码: ${fileName}`);
+
+    let jsContent = fs.readFileSync(filePath, 'utf8');
+    const progress = createProgress(4);
+    const changes = createChangeTracker();
+
+    progress.update('准备汉化附加窗口', fileName);
+
+    jsContent = jsContent.replace(safeMegaRegex, (match, quote, en) => {
+        changes.record('安全长句', en, safeGlobalDict[en], 1);
+        progress.update('替换安全长句', formatReplacementDetail(en, safeGlobalDict[en], 1));
+        return `${quote}${safeGlobalDict[en]}${quote}`;
+    });
+    if (longMegaRegex) {
+        jsContent = jsContent.replace(longMegaRegex, (match, en) => {
+            changes.record('裸文本长句', en, safeGlobalDict[en], 1);
+            progress.update('替换裸文本长句', formatReplacementDetail(en, safeGlobalDict[en], 1));
+            return safeGlobalDict[en];
+        });
+    }
+    progress.step('安全文本处理完成');
+
+    for (const [en, zh] of auxiliaryInterfaceReplacements) {
+        const result = replaceStringWithCount(jsContent, en, zh);
+        jsContent = result.content;
+        changes.record('附加界面片段', en, zh, result.count);
+        if (result.count > 0) {
+            progress.update('替换附加界面片段', formatReplacementDetail(en, zh, result.count));
+        }
+    }
+    progress.step('界面片段处理完成');
+
+    for (const { en, zh, propRegex, jsxRegex, htmlRegex } of riskyRegexes) {
+        const guard = (group, regex, build) => {
+            let count = 0;
+            jsContent = jsContent.replace(regex, (...args) => {
+                const offset = args[args.length - 2];
+                if (isProtectedKeybindingContext(jsContent, offset, en)) return args[0];
+                count++;
+                return build(...args);
+            });
+            changes.record(group, en, zh, count);
+            if (count > 0) {
+                progress.update('替换短词', formatReplacementDetail(en, zh, count));
+            }
+        };
+        guard('UI 属性短词', propRegex, (_, p1, p2) => `${p1}: ${p2}${zh}${p2}`);
+        guard('JSX 文本短词', jsxRegex, (_, p1, p2) => `${p1}, ${p2}${zh}${p2}`);
+        guard('HTML 文本短词', htmlRegex, () => `>${zh}<`);
+    }
+    progress.step('短词处理完成');
+
+    try {
+        writeFileSafe(filePath, jsContent, 'utf8');
+    } catch (err) {
+        if (err.code === 'EACCES' || err.code === 'EPERM') {
+            throw new Error(`无法写入 ${filePath}：权限不足。请关闭 Cursor 后以管理员身份运行本工具。`);
+        }
+        throw err;
+    }
+
+    const hashFixed = fixProductHash(jsContent, productJsonPath, fileName);
+    progress.finish('附加窗口代码处理完成');
+    changes.print();
+    console.log(`✅ ${fileName} 智能汉化完成！`);
+
+    return { processed: true, hashFixed };
+}
+
 
 // ═══════════════════════════════════════════════
 // 核心汉化
@@ -359,13 +588,14 @@ function fixMacGatekeeper(appPath) {
  * @param {{ appPath: string, mainJsPath: string, htmlPath: string, productJsonPath: string }} paths
  */
 function translate(paths) {
-    const { appPath, mainJsPath, htmlPath, productJsonPath } = paths;
+    const { appPath, mainJsPath, glassJsPath, htmlPath, productJsonPath } = paths;
 
     // 1. 备份
     console.log('');
     const msgs = [
         backupFile(htmlPath),
         backupFile(mainJsPath),
+        glassJsPath && fs.existsSync(glassJsPath) ? backupFile(glassJsPath) : null,
         backupFile(productJsonPath),
     ].filter(Boolean);
     msgs.forEach(m => console.log(`  ${m}`));
@@ -1067,6 +1297,33 @@ function translate(paths) {
         ['description:"Debug and troubleshoot issues"', 'description:"调试并排查问题"'],
         ['placeholder:"Ask questions without making changes..."', 'placeholder:"提问但不修改..."'],
         ['description:"Ask questions without making changes"', 'description:"提问但不修改"'],
+        ['"Ask questions without making changes..."', '"提问但不修改..."'],
+        ["'Ask questions without making changes...'", "'提问但不修改...'"],
+        ['`Ask questions without making changes...`', '`提问但不修改...`'],
+        ['title:"Ask questions without making changes..."', 'title:"提问但不修改..."'],
+        ['children:"Ask questions without making changes..."', 'children:"提问但不修改..."'],
+        ['label:"Ask"', 'label:"对话"'],
+        ['title:"Ask"', 'title:"对话"'],
+        ['children:"Ask"', 'children:"对话"'],
+        ['"aria-label":"Ask"', '"aria-label":"对话"'],
+        ['label:"Local"', 'label:"本地"'],
+        ['title:"Local"', 'title:"本地"'],
+        ['children:"Local"', 'children:"本地"'],
+        ['currentLabel:"Local"', 'currentLabel:"本地"'],
+        ['breadcrumbLabel:"Local"', 'breadcrumbLabel:"本地"'],
+        ['"aria-label":"Local"', '"aria-label":"本地"'],
+        ['label:"Cursor Local"', 'label:"Cursor 本地"'],
+        ['title:"Cursor Local"', 'title:"Cursor 本地"'],
+        ['children:"Cursor Local"', 'children:"Cursor 本地"'],
+        ['"Cursor Local"', '"Cursor 本地"'],
+        ["'Cursor Local'", "'Cursor 本地'"],
+        ['`Cursor Local`', '`Cursor 本地`'],
+        ['label:"Ultra Plan"', 'label:"Ultra 套餐"'],
+        ['title:"Ultra Plan"', 'title:"Ultra 套餐"'],
+        ['children:"Ultra Plan"', 'children:"Ultra 套餐"'],
+        ['"Ultra Plan"', '"Ultra 套餐"'],
+        ["'Ultra Plan'", "'Ultra 套餐'"],
+        ['`Ultra Plan`', '`Ultra 套餐`'],
         ['return"Mentions"', 'return"提及项"'],
         ['return"Files & Folders"', 'return"文件和文件夹"'],
         ['return"Agent Stores"', 'return"智能体存储"'],
@@ -1125,15 +1382,45 @@ function translate(paths) {
         ['children:"Open project config"', 'children:"打开项目配置"'],
         ['children:"Open enterprise config"', 'children:"打开企业配置"'],
         ['children:"Open JSON"', 'children:"打开 JSON"'],
+        ['"<span class=cursor-settings-new-badge>NEW"', '"<span class=cursor-settings-new-badge>新"'],
+        ['"<div>New project"', '"<div>新建项目"'],
+        ['"<div>Open project"', '"<div>打开项目"'],
+        ['"<div>Clone repo"', '"<div>克隆仓库"'],
+        ['"<div>Connect via SSH"', '"<div>通过 SSH 连接"'],
+        ['"<div>New Window"', '"<div>新窗口"'],
+        ['"<span>Recent projects"', '"<span>最近项目"'],
+        ['"<div class=empty-screen-view-all>View all (<!>)"', '"<div class=empty-screen-view-all>查看全部 (<!>)"'],
+        ['`Open project: ${n.projectName}`', '`打开项目：${n.projectName}`'],
+        ['"Connect via WSL"', '"通过 WSL 连接"'],
+        ['"Connect via SSH"', '"通过 SSH 连接"'],
         ['title:"PR Preferences"', 'title:"PR 偏好设置"'],
         ['label:"Preferred PR destination"', 'label:"首选 PR 打开位置"'],
         ['qbE="Choose where PR links open across web, the desktop app and IDE."', 'qbE="选择 PR 链接在网页、桌面应用和 IDE 中的打开位置。"'],
+        ['title:"Pull Requests"', 'title:"拉取请求"'],
+        ['label:"Review Provider"', 'label:"评审提供方"'],
+        ['label:"PR Link Destination"', 'label:"PR 链接打开位置"'],
+        ['"Open pull request links inside Cursor or in the default browser"', '"在 Cursor 内或默认浏览器中打开拉取请求链接"'],
+        ['return`Choose ${D40(n)} for pull request links on web and desktop`', 'return`选择 ${D40(n)} 作为网页和桌面端 PR 链接打开方式`'],
+        ['`${e[0]} or ${e[1]}`', '`${e[0]} 或 ${e[1]}`'],
+        ['`${e.slice(0,-1).join(", ")}, or ${e[e.length-1]}`', '`${e.slice(0,-1).join("、")}，或 ${e[e.length-1]}`'],
+        ['return n==="externalBrowser"?"Default browser":"Inside Cursor"', 'return n==="externalBrowser"?"默认浏览器":"Cursor 内打开"'],
+        ['{id:"inApp",label:"Inside Cursor"},{id:"externalBrowser",label:"Default browser"}', '{id:"inApp",label:"Cursor 内打开"},{id:"externalBrowser",label:"默认浏览器"}'],
+        ['label:"Team default"', 'label:"团队默认值"'],
+        ['"Open chat as editor tabs is unavailable while non-chat content is placed in the Secondary Side Bar."', '"当辅助侧边栏中放置了非聊天内容时，无法以编辑器标签页打开聊天。"'],
+        ['label:"Open chat as editor tabs"', 'label:"以编辑器标签页打开聊天"'],
+        ['description:"Show chats as editor tabs inside the chat area instead of the legacy stacked view"', 'description:"在聊天区域内以编辑器标签页显示聊天，而不是旧版堆叠视图"'],
+        ['label:"Ignored Files"', 'label:"忽略的文件"'],
+        ['description:"Glob patterns for files where Cursor Tab will not suggest"', 'description:"Cursor Tab 不提供建议的文件 Glob 匹配模式"'],
+        ['placeholder:"e.g., *.md, **/generated/**"', 'placeholder:"例如：*.md, **/generated/**"'],
+        ['title:"Configure Ignored Files"', 'title:"配置忽略文件"'],
         ['<p class=cursor-settings-cell-label>Window Layout</p>', '<p class=cursor-settings-cell-label>窗口布局</p>'],
         ['<div class=cursor-settings-cell-description>Switch between Agent and Editor default layouts</div>', '<div class=cursor-settings-cell-description>在智能体和编辑器默认布局之间切换</div>'],
         ['aria-label="Window Layout"', 'aria-label="窗口布局"'],
         ['<span class=layout-picker-segmented__label>Agent</span>', '<span class=layout-picker-segmented__label>智能体</span>'],
         ['<span class=layout-picker-segmented__label>Editor</span>', '<span class=layout-picker-segmented__label>编辑器</span>'],
         ['{id:"agent",label:"Agent"},{id:"editor",label:"Editor"}', '{id:"agent",label:"智能体"},{id:"editor",label:"编辑器"}'],
+        ['label:"Open Agents Window on startup"', 'label:"启动时打开智能体窗口"'],
+        ['description:"When launching Cursor, open Agents Window by default"', 'description:"启动 Cursor 时默认打开智能体窗口"'],
         ['label:"Title Bar"', 'label:"标题栏"'],
         ['description:"Show title bar in agent layout"', 'description:"在智能体布局中显示标题栏"'],
         ['description:"Show status bar at the bottom of the window"', 'description:"在窗口底部显示状态栏"'],
@@ -1230,10 +1517,28 @@ function translate(paths) {
         ['title:"New Agent"', 'title:"新建智能体"'],
         ['children:"New Agent"', 'children:"新建智能体"'],
         ['"aria-label":"New Agent"', '"aria-label":"新建智能体"'],
+        ['value:"New Agent"', 'value:"新建智能体"'],
+        ['original:"New Agent"', 'original:"新建智能体"'],
+        ['title:{value:"New Agent",original:"New Agent"}', 'title:{value:"新建智能体",original:"新建智能体"}'],
+        ['"Open New Agent Chat"', '"打开新智能体聊天"'],
+        ['original:"Open New Agent Chat"', 'original:"打开新智能体聊天"'],
         ['name:"New Agent",get icon(){return ie(NTe,{name:"agent"', 'name:"新建智能体",get icon(){return ie(NTe,{name:"agent"'],
         ['name:"Automations",get icon(){return ie(NTe,{name:"robot"', 'name:"自动化",get icon(){return ie(NTe,{name:"robot"'],
         ['name:"Customize",get icon(){return ie(NTe,{name:"extensions"', 'name:"插件市场",get icon(){return ie(NTe,{name:"extensions"'],
         ['children:"Open Agents Window"', 'children:"打开智能体窗口"'],
+        ['title:Je(4823,"New Agents Window")', 'title:Je(4823,"新建智能体窗口")'],
+        ['title:Je(4824,"Developer: New Additional Agents Window")', 'title:Je(4824,"开发者：新建额外智能体窗口")'],
+        ['title:Je(4825,"Switch to {0}",xNc)', 'title:Je(4825,"切换到 {0}",xNc)'],
+        ['title:Je(4826,"Open or Focus {0}",xNc)', 'title:Je(4826,"打开或聚焦 {0}",xNc)'],
+        ['title:Je(4827,"Open or Focus Editor Window")', 'title:Je(4827,"打开或聚焦编辑器窗口")'],
+        ['title:Je(4829,"Open Glass and Change to Multitask")', 'title:Je(4829,"打开智能体窗口并切换到多任务")'],
+        ['xNc="Agents Window"', 'xNc="智能体窗口"'],
+        ['title:{...Je(3659,"New Empty Editor Window")', 'title:{...Je(3659,"新建空编辑器窗口")'],
+        ['description:"New Agents Window (Glass)"', 'description:"新建智能体窗口"'],
+        ['description:"Switch to Agents Window (Glass)"', 'description:"切换到智能体窗口"'],
+        ['description:"Open or Focus Agents Window (Glass)"', 'description:"打开或聚焦智能体窗口"'],
+        ['description:"Open or focus the editor (IDE) window from the Agents window."', 'description:"从智能体窗口打开或聚焦编辑器（IDE）窗口。"'],
+        ['description:"Opens or focuses the Glass window, then selects Multitask mode there."', 'description:"打开或聚焦智能体窗口，并在其中选择多任务模式。"'],
         ['"Plan, search, build anything"', '"规划、搜索、构建任何内容"'],
         ["'Plan, search, build anything'", "'规划、搜索、构建任何内容'"],
         ['`Plan, search, build anything`', '`规划、搜索、构建任何内容`'],
@@ -1276,17 +1581,64 @@ function translate(paths) {
         ['label:"Export Transcript"', 'label:"导出对话记录"'],
         ['label:"Copy Request ID"', 'label:"复制请求 ID"'],
         ['label:"Agent Settings"', 'label:"智能体设置"'],
+        ['name:"Search"', 'name:"搜索"'],
+        ['label:"Search"', 'label:"搜索"'],
+        ['title:"Search"', 'title:"搜索"'],
+        ['children:"Search"', 'children:"搜索"'],
+        ['"aria-label":"Search"', '"aria-label":"搜索"'],
         ['label:"Automations"', 'label:"自动化"'],
+        ['title:"Automations"', 'title:"自动化"'],
+        ['children:"Automations"', 'children:"自动化"'],
+        ['rootLabel:s,rootHref:o,onRootClick:a,LinkComponent:l}=n;let c;e[0]!==i?(c=i===void 0?[]:i,e[0]=i,e[1]=c):c=e[1];const d=c,m=s===void 0?"Automations"', 'rootLabel:s,rootHref:o,onRootClick:a,LinkComponent:l}=n;let c;e[0]!==i?(c=i===void 0?[]:i,e[0]=i,e[1]=c):c=e[1];const d=c,m=s===void 0?"自动化"'],
         ['label:"Marketplace"', 'label:"插件市场"'],
+        ['title:"Marketplace"', 'title:"插件市场"'],
+        ['children:"Marketplace"', 'children:"插件市场"'],
+        ['"aria-label":"Marketplace"', '"aria-label":"插件市场"'],
+        ['"aria-label":"Marketplace scope"', '"aria-label":"插件市场范围"'],
+        ['name:Je(9469,"Repositories")', 'name:Je(9469,"代码库")'],
+        ['name:ot(9469,"Repositories")', 'name:ot(9469,"代码库")'],
+        ['collectionLabel:"Repositories"', 'collectionLabel:"代码库"'],
         ['children:"Repositories"', 'children:"代码库"'],
+        ['label:"Repositories"', 'label:"代码库"'],
+        ['title:"Repositories"', 'title:"代码库"'],
+        ['name:"Repositories"', 'name:"代码库"'],
+        ['"aria-label":"Repositories"', '"aria-label":"代码库"'],
         ['children:"Editor Window"', 'children:"编辑器窗口"'],
+        ['label:"Editor Window"', 'label:"编辑器窗口"'],
+        ['title:"Editor Window"', 'title:"编辑器窗口"'],
+        ['name:"Editor Window"', 'name:"编辑器窗口"'],
         ['"aria-label":"Editor Window"', '"aria-label":"编辑器窗口"'],
         ['label:"Open Editor Window"', 'label:"打开编辑器窗口"'],
+        ['label:"Split Up"', 'label:"向上拆分"'],
         ['label:"Split Right"', 'label:"向右拆分"'],
         ['label:"Split Down"', 'label:"向下拆分"'],
+        ['label:"Split Left"', 'label:"向左拆分"'],
+        ['Je(3511,"Split Up")', 'Je(3511,"向上拆分")'],
+        ['Je(3512,"Split Down")', 'Je(3512,"向下拆分")'],
+        ['Je(3513,"Split Left")', 'Je(3513,"向左拆分")'],
+        ['Je(3514,"Split Right")', 'Je(3514,"向右拆分")'],
+        ['Je(3515,"Split in Group")', 'Je(3515,"在组内拆分")'],
+        ['ot(3511,"Split Up")', 'ot(3511,"向上拆分")'],
+        ['ot(3512,"Split Down")', 'ot(3512,"向下拆分")'],
+        ['ot(3513,"Split Left")', 'ot(3513,"向左拆分")'],
+        ['ot(3514,"Split Right")', 'ot(3514,"向右拆分")'],
+        ['ot(3515,"Split in Group")', 'ot(3515,"在组内拆分")'],
         ['label:"Close",onSelect:r,disabled:s', 'label:"关闭",onSelect:r,disabled:s'],
         ['label:"Plan New Idea"', 'label:"规划新想法"'],
+        ['title:"Plan New Idea"', 'title:"规划新想法"'],
+        ['children:"Plan New Idea"', 'children:"规划新想法"'],
+        ['"Plan New Idea"', '"规划新想法"'],
+        ["'Plan New Idea'", "'规划新想法'"],
+        ['`Plan New Idea`', '`规划新想法`'],
         ['label:"Run in Cloud"', 'label:"在云端运行"'],
+        ['label:"Multitask"', 'label:"多任务"'],
+        ['title:"Multitask"', 'title:"多任务"'],
+        ['children:"Multitask"', 'children:"多任务"'],
+        ['"Multitask"', '"多任务"'],
+        ["'Multitask'", "'多任务'"],
+        ['`Multitask`', '`多任务`'],
+        ['"Parallelize Build with Multitask Mode."', '"使用多任务模式并行构建。"'],
+        ['"Coordinate parallel tasks..."', '"协调并行任务..."'],
         ['hint:"\\u21E7Tab"', 'hint:"\\u21E7Tab"'],
         ['"aria-label":"Group by options"', '"aria-label":"分组选项"'],
         ['"aria-label":"Sidebar filters"', '"aria-label":"侧边栏筛选器"'],
@@ -1451,6 +1803,15 @@ function translate(paths) {
         console.log('⚠️  未找到对应的校验项，可能无需更新。');
     }
 
+    const auxiliaryResult = translateAuxiliaryJsFile(glassJsPath, productJsonPath);
+    if (auxiliaryResult.processed) {
+        if (auxiliaryResult.hashFixed) {
+            console.log('✅ 已更新附加窗口 JS 校验值。');
+        } else {
+            console.log('ℹ️  附加窗口 JS 未发现校验项，已跳过 product.json 更新。');
+        }
+    }
+
     // 9. Mac Gatekeeper 修复
     fixMacGatekeeper(appPath);
 
@@ -1463,11 +1824,11 @@ function translate(paths) {
  * @param {{ mainJsPath: string, htmlPath: string, productJsonPath: string }} paths
  */
 function restore(paths) {
-    const { mainJsPath, htmlPath, productJsonPath } = paths;
+    const { mainJsPath, glassJsPath, htmlPath, productJsonPath } = paths;
 
     console.log('');
     let restored = 0;
-    for (const filePath of [htmlPath, mainJsPath, productJsonPath]) {
+    for (const filePath of [htmlPath, mainJsPath, glassJsPath, productJsonPath].filter(Boolean)) {
         if (restoreFromBackup(filePath)) {
             console.log(`  ✅ 已还原: ${path.basename(filePath)}`);
             restored++;

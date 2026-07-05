@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.0.4 - 2026-07-05
+
+### 改进
+
+- 新增 `workbench.glass.main.js` 处理，覆盖新版 Cursor Agents / Glass 窗口中的独立界面文案。
+- 补充 Agents 窗口、仓库分组、输入框占位、拆分菜单、PR 偏好、忽略文件和多任务相关文案汉化。
+- 新增 GitHub Release 打包脚本，macOS / Linux 发布为 `.tar.gz`，Windows 发布为 `.zip`。
+- 生成 `SHA256SUMS` 校验文件，方便下载后核对发布包完整性。
+- README 补充下载后显示为“文稿”的原因和处理方式。
+
+### 修复
+
+- 修复 macOS / Linux 裸二进制从 GitHub 下载后可能丢失可执行权限的问题。
+- 修复新版 Cursor 中 `Repositories`、`Open Agents Window on startup`、`Plan, Build, / for skills, @ for context`、`Split Down` 和 `Split Right` 等遗漏英文。
+
 ## 1.0.3 - 2026-06-21
 
 ### 改进

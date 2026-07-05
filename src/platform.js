@@ -14,6 +14,7 @@ const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 const LEGACY_CONFIG_FILE = path.join(os.homedir(), '.cursor-i18n-tool', 'config.json');
 
 const WORKBENCH_MAIN = path.join('out', 'vs', 'workbench', 'workbench.desktop.main.js');
+const WORKBENCH_GLASS_MAIN = path.join('out', 'vs', 'workbench', 'workbench.glass.main.js');
 
 /**
  * 校验是否为有效的 Cursor resources/app 目录
@@ -31,6 +32,9 @@ function buildPathsFromAppPath(appPath) {
     return {
         appPath: normalized,
         mainJsPath: path.join(normalized, 'out', 'vs', 'workbench', 'workbench.desktop.main.js'),
+        // Cursor 新版 Agent / Glass 窗口会把大量可见文案拆到独立 bundle。
+        // 该文件在旧版本中不存在，因此后续处理都要按可选文件对待。
+        glassJsPath: path.join(normalized, WORKBENCH_GLASS_MAIN),
         htmlPath: path.join(normalized, 'out', 'vs', 'code', 'electron-sandbox', 'workbench', 'workbench.html'),
         productJsonPath: path.join(normalized, 'product.json'),
     };
