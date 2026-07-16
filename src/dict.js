@@ -657,7 +657,12 @@ const safeGlobalDict = {
     // ── Agent errors ──
     "Agent Execution Timed Out": "智能体执行超时",
     "The agent execution provider did not respond in time. This may indicate the extension host is not running or is unresponsive.": "智能体执行提供程序未及时响应。这可能表示扩展主机未运行或无响应。",
+    "Extensions have been modified on disk. Please reload the window.": "扩展已在磁盘上修改。请重新加载窗口。",
+    "Extensions have been modified on disk.": "扩展已在磁盘上修改。",
+    "Please reload the window.": "请重新加载窗口。",
+    "Cannot reconnect. Please reload the window.": "无法重新连接。请重新加载窗口。",
     "Reload Window": "重新加载窗口",
+    "&&Reload Window": "&&重新加载窗口",
 
     // ── Network ──
     "HTTP Compatibility Mode": "HTTP 兼容模式",
@@ -743,6 +748,8 @@ const safeGlobalDict = {
     "Special conversation mode for project-level discussions": "用于项目级讨论的特殊对话模式",
     "Open Agents Window on startup": "启动时打开智能体窗口",
     "When launching Cursor, open Agents Window by default": "启动 Cursor 时默认打开智能体窗口",
+    "Open Agents Window on Startup": "启动时打开智能体窗口",
+    "Open the Agents Window by default when Cursor launches": "Cursor 启动时默认打开智能体窗口",
     "Plan, Build, / for skills, @ for context": "规划、构建，/ 选择技能，@ 添加上下文",
     "Ask, learn, brainstorm": "提问、学习、头脑风暴",
     "Work on explicitly added files (no tools)": "处理明确添加的文件（不使用工具）",
@@ -830,6 +837,7 @@ const safeGlobalDict = {
     "Upgrade to Ultra Plan for near unlimited use, or set a Spend Limit for overages.": "升级到 Ultra 套餐以获得近乎无限的使用量，或设置超额消费限额。",
     "Open Editor Window": "打开编辑器窗口",
     "Open in Editor Window": "在编辑器窗口中打开",
+    "Open in New Window": "在新窗口中打开",
     "Import from Editor Window": "从编辑器窗口导入",
     "Open New Agent Chat": "打开新智能体聊天",
     "New Agent in Project": "在项目中新建智能体",
@@ -854,6 +862,29 @@ const safeGlobalDict = {
 
     // ── Agent 面板、标签页菜单与搜索弹窗 ──
     "New Agent": "新建智能体",
+    "Code Block Word Wrap": "代码块自动换行",
+    "Wrap long lines in Agent conversation code blocks": "在智能体对话代码块中自动换行长行",
+    "Voice Submit Keywords": "语音提交关键词",
+    "Custom words that submit a voice prompt. Spaces and punctuation are ignored.": "用于提交语音提示的自定义词。会忽略空格和标点。",
+    "Custom words that submit a voice prompt.": "用于提交语音提示的自定义词。",
+    "Spaces and punctuation are ignored.": "会忽略空格和标点。",
+    "Task Models": "任务模型",
+    "Explore Subagent Model": "探索子智能体模型",
+    "Choose the model used by the Explore subagent for initial research": "选择探索子智能体进行初始研究时使用的模型",
+    "Choose the model used by Explore subagent for initial research": "选择探索子智能体进行初始研究时使用的模型",
+    "Deployment Name": "部署名称",
+    "AWS Bedrock": "AWS Bedrock",
+    "Configure AWS Bedrock to use Anthropic Claude models through your AWS account.": "配置 AWS Bedrock，通过你的 AWS 账号使用 Anthropic Claude 模型。",
+    "Cursor Enterprise teams can configure IAM roles to access Bedrock without any Access Keys.": "Cursor 企业团队可以配置 IAM 角色，无需访问密钥即可访问 Bedrock。",
+    "Your team has configured AWS Bedrock access. You can use your teams Bedrock instance without any additional configuration.": "你的团队已配置 AWS Bedrock 访问权限。无需额外配置即可使用团队的 Bedrock 实例。",
+    "Access Key ID": "访问密钥 ID",
+    "Secret Access Key": "秘密访问密钥",
+    "Test Model": "测试模型",
+    "AWS Access Key ID": "AWS 访问密钥 ID",
+    "AWS Secret Access Key": "AWS 秘密访问密钥",
+    "Ignore Files": "忽略文件",
+    "Hierarchical Cursor Ignore": "分层 Cursor 忽略",
+    "Ignore Symlinks in Cursor Ignore Search": "在 Cursor 忽略搜索中忽略符号链接",
     "Toggle Chat Pane": "切换聊天面板",
     "Maximize Chat": "最大化聊天",
     "Close Tab": "关闭标签页",
@@ -866,7 +897,12 @@ const safeGlobalDict = {
     "Search Agents...": "搜索智能体...",
     "Search Agents…": "搜索智能体…",
     "No matching agents": "未找到匹配的智能体",
-    "Archived": "已归档"
+    "Archived": "已归档",
+    "Open in Web": "在网页中打开",
+    "Copy Transcript": "复制对话记录",
+    "Copy Web Link": "复制网页链接",
+    "Copy Deep Link": "复制深层链接",
+    "Copy Branch": "复制分支"
 };
 
 const riskyShortWords = {
@@ -918,6 +954,7 @@ const riskyShortWords = {
     "Show": "显示",
     "Auto-Run": "自动运行",
     "Pane": "面板",
+    "On": "开启",
     "Small": "小",
     "Default": "默认",
     "Large": "大",
@@ -1012,7 +1049,18 @@ const riskyShortWords = {
     "Hide": "隐藏",
     "Edit": "编辑",
     "Manage": "管理",
-    "Save": "保存"
+    "Save": "保存",
+    "Cut": "剪切",
+    "Copy": "复制",
+    "Paste": "粘贴",
+    "Export": "导出",
+    "Fork": "分叉",
+    "Pin": "固定",
+    "Unpin": "取消固定",
+    "Rename": "重命名",
+    "Archive": "归档",
+    "Discard": "丢弃",
+    "Share": "分享"
 };
 
 module.exports = { safeGlobalDict, riskyShortWords };

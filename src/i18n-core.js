@@ -448,6 +448,55 @@ const auxiliaryInterfaceReplacements = [
     ['title:"Run tasks in parallel"', 'title:"并行运行任务"'],
     ['label:"Open Agents Window on startup"', 'label:"启动时打开智能体窗口"'],
     ['description:"When launching Cursor, open Agents Window by default"', 'description:"启动 Cursor 时默认打开智能体窗口"'],
+    ['label:"Open Agents Window on Startup"', 'label:"启动时打开智能体窗口"'],
+    ['description:"Open the Agents Window by default when Cursor launches"', 'description:"Cursor 启动时默认打开智能体窗口"'],
+    ['label:"Code Block Word Wrap"', 'label:"代码块自动换行"'],
+    ['description:"Wrap long lines in Agent conversation code blocks"', 'description:"在智能体对话代码块中自动换行长行"'],
+    ['label:"Voice Submit Keywords"', 'label:"语音提交关键词"'],
+    ['description:"Custom words that submit a voice prompt. Spaces and punctuation are ignored."', 'description:"用于提交语音提示的自定义词。会忽略空格和标点。"'],
+    ['label:"Explore Subagent Model"', 'label:"探索子智能体模型"'],
+    ['description:"Choose the model used by the Explore subagent for initial research"', 'description:"选择探索子智能体进行初始研究时使用的模型"'],
+    ['description:"Choose the model used by Explore subagent for initial research"', 'description:"选择探索子智能体进行初始研究时使用的模型"'],
+    ['label:"Deployment Name"', 'label:"部署名称"'],
+    ['placeholder:"AWS Access Key ID"', 'placeholder:"AWS 访问密钥 ID"'],
+    ['placeholder:"AWS Secret Access Key"', 'placeholder:"AWS 秘密访问密钥"'],
+    ['label:"Access Key ID"', 'label:"访问密钥 ID"'],
+    ['label:"Secret Access Key"', 'label:"秘密访问密钥"'],
+    ['label:"Region"', 'label:"区域"'],
+    ['label:"Test Model"', 'label:"测试模型"'],
+    ['"Configure AWS Bedrock to use Anthropic Claude models through your AWS account."', '"配置 AWS Bedrock，通过你的 AWS 账号使用 Anthropic Claude 模型。"'],
+    ['"Cursor Enterprise teams can configure IAM roles to access Bedrock without any Access Keys."', '"Cursor 企业团队可以配置 IAM 角色，无需访问密钥即可访问 Bedrock。"'],
+    ['"Your team has configured AWS Bedrock access. You can use your teams Bedrock instance without any additional configuration."', '"你的团队已配置 AWS Bedrock 访问权限。无需额外配置即可使用团队的 Bedrock 实例。"'],
+    ['title:"Ignore Files"', 'title:"忽略文件"'],
+    ['label:"Hierarchical Cursor Ignore"', 'label:"分层 Cursor 忽略"'],
+    ['label:"Ignore Symlinks in Cursor Ignore Search"', 'label:"在 Cursor 忽略搜索中忽略符号链接"'],
+    ['return`Apply .cursorignore files to all subdirectories${n()?" (controlled by admin)":""}. Changing this setting requires restarting Cursor.`', 'return`将 .cursorignore 文件应用到所有子目录${n()?"（由管理员控制）":""}。更改此设置需要重启 Cursor。`'],
+    ['return`Use with caution. Skip symlinks during .cursorignore file discovery. Enable only when all .cursorignore files are reachable without symlinks${i()?" (controlled by admin)":""}. Changing this setting requires restarting Cursor.`', 'return`谨慎使用。在查找 .cursorignore 文件时跳过符号链接。仅当无需符号链接即可访问所有 .cursorignore 文件时才启用${i()?"（由管理员控制）":""}。更改此设置需要重启 Cursor。`'],
+    ['get title(){return`Configured Hooks (${I()})`}', 'get title(){return`已配置的钩子 (${I()})`}'],
+    ['get title(){return`Configured Hooks (${A()})`}', 'get title(){return`已配置的钩子 (${A()})`}'],
+    ['label:"Configured Hooks"', 'label:"已配置的钩子"'],
+    ['label:"Execution Log"', 'label:"执行日志"'],
+    ['"Extensions have been modified on disk. Please reload the window."', '"扩展已在磁盘上修改。请重新加载窗口。"'],
+    ['label:"Fork"', 'label:"分叉"'],
+    ['label:"Copy"', 'label:"复制"'],
+    ['label:"Share"', 'label:"分享"'],
+    ['label:"Export"', 'label:"导出"'],
+    ['label:"Open in Web"', 'label:"在网页中打开"'],
+    ['label:"Open in New Window"', 'label:"在新窗口中打开"'],
+    ['label:"Rename"', 'label:"重命名"'],
+    ['label:s?"Unpin":"Pin"', 'label:s?"取消固定":"固定"'],
+    ['label:ge?"Discard":"Archive"', 'label:ge?"丢弃":"归档"'],
+    ['label:"Copy Transcript"', 'label:"复制对话记录"'],
+    ['label:"Copy Web Link"', 'label:"复制网页链接"'],
+    ['label:"Copy Deep Link"', 'label:"复制深层链接"'],
+    ['label:"Copy Branch"', 'label:"复制分支"'],
+    ['children:"Open in New Window"', 'children:"在新窗口中打开"'],
+    ['children:"Fork"', 'children:"分叉"'],
+    ['children:"Copy"', 'children:"复制"'],
+    ['children:"Export"', 'children:"导出"'],
+    ['children:"Pin"', 'children:"固定"'],
+    ['children:"Rename"', 'children:"重命名"'],
+    ['children:"Archive"', 'children:"归档"'],
     ['label:"Split Up"', 'label:"向上拆分"'],
     ['label:"Split Down"', 'label:"向下拆分"'],
     ['label:"Split Left"', 'label:"向左拆分"'],
@@ -578,6 +627,69 @@ function translateAuxiliaryJsFile(filePath, productJsonPath) {
     return { processed: true, hashFixed };
 }
 
+function translateNlsMessagesFile(filePath) {
+    if (!filePath || !fs.existsSync(filePath)) return { processed: false };
+
+    console.log('\n⚙️  正在处理原生提示文案: nls.messages.json');
+
+    let messages;
+    try {
+        messages = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    } catch (err) {
+        throw new Error(`无法解析 ${filePath}: ${err.message}`);
+    }
+
+    if (!Array.isArray(messages)) {
+        console.log('ℹ️  nls.messages.json 不是数组格式，已跳过。');
+        return { processed: false };
+    }
+
+    const progress = createProgress(2);
+    const changes = createChangeTracker();
+    progress.update('准备汉化原生提示', '正在扫描 nls 消息');
+    const hasSafeEntry = (key) => Object.prototype.hasOwnProperty.call(safeGlobalDict, key);
+
+    const translated = messages.map((value) => {
+        if (typeof value !== 'string') return value;
+
+        if (hasSafeEntry(value)) {
+            const next = safeGlobalDict[value];
+            changes.record('原生提示词条', value, next, 1);
+            progress.update('替换原生提示', formatReplacementDetail(value, next, 1));
+            return next;
+        }
+
+        if (value.startsWith('&&')) {
+            const withoutMnemonic = value.slice(2);
+            if (hasSafeEntry(withoutMnemonic)) {
+                const next = `&&${safeGlobalDict[withoutMnemonic]}`;
+                changes.record('原生提示词条', value, next, 1);
+                progress.update('替换原生提示', formatReplacementDetail(value, next, 1));
+                return next;
+            }
+        }
+
+        return value;
+    });
+
+    progress.step('原生提示扫描完成');
+
+    try {
+        writeFileSafe(filePath, JSON.stringify(translated), 'utf8');
+    } catch (err) {
+        if (err.code === 'EACCES' || err.code === 'EPERM') {
+            throw new Error(`无法写入 ${filePath}：权限不足。请关闭 Cursor 后以管理员身份运行本工具。`);
+        }
+        throw err;
+    }
+
+    progress.finish('原生提示处理完成');
+    changes.print();
+    console.log('✅ nls.messages.json 汉化完成！');
+
+    return { processed: true };
+}
+
 
 // ═══════════════════════════════════════════════
 // 核心汉化
@@ -585,10 +697,10 @@ function translateAuxiliaryJsFile(filePath, productJsonPath) {
 
 /**
  * 执行汉化
- * @param {{ appPath: string, mainJsPath: string, htmlPath: string, productJsonPath: string }} paths
+ * @param {{ appPath: string, mainJsPath: string, glassJsPath?: string, nlsMessagesPath?: string, htmlPath: string, productJsonPath: string }} paths
  */
 function translate(paths) {
-    const { appPath, mainJsPath, glassJsPath, htmlPath, productJsonPath } = paths;
+    const { appPath, mainJsPath, glassJsPath, nlsMessagesPath, htmlPath, productJsonPath } = paths;
 
     // 1. 备份
     console.log('');
@@ -596,6 +708,7 @@ function translate(paths) {
         backupFile(htmlPath),
         backupFile(mainJsPath),
         glassJsPath && fs.existsSync(glassJsPath) ? backupFile(glassJsPath) : null,
+        nlsMessagesPath && fs.existsSync(nlsMessagesPath) ? backupFile(nlsMessagesPath) : null,
         backupFile(productJsonPath),
     ].filter(Boolean);
     msgs.forEach(m => console.log(`  ${m}`));
@@ -1375,6 +1488,10 @@ function translate(paths) {
         ['children:"Remove an installed plugin. Type a search query after the command to find plugins to uninstall."', 'children:"移除已安装插件。在命令后输入搜索词以查找要卸载的插件。"'],
 
         ['get title(){return`Configured Hooks (${D()})`}', 'get title(){return`已配置的钩子 (${D()})`}'],
+        ['get title(){return`Configured Hooks (${I()})`}', 'get title(){return`已配置的钩子 (${I()})`}'],
+        ['get title(){return`Configured Hooks (${A()})`}', 'get title(){return`已配置的钩子 (${A()})`}'],
+        ['label:"Configured Hooks"', 'label:"已配置的钩子"'],
+        ['label:"Execution Log"', 'label:"执行日志"'],
         ['description:"Add a hooks.json file to your user, project, or enterprise config to start running custom scripts."', 'description:"在用户、项目或企业配置中添加 hooks.json 文件，即可开始运行自定义脚本。"'],
         ['helpTooltipLabel:"Learn about Hooks"', 'helpTooltipLabel:"了解钩子"'],
         ['title:"Configuration Errors"', 'title:"配置错误"'],
@@ -1421,6 +1538,30 @@ function translate(paths) {
         ['{id:"agent",label:"Agent"},{id:"editor",label:"Editor"}', '{id:"agent",label:"智能体"},{id:"editor",label:"编辑器"}'],
         ['label:"Open Agents Window on startup"', 'label:"启动时打开智能体窗口"'],
         ['description:"When launching Cursor, open Agents Window by default"', 'description:"启动 Cursor 时默认打开智能体窗口"'],
+        ['label:"Open Agents Window on Startup"', 'label:"启动时打开智能体窗口"'],
+        ['description:"Open the Agents Window by default when Cursor launches"', 'description:"Cursor 启动时默认打开智能体窗口"'],
+        ['label:"Code Block Word Wrap"', 'label:"代码块自动换行"'],
+        ['description:"Wrap long lines in Agent conversation code blocks"', 'description:"在智能体对话代码块中自动换行长行"'],
+        ['label:"Voice Submit Keywords"', 'label:"语音提交关键词"'],
+        ['description:"Custom words that submit a voice prompt. Spaces and punctuation are ignored."', 'description:"用于提交语音提示的自定义词。会忽略空格和标点。"'],
+        ['label:"Explore Subagent Model"', 'label:"探索子智能体模型"'],
+        ['description:"Choose the model used by the Explore subagent for initial research"', 'description:"选择探索子智能体进行初始研究时使用的模型"'],
+        ['description:"Choose the model used by Explore subagent for initial research"', 'description:"选择探索子智能体进行初始研究时使用的模型"'],
+        ['label:"Deployment Name"', 'label:"部署名称"'],
+        ['placeholder:"AWS Access Key ID"', 'placeholder:"AWS 访问密钥 ID"'],
+        ['placeholder:"AWS Secret Access Key"', 'placeholder:"AWS 秘密访问密钥"'],
+        ['label:"Access Key ID"', 'label:"访问密钥 ID"'],
+        ['label:"Secret Access Key"', 'label:"秘密访问密钥"'],
+        ['label:"Region"', 'label:"区域"'],
+        ['label:"Test Model"', 'label:"测试模型"'],
+        ['"Configure AWS Bedrock to use Anthropic Claude models through your AWS account."', '"配置 AWS Bedrock，通过你的 AWS 账号使用 Anthropic Claude 模型。"'],
+        ['"Cursor Enterprise teams can configure IAM roles to access Bedrock without any Access Keys."', '"Cursor 企业团队可以配置 IAM 角色，无需访问密钥即可访问 Bedrock。"'],
+        ['"Your team has configured AWS Bedrock access. You can use your teams Bedrock instance without any additional configuration."', '"你的团队已配置 AWS Bedrock 访问权限。无需额外配置即可使用团队的 Bedrock 实例。"'],
+        ['title:"Ignore Files"', 'title:"忽略文件"'],
+        ['label:"Hierarchical Cursor Ignore"', 'label:"分层 Cursor 忽略"'],
+        ['label:"Ignore Symlinks in Cursor Ignore Search"', 'label:"在 Cursor 忽略搜索中忽略符号链接"'],
+        ['return`Apply .cursorignore files to all subdirectories${n()?" (controlled by admin)":""}. Changing this setting requires restarting Cursor.`', 'return`将 .cursorignore 文件应用到所有子目录${n()?"（由管理员控制）":""}。更改此设置需要重启 Cursor。`'],
+        ['return`Use with caution. Skip symlinks during .cursorignore file discovery. Enable only when all .cursorignore files are reachable without symlinks${i()?" (controlled by admin)":""}. Changing this setting requires restarting Cursor.`', 'return`谨慎使用。在查找 .cursorignore 文件时跳过符号链接。仅当无需符号链接即可访问所有 .cursorignore 文件时才启用${i()?"（由管理员控制）":""}。更改此设置需要重启 Cursor。`'],
         ['label:"Title Bar"', 'label:"标题栏"'],
         ['description:"Show title bar in agent layout"', 'description:"在智能体布局中显示标题栏"'],
         ['description:"Show status bar at the bottom of the window"', 'description:"在窗口底部显示状态栏"'],
@@ -1526,6 +1667,26 @@ function translate(paths) {
         ['name:"Automations",get icon(){return ie(NTe,{name:"robot"', 'name:"自动化",get icon(){return ie(NTe,{name:"robot"'],
         ['name:"Customize",get icon(){return ie(NTe,{name:"extensions"', 'name:"插件市场",get icon(){return ie(NTe,{name:"extensions"'],
         ['children:"Open Agents Window"', 'children:"打开智能体窗口"'],
+        ['label:"Fork"', 'label:"分叉"'],
+        ['label:"Copy"', 'label:"复制"'],
+        ['label:"Share"', 'label:"分享"'],
+        ['label:"Export"', 'label:"导出"'],
+        ['label:"Open in Web"', 'label:"在网页中打开"'],
+        ['label:"Open in New Window"', 'label:"在新窗口中打开"'],
+        ['label:"Rename"', 'label:"重命名"'],
+        ['label:s?"Unpin":"Pin"', 'label:s?"取消固定":"固定"'],
+        ['label:ge?"Discard":"Archive"', 'label:ge?"丢弃":"归档"'],
+        ['label:"Copy Transcript"', 'label:"复制对话记录"'],
+        ['label:"Copy Web Link"', 'label:"复制网页链接"'],
+        ['label:"Copy Deep Link"', 'label:"复制深层链接"'],
+        ['label:"Copy Branch"', 'label:"复制分支"'],
+        ['children:"Open in New Window"', 'children:"在新窗口中打开"'],
+        ['children:"Fork"', 'children:"分叉"'],
+        ['children:"Copy"', 'children:"复制"'],
+        ['children:"Export"', 'children:"导出"'],
+        ['children:"Pin"', 'children:"固定"'],
+        ['children:"Rename"', 'children:"重命名"'],
+        ['children:"Archive"', 'children:"归档"'],
         ['title:Je(4823,"New Agents Window")', 'title:Je(4823,"新建智能体窗口")'],
         ['title:Je(4824,"Developer: New Additional Agents Window")', 'title:Je(4824,"开发者：新建额外智能体窗口")'],
         ['title:Je(4825,"Switch to {0}",xNc)', 'title:Je(4825,"切换到 {0}",xNc)'],
@@ -1812,6 +1973,8 @@ function translate(paths) {
         }
     }
 
+    translateNlsMessagesFile(nlsMessagesPath);
+
     // 9. Mac Gatekeeper 修复
     fixMacGatekeeper(appPath);
 
@@ -1821,14 +1984,14 @@ function translate(paths) {
 
 /**
  * 恢复英文原版
- * @param {{ mainJsPath: string, htmlPath: string, productJsonPath: string }} paths
+ * @param {{ mainJsPath: string, glassJsPath?: string, nlsMessagesPath?: string, htmlPath: string, productJsonPath: string }} paths
  */
 function restore(paths) {
-    const { mainJsPath, glassJsPath, htmlPath, productJsonPath } = paths;
+    const { mainJsPath, glassJsPath, nlsMessagesPath, htmlPath, productJsonPath } = paths;
 
     console.log('');
     let restored = 0;
-    for (const filePath of [htmlPath, mainJsPath, glassJsPath, productJsonPath].filter(Boolean)) {
+    for (const filePath of [htmlPath, mainJsPath, glassJsPath, nlsMessagesPath, productJsonPath].filter(Boolean)) {
         if (restoreFromBackup(filePath)) {
             console.log(`  ✅ 已还原: ${path.basename(filePath)}`);
             restored++;

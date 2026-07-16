@@ -15,6 +15,7 @@ const LEGACY_CONFIG_FILE = path.join(os.homedir(), '.cursor-i18n-tool', 'config.
 
 const WORKBENCH_MAIN = path.join('out', 'vs', 'workbench', 'workbench.desktop.main.js');
 const WORKBENCH_GLASS_MAIN = path.join('out', 'vs', 'workbench', 'workbench.glass.main.js');
+const NLS_MESSAGES = path.join('out', 'nls.messages.json');
 
 /**
  * 校验是否为有效的 Cursor resources/app 目录
@@ -35,6 +36,7 @@ function buildPathsFromAppPath(appPath) {
         // Cursor 新版 Agent / Glass 窗口会把大量可见文案拆到独立 bundle。
         // 该文件在旧版本中不存在，因此后续处理都要按可选文件对待。
         glassJsPath: path.join(normalized, WORKBENCH_GLASS_MAIN),
+        nlsMessagesPath: path.join(normalized, NLS_MESSAGES),
         htmlPath: path.join(normalized, 'out', 'vs', 'code', 'electron-sandbox', 'workbench', 'workbench.html'),
         productJsonPath: path.join(normalized, 'product.json'),
     };
