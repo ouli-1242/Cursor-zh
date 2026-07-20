@@ -352,6 +352,25 @@ function fixMacGatekeeper(appPath) {
 // Glass / Agent 独立 bundle 中常见的新版 UI 片段。
 // 这些替换只在附加 JS 文件里执行，避免为了新窗口文案扩大 desktop 主文件的短词替换面。
 const auxiliaryInterfaceReplacements = [
+    ['general:"General"', 'general:"通用"'],
+    ['profile:"Profile"', 'profile:"个人资料"'],
+    ['appearance:"Appearance"', 'appearance:"外观"'],
+    ['fun:"Fun"', 'fun:"趣味"'],
+    ['chat:"Agents"', 'chat:"智能体"'],
+    ['browser:"Browser & Network"', 'browser:"浏览器与网络"'],
+    ['tab:"Tab"', 'tab:"Tab 补全"'],
+    ['models:"Models"', 'models:"模型"'],
+    ['"git-prs":"Git & PRs"', '"git-prs":"Git 与 PR"'],
+    ['customize:"Customize"', 'customize:"自定义"'],
+    ['mcp:"Tools & MCPs"', 'mcp:"工具与 MCP"'],
+    ['hooks:"Hooks"', 'hooks:"钩子"'],
+    ['beta:"Beta"', 'beta:"测试功能"'],
+    ['network:"Network"', 'network:"网络"'],
+    ['"self-driving":"Self-driving PRs"', '"self-driving":"自动 PR"'],
+    ['developer:"Developer"', 'developer:"开发者"'],
+    ['title:"Conversation"', 'title:"对话"'],
+    ['label:"Conversation"', 'label:"对话"'],
+    ['"<div>Web Search Tool"', '"<div>网络搜索工具"'],
     ['"<span class=cursor-settings-new-badge>NEW"', '"<span class=cursor-settings-new-badge>新"'],
     ['children:"NEW"', 'children:"新"'],
     ['"<div>New project"', '"<div>新建项目"'],
@@ -550,6 +569,25 @@ const auxiliaryInterfaceReplacements = [
     ['title:"Configure Ignored Files"', 'title:"配置忽略文件"'],
 ];
 
+const auxiliaryRegexReplacements = [
+    {
+        regex: /Submit\s+with\s+(\$\{[^}]+\}|\\u2318\s*\+\s*|⌘\s*\+\s*|Ctrl\s*\+\s*)Enter/gi,
+        zh: '使用 $1Enter 提交',
+    },
+    {
+        regex: /When\s+enabled,\s+(\$\{[^}]+\}|\\u2318\s*\+\s*|⌘\s*\+\s*|Ctrl\s*\+\s*)Enter\s+submits\s+chat\s+and\s+Enter\s+inserts\s+a\s+newline/gi,
+        zh: '启用后，$1Enter 提交聊天，Enter 插入换行',
+    },
+    {
+        regex: /\[\s*"Automatically\s+index\s+any\s+new\s+folders\s+with\s+fewer\s+than"\s*,\s*" "\s*,\s*(.+?)\s*,\s*" "\s*,\s*"files"\s*\]/gi,
+        zh: '["自动索引少于", " ", $1, " ", "个文件的新文件夹"]',
+    },
+    {
+        regex: /Search\s+settings\s+\$\{([^}]+)\}/g,
+        zh: '搜索设置 ${$1}',
+    },
+];
+
 /**
  * 新版 Cursor 会把 Agent / Glass 窗口拆到 workbench.glass.main.js。
  * 这里只处理可选附加 bundle，复用安全字典和短词保护，避免复制完整主流程。
@@ -561,7 +599,7 @@ function translateAuxiliaryJsFile(filePath, productJsonPath) {
     console.log(`\n⚙️  正在处理附加窗口代码: ${fileName}`);
 
     let jsContent = fs.readFileSync(filePath, 'utf8');
-    const progress = createProgress(4);
+    const progress = createProgress(5);
     const changes = createChangeTracker();
 
     progress.update('准备汉化附加窗口', fileName);
@@ -589,6 +627,16 @@ function translateAuxiliaryJsFile(filePath, productJsonPath) {
         }
     }
     progress.step('界面片段处理完成');
+
+    for (const { regex, zh } of auxiliaryRegexReplacements) {
+        const result = replaceRegexWithCount(jsContent, regex, zh);
+        jsContent = result.content;
+        changes.record('附加动态模板', regex.source, zh, result.count);
+        if (result.count > 0) {
+            progress.update('替换附加动态模板', formatReplacementDetail(regex.source, zh, result.count));
+        }
+    }
+    progress.step('动态模板处理完成');
 
     for (const { en, zh, propRegex, jsxRegex, htmlRegex } of riskyRegexes) {
         const guard = (group, regex, build) => {
@@ -770,12 +818,12 @@ function translate(paths) {
         },
         {
             // 攻克 6a：label:`Submit with ${Fs?"⌘ + ":"Ctrl + "}Enter`
-            regex: /Submit\s+with\s+(\$\{[^}]+\}|Ctrl\s*\+\s*)Enter/gi,
+            regex: /Submit\s+with\s+(\$\{[^}]+\}|\\u2318\s*\+\s*|⌘\s*\+\s*|Ctrl\s*\+\s*)Enter/gi,
             zh: '使用 $1Enter 提交'
         },
         {
             // 攻克 6b：description:`When enabled, ${Fs?"⌘ + ":"Ctrl + "}Enter submits chat and Enter inserts a newline`
-            regex: /When\s+enabled,\s+(\$\{[^}]+\}|Ctrl\s*\+\s*)Enter\s+submits\s+chat\s+and\s+Enter\s+inserts\s+a\s+newline/gi,
+            regex: /When\s+enabled,\s+(\$\{[^}]+\}|\\u2318\s*\+\s*|⌘\s*\+\s*|Ctrl\s*\+\s*)Enter\s+submits\s+chat\s+and\s+Enter\s+inserts\s+a\s+newline/gi,
             zh: '启用后，$1Enter 提交聊天，Enter 插入换行'
         },
         {
@@ -840,7 +888,7 @@ function translate(paths) {
             // 攻克 20：Automatically index any new folders with fewer than 250,000 files
             // 实际代码是一个数组：["Automatically index any new folders with fewer than"," ",Ui(()=>...)," ","files"]
             regex: /\[\s*"Automatically\s+index\s+any\s+new\s+folders\s+with\s+fewer\s+than"\s*,\s*" "\s*,\s*(.+?)\s*,\s*" "\s*,\s*"files"\s*\]/gi,
-            zh: '["自动索引文件数量少于", " ", $1, " ", "个的新文件夹"]'
+            zh: '["自动索引少于", " ", $1, " ", "个文件的新文件夹"]'
         },
         {
             // 攻克 21：Automatically index repositories to speed up Grep searches. All data is stored locally.
@@ -857,6 +905,11 @@ function translate(paths) {
             // 用量页“包含在当前套餐中”：`Included in ${planName}`。
             regex: /`Included\s+in\s+\$\{([^}]+)\}`/g,
             zh: '`包含在 ${$1} 中`'
+        },
+        {
+            // 设置页搜索框占位：`Search settings ${...}`，变量名在 desktop/glass 中会随版本变化。
+            regex: /Search\s+settings\s+\$\{([^}]+)\}/g,
+            zh: '搜索设置 ${$1}'
         },
         {
             // 另一套用量图组件会把套餐名拼成：`Included in ${planName.trim()} Plan`。
@@ -950,23 +1003,33 @@ function translate(paths) {
     // 5.1 设置侧边栏映射与部分编译模板片段
     const scopedReplacements = [
         ['general:"General"', 'general:"通用"'],
+        ['profile:"Profile"', 'profile:"个人资料"'],
         ['appearance:"Appearance"', 'appearance:"外观"'],
+        ['fun:"Fun"', 'fun:"趣味"'],
         ['"vscode-settings":"VS Code Settings"', '"vscode-settings":"VS Code 设置"'],
         ['"plan-usage":"Plan & Usage"', '"plan-usage":"套餐与用量"'],
         ['Open VS Code Settings', '打开 VS Code 设置'],
         ['children:"Manage View"', 'children:"管理视图"'],
         ['children:"Group By"', 'children:"分组方式"'],
         ['chat:"Agents"', 'chat:"智能体"'],
+        ['browser:"Browser & Network"', 'browser:"浏览器与网络"'],
         ['tab:"Tab"', 'tab:"Tab 补全"'],
         ['models:"Models"', 'models:"模型"'],
+        ['"git-prs":"Git & PRs"', '"git-prs":"Git 与 PR"'],
         ['mcp:"Tools & MCPs"', 'mcp:"工具与 MCP"'],
         ['hooks:"Hooks"', 'hooks:"钩子"'],
         ['beta:"Beta"', 'beta:"测试功能"'],
         ['network:"Network"', 'network:"网络"'],
+        ['customize:"Customize"', 'customize:"自定义"'],
+        ['"self-driving":"Self-driving PRs"', '"self-driving":"自动 PR"'],
+        ['developer:"Developer"', 'developer:"开发者"'],
         ['worktrees:"Worktrees"', 'worktrees:"工作树"'],
         ['docs:"Docs"', 'docs:"官方文档"'],
         ['`Search settings ${ne()}`', '`搜索设置 ${ne()}`'],
         ['n.isGlass?"Indexing":"索引与文档"', 'n.isGlass?"索引":"索引与文档"'],
+        ['title:"Conversation"', 'title:"对话"'],
+        ['label:"Conversation"', 'label:"对话"'],
+        ['"<div>Web Search Tool"', '"<div>网络搜索工具"'],
         ['>Resets on ', '>重置于 '],
         ['title:"Authentication"', 'title:"身份验证"'],
         ['"Authentication error"', '"身份验证错误"'],
