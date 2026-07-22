@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { execSync } = require('child_process');
-const { safeGlobalDict, riskyShortWords } = require('./dict');
+const { safeGlobalDict, nativeNlsDict, riskyShortWords } = require('./dict');
 const { PLATFORM } = require('./platform');
 
 // 辅助：转义正则特殊字符
@@ -695,13 +695,22 @@ function translateNlsMessagesFile(filePath) {
     const progress = createProgress(2);
     const changes = createChangeTracker();
     progress.update('准备汉化原生提示', '正在扫描 nls 消息');
-    const hasSafeEntry = (key) => Object.prototype.hasOwnProperty.call(safeGlobalDict, key);
+    const lookupTranslation = (key) => {
+        if (Object.prototype.hasOwnProperty.call(safeGlobalDict, key)) {
+            return safeGlobalDict[key];
+        }
+        if (Object.prototype.hasOwnProperty.call(nativeNlsDict, key)) {
+            return nativeNlsDict[key];
+        }
+        return null;
+    };
 
     const translated = messages.map((value) => {
         if (typeof value !== 'string') return value;
 
-        if (hasSafeEntry(value)) {
-            const next = safeGlobalDict[value];
+        const directTranslation = lookupTranslation(value);
+        if (directTranslation) {
+            const next = directTranslation;
             changes.record('原生提示词条', value, next, 1);
             progress.update('替换原生提示', formatReplacementDetail(value, next, 1));
             return next;
@@ -709,8 +718,9 @@ function translateNlsMessagesFile(filePath) {
 
         if (value.startsWith('&&')) {
             const withoutMnemonic = value.slice(2);
-            if (hasSafeEntry(withoutMnemonic)) {
-                const next = `&&${safeGlobalDict[withoutMnemonic]}`;
+            const mnemonicTranslation = lookupTranslation(withoutMnemonic);
+            if (mnemonicTranslation) {
+                const next = `&&${mnemonicTranslation}`;
                 changes.record('原生提示词条', value, next, 1);
                 progress.update('替换原生提示', formatReplacementDetail(value, next, 1));
                 return next;
@@ -1028,6 +1038,7 @@ function translate(paths) {
         ['`Search settings ${ne()}`', '`搜索设置 ${ne()}`'],
         ['n.isGlass?"Indexing":"索引与文档"', 'n.isGlass?"索引":"索引与文档"'],
         ['title:"Conversation"', 'title:"对话"'],
+        ['s===void 0?"Automations":s', 's===void 0?"自动化":s'],
         ['label:"Conversation"', 'label:"对话"'],
         ['"<div>Web Search Tool"', '"<div>网络搜索工具"'],
         ['>Resets on ', '>重置于 '],
