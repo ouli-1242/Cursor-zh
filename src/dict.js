@@ -60,7 +60,13 @@ const safeGlobalDict = {
     "Status Bar": "状态栏",
     "Show status bar": "显示状态栏",
     "Auto-hide editor when empty": "空闲时自动隐藏编辑器",
+    "Auto-Hide Editor When Empty": "编辑器为空时自动隐藏",
     "When all editors are closed, hide the editor area and maximize chat": "关闭所有编辑器时，隐藏编辑器并最大化聊天窗口",
+    "Open Chat as Editor Tabs": "将聊天作为编辑器标签页打开",
+    "Show chats as editor tabs inside the chat area instead of the legacy stacked view": "在聊天区域中以编辑器标签页显示聊天，而非旧版堆叠视图",
+    "Startup": "启动",
+    "Window Restoration": "窗口恢复",
+    "Controls which windows Cursor restores on startup": "控制 Cursor 启动时恢复哪些窗口",
     "Notifications": "通知",
     "System Notifications": "系统通知",
     "Show system notifications when Agent completes or needs attention": "智能体完成任务或需要注意时显示系统通知",
@@ -248,11 +254,14 @@ const safeGlobalDict = {
     "Submit with Ctrl + Enter": "使用 Ctrl + Enter 提交",
     "When enabled, ⌘ + Enter submits chat and Enter inserts a newline": "启用后，⌘ + Enter 提交聊天，Enter 插入换行",
     "When enabled, Ctrl + Enter submits chat and Enter inserts a newline": "启用后，Ctrl + Enter 提交聊天，Enter 插入换行",
+    "Ctrl+Enter submits chat, Enter inserts a newline, and primary actions move to Ctrl+Alt+Enter": "Ctrl+Enter 提交聊天，Enter 插入换行，主要操作改为 Ctrl+Alt+Enter",
     "Max Tab Count": "最大标签页数",
     "Limit how many chat tabs can be open at once": "限制同时打开的聊天标签页数量",
     "Queue Messages": "消息队列",
     "Adjust the default behavior of sending a message while Agent is running": "调整智能体运行时发送消息的默认行为",
     "Send after current message": "当前消息后发送",
+    "Send After Current Message": "当前消息后发送",
+    "Send Right Away": "立即发送",
     "Stop & send right away": "立即停止并发送",
     "Usage Summary": "用量摘要",
     "When to show the usage summary at the bottom of the chat pane": "何时在聊天面板底部显示用量摘要",
@@ -843,6 +852,10 @@ const safeGlobalDict = {
     "Agents Window": "智能体窗口",
     "Switch to Agents Window": "切换到智能体窗口",
     "Open or Focus Agents Window": "打开或聚焦智能体窗口",
+    "Meet the new Agents Window": "认识全新的智能体窗口",
+    "Jump back to the Agents Window to keep working across repos.": "返回智能体窗口，继续跨代码库工作。",
+    "Run many agents in parallel — across repos, locally, on remote SSH, and in the cloud.": "在不同代码库、本地、远程 SSH 和云端并行运行多个智能体。",
+    "Try it now": "立即体验",
     "New Empty Editor Window": "新建空编辑器窗口",
     "Open or Focus Editor Window": "打开或聚焦编辑器窗口",
     "Open or focus the editor (IDE) window from the Agents window.": "从智能体窗口打开或聚焦编辑器（IDE）窗口。",
@@ -875,6 +888,21 @@ const safeGlobalDict = {
     "View all": "查看全部",
     "Try a new window for running parallel agents": "尝试使用新窗口运行并行智能体",
     "Open project: ": "打开项目：",
+
+    // ── Agent 欢迎页 ──
+    "Start with a plan": "从计划开始",
+    "Align on implementation before writing code": "在编写代码前先明确实现方案",
+    "Debug an issue": "调试问题",
+    "Find root causes and fix tricky bugs": "定位根因并修复棘手问题",
+    "Create a dashboard": "创建仪表板",
+    "Visualize information in a custom interface": "在自定义界面中可视化信息",
+
+    // ── Automations ──
+    "Automate repetitive tasks with always-on cloud agents that respond to environment triggers.": "使用始终在线的云端智能体自动执行由环境触发的重复任务。",
+    "Automate repetitive tasks with always-on agents and configure Cursor's built-in agents for your team.": "使用始终在线的智能体自动执行重复任务，并为团队配置 Cursor 内置智能体。",
+    "Automations use Cloud Agents, which require us to give agents access to your codebase. This is not compatible with Legacy Privacy Mode.": "自动化功能使用云端智能体，需要授予智能体访问代码库的权限。这与旧版隐私模式不兼容。",
+    "Edit Privacy Settings": "编辑隐私设置",
+    "Learn More": "了解更多",
 
     // ── Agent 面板、标签页菜单与搜索弹窗 ──
     "New Agent": "新建智能体",
@@ -937,6 +965,21 @@ const safeGlobalDict = {
     "Minimize interface animations. System follows your OS preference.": "减少界面动画。系统会跟随您的操作系统偏好。"
 };
 
+// 原生工作台菜单与加载状态来自 nls.messages.json。它们是短词，不能加入
+// safeGlobalDict，否则可能改变 bundle 中的协议值或键位数据。
+const nativeNlsDict = {
+    "File": "文件",
+    "Edit": "编辑",
+    "Selection": "选择",
+    "View": "视图",
+    "Go": "转到",
+    "Run": "运行",
+    "Terminal": "终端",
+    "Help": "帮助",
+    "Default": "默认",
+    "Loading...": "正在加载...",
+};
+
 const riskyShortWords = {
     "General": "通用",
     "Appearance": "外观",
@@ -963,6 +1006,7 @@ const riskyShortWords = {
     "User": "用户",
     "Search": "搜索",
     "Theme": "主题",
+    "Automations": "自动化",
     "System": "系统",
     "Colors": "颜色",
     "Hue": "色相",
@@ -1104,4 +1148,4 @@ const riskyShortWords = {
     "Share": "分享"
 };
 
-module.exports = { safeGlobalDict, riskyShortWords };
+module.exports = { safeGlobalDict, nativeNlsDict, riskyShortWords };
