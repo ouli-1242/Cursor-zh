@@ -1379,6 +1379,14 @@ const nativeNlsDict = {
     "Import": "导入",
     "Small": "小",
     "Large": "大",
+    // ── 用户反馈缺失：nls 索引词条（ft()/E() 从 nls.messages.json 取值）──
+    "Collapse All": "全部折叠",
+    "Show Details": "显示详情",
+    "Hide Details": "隐藏详情",
+    "Ask Agent": "询问智能体",
+    "Discard Changes": "放弃更改",
+    "Discard All Changes": "放弃所有更改",
+    "Home": "主页",
 
     // ── 标题栏/视图/面板名称 ──
     "Primary Side Bar": "主侧边栏",

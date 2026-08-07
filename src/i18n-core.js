@@ -2114,6 +2114,54 @@ const auxiliaryInterfaceReplacements = [
     ['original:"Start Extension Host CPU Profiler"', 'original:"启动扩展宿主 CPU 分析器"'],
     ['original:"Start Extension Host Heap Allocation Profiler"', 'original:"启动扩展宿主堆分配分析器"'],
     ['original:"Delete Old Chats..."', 'original:"删除旧聊天..."'],
+    // ── Agents 窗口缺失的编辑菜单/操作按钮构造函数形式 ──
+    ['new ks("undo","Undo"', 'new ks("undo","撤销"'],
+    ['new ks("redo","Redo"', 'new ks("redo","重做"'],
+    ['new ks("cut","Cut"', 'new ks("cut","剪切"'],
+    ['new ks("copy","Copy"', 'new ks("copy","复制"'],
+    ['new ks("paste","Paste"', 'new ks("paste","粘贴"'],
+    ['new ks("selectAll","Select All"', 'new ks("selectAll","全选"'],
+    ['new ks("collapse-all","Collapse All"', 'new ks("collapse-all","全部折叠"'],
+    // ── children/label 缺失的编辑菜单项 ──
+    ['children:"Cut"', 'children:"剪切"'],
+    ['children:"Paste"', 'children:"粘贴"'],
+    ['children:"Select All"', 'children:"全选"'],
+    ['children:"No projects"', 'children:"暂无项目"'],
+    ['children:"Reload"', 'children:"重新加载"'],
+    ['children:"Clone Repository"', 'children:"克隆仓库"'],
+    ['label:"Cut"', 'label:"剪切"'],
+    ['label:"Paste"', 'label:"粘贴"'],
+    ['label:"Select All"', 'label:"全选"'],
+    ['label:"Clone Repository"', 'label:"克隆仓库"'],
+    ['label:"Reload"', 'label:"重新加载"'],
+    // ── Repos / Docs / Reload 其他形式 ──
+    ['groupLabel:"Repos"', 'groupLabel:"仓库"'],
+    ['buttonLabel:"Reload"', 'buttonLabel:"重新加载"'],
+    ['doc:"Docs"', 'doc:"文档"'],
+    ['title:"Docs"', 'title:"文档"'],
+    ['case"doc":return"Docs"', 'case"doc":return"文档"'],
+    ['case"docs":return"Docs"', 'case"docs":return"文档"'],
+    // ── 用户反馈缺失：Ask Agent（label/children 形式）──
+    ['label:"Ask Agent"', 'label:"询问智能体"'],
+    ['children:"Ask Agent"', 'children:"询问智能体"'],
+    // ── 用户反馈缺失：Show/Hide Details（三元 + HTML + textContent）──
+    ['?"Hide Details":"Show Details"', '?"隐藏详情":"显示详情"'],
+    ['>Show Details</button>', '>显示详情</button>'],
+    ['btn.textContent = \'Hide Details\'', 'btn.textContent = \'隐藏详情\''],
+    ['btn.textContent = \'Show Details\'', 'btn.textContent = \'显示详情\''],
+    // ── 用户反馈缺失：Discard Anular Changes / Discard Changes（E 形式）──
+    ['?"Discard Unstaged Changes":"Discard All Changes"', '?"放弃未暂存更改":"放弃所有更改"'],
+    ['E("glassSaveConflictDiscard","Discard Changes")', 'E("glassSaveConflictDiscard","放弃更改")'],
+    ['label:"Discard Tracked Only"', 'label:"仅放弃已跟踪"'],
+    ['?"Move to Trash":"Discard All"', '?"移到回收站":"全部放弃"'],
+    // ── 用户反馈缺失：Home、（Collapse All 其余形式）──
+    ['label:"Home",workspaceIdentifier', 'label:"主页",workspaceIdentifier'],
+    ['children:"Collapse All"', 'children:"全部折叠"'],
+    ['title:ft(9500,"Collapse All")', 'title:ft(9500,"全部折叠")'],
+    ['?"Collapse All":"Expand All"', '?"全部折叠":"全部展开"'],
+    ["collapseAll: 'Collapse All'", "collapseAll: '全部折叠'"],
+    // ── 用户反馈缺失：Docs（docs:"Docs" 对象映射值）──
+    ['docs:"Docs",contact:"Contact"', 'docs:"文档",contact:"联系"'],
 ];
 
 // 合并大正则：单次扫描替代逐条替换（~1675条 → 1次扫描）
@@ -2484,6 +2532,61 @@ const trickyReplacements = [
         // ariaLabel: `Open ${Rt} in Customize`
         regex: /`Open \$\{([^}]+)\} in Customize`/g,
         zh: '`在自定义中打开 ${$1}`'
+    },
+    {
+        // Repos/Cloud 三元表达式：n?"Cloud":"Repos" 或 name:n?"Cloud":"Repos"
+        regex: /\?"Cloud":"Repos"/g,
+        zh: '?"云端":"仓库"'
+    },
+    {
+        // Select 三元表达式：i?"Select one":"Select Multiple"
+        regex: /\?"Select one":"Select Multiple"/g,
+        zh: '?"选择一个":"选择多个"'
+    },
+    {
+        // Describe the change 三元表达式：a.length>0?"Describe the change":`Describe the change or ...`
+        regex: /\?"Describe the change"/g,
+        zh: '?"描述更改"'
+    },
+    {
+        // Expand All / Collapse All 三元表达式：nt?"Expand All":"Collapse All"
+        regex: /\?"Expand All":"Collapse All"/g,
+        zh: '?"全部展开":"全部折叠"'
+    },
+    {
+        // Collapse All / Expand All 另一顺序：Y=Z?"Collapse All":"Expand All"
+        regex: /\?"Collapse All":"Expand All"/g,
+        zh: '?"全部折叠":"全部展开"'
+    },
+    {
+        // Could not reach 模板：`Could not reach ${r}.`
+        regex: /`Could not reach \$\{([^}]+)\}\.`/g,
+        zh: '`无法连接 ${$1}.`'
+    },
+    {
+        // Documentation 模板：case"docs":return`Documentation: ${n||e}`
+        regex: /case"docs":return`Documentation: \$\{([^}]+)\}`/g,
+        zh: 'case"docs":return`文档：${$1}`'
+    },
+    {
+        // Discard 赋值：let r="Discard Changes" / const Bn="Discard Changes"（变量名为 minified，保留结构）
+        regex: /(let|const)\s+(\w+)="Discard Changes"/g,
+        zh: '$1 $2="放弃更改"'
+    },
+    {
+        // Discard 三元链：t.isDirectory?r="Discard Folder Changes"
+        regex: /="Discard Folder Changes"/g,
+        zh: '="放弃文件夹更改"'
+    },
+    {
+        // Discard 标题：title:"Discard Changes?"
+        regex: /title:"Discard Changes\?"/g,
+        zh: 'title:"放弃更改？"'
+    },
+    {
+        // Discard 三元链：?r="Discard Untracked Changes"（若有）
+        regex: /="Discard Untracked Changes"/g,
+        zh: '="放弃未跟踪更改"'
     },
 ];
 
@@ -4756,6 +4859,47 @@ function translate(paths) {
         ['original:"Delete Old Chats..."', 'original:"删除旧聊天..."'],
         ['value:"Delete Old Chats..."', 'value:"删除旧聊天..."'],
         ['children:"Workspace Diagnostics"', 'children:"工作区诊断"'],
+        // ── Agents 窗口缺失的编辑菜单/操作按钮构造函数形式（main.js 用 gr）──
+        ['new gr("undo","Undo"', 'new gr("undo","撤销"'],
+        ['new gr("redo","Redo"', 'new gr("redo","重做"'],
+        ['new gr("cut","Cut"', 'new gr("cut","剪切"'],
+        ['new gr("copy","Copy"', 'new gr("copy","复制"'],
+        ['new gr("paste","Paste"', 'new gr("paste","粘贴"'],
+        ['new gr("selectAll","Select All"', 'new gr("selectAll","全选"'],
+        ['new gr("collapse-all","Collapse All"', 'new gr("collapse-all","全部折叠"'],
+        // ── children/label 缺失的编辑菜单项 ──
+        ['children:"Cut"', 'children:"剪切"'],
+        ['children:"Paste"', 'children:"粘贴"'],
+        ['children:"Select All"', 'children:"全选"'],
+        ['children:"No projects"', 'children:"暂无项目"'],
+        ['children:"Reload"', 'children:"重新加载"'],
+        ['children:"Clone Repository"', 'children:"克隆仓库"'],
+        ['label:"Cut"', 'label:"剪切"'],
+        ['label:"Paste"', 'label:"粘贴"'],
+        ['label:"Select All"', 'label:"全选"'],
+        ['label:"Clone Repository"', 'label:"克隆仓库"'],
+        ['label:"Reload"', 'label:"重新加载"'],
+        // ── Repos / Docs / Reload 其他形式 ──
+        ['groupLabel:"Repos"', 'groupLabel:"仓库"'],
+        ['buttonLabel:"Reload"', 'buttonLabel:"重新加载"'],
+        ['doc:"Docs"', 'doc:"文档"'],
+        ['title:"Docs"', 'title:"文档"'],
+        ['case"doc":return"Docs"', 'case"doc":return"文档"'],
+        ['case"docs":return"Docs"', 'case"docs":return"文档"'],
+        // ── 用户反馈缺失：Ask Agent（label/children 形式）──
+        ['label:"Ask Agent"', 'label:"询问智能体"'],
+        ['children:"Ask Agent"', 'children:"询问智能体"'],
+        // ── 用户反馈缺失：Show/Hide Details（三元 + HTML + textContent）──
+        ['?"Hide Details":"Show Details"', '?"隐藏详情":"显示详情"'],
+        ['>Show Details</button>', '>显示详情</button>'],
+        ['btn.textContent = \'Hide Details\'', 'btn.textContent = \'隐藏详情\''],
+        ['btn.textContent = \'Show Details\'', 'btn.textContent = \'显示详情\''],
+        // ── 用户反馈缺失：Home、（Collapse All 其余形式）──
+        ['label:"Home",workspaceIdentifier', 'label:"主页",workspaceIdentifier'],
+        ['title:Te(9500,"Collapse All")', 'title:Te(9500,"全部折叠")'],
+        ["collapseAll: 'Collapse All'", "collapseAll: '全部折叠'"],
+        // ── 用户反馈缺失：Docs（case"docs" 模板）──
+        ['case"docs":return`Documentation: ${n||t}`', 'case"docs":return`文档：${n||t}`'],
     ];
 
     // 合并大正则：单次扫描替代逐条替换（~1803条 → 1次扫描）
