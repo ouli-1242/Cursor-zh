@@ -34,6 +34,17 @@ const modeDescriptionDict = {
     "project": "用于项目级讨论的特殊对话模式"
 };
 
+// 模型参数定义翻译（parameterDefinitions 里的 name / markdownTooltip）
+// 只翻译服务端下发的英文参数名，不改变参数 id 和枚举值
+const parameterDefinitionDict = {
+    name: {
+        "Thinking intensity": "思考强度",
+    },
+    markdownTooltip: {
+        "Controls the model thinking intensity for this run.": "控制本次运行的模型思考强度。",
+    },
+};
+
 const STORAGE_KEY = 'src.vs.platform.reactivestorage.browser.reactiveStorageServiceImpl.persistentStorage.applicationUser';
 const BACKUP_SUFFIX = '.zh-backup';
 
@@ -158,8 +169,31 @@ function translateModes(appPath) {
                 }
             }
 
+            // 翻译模型配置里的参数定义（Thinking intensity 等）
+            // 模型配置存于 availableDefaultModels2（数组，每项含 parameterDefinitions）
+            const modelKey = typeof data.availableDefaultModels2 === 'object' && data.availableDefaultModels2 !== null
+                ? 'availableDefaultModels2'
+                : (data.availableDefaultModels1 ? 'availableDefaultModels1' : null);
+            if (modelKey && Array.isArray(data[modelKey])) {
+                for (const model of data[modelKey]) {
+                    if (!model || !Array.isArray(model.parameterDefinitions)) continue;
+                    for (const pd of model.parameterDefinitions) {
+                        if (!pd || typeof pd !== 'object') continue;
+                        for (const field of ['name', 'markdownTooltip']) {
+                            const dict = parameterDefinitionDict[field];
+                            if (!dict || !pd[field]) continue;
+                            const zh = dict[pd[field]];
+                            if (zh && pd[field] !== zh) {
+                                pd[field] = zh;
+                                changed++;
+                            }
+                        }
+                    }
+                }
+            }
+
             if (changed === 0) {
-                console.log('  ℹ️  modes4 描述已是中文，无需修改。');
+                console.log('  ℹ️  modes4 描述与参数定义已是中文，无需修改。');
                 db.close();
                 return;
             }

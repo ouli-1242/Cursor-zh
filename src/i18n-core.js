@@ -125,6 +125,30 @@ function applyRiskyShortWords(jsContent, changes, progress) {
     return jsContent;
 }
 
+/**
+ * 还原 composer mode 名称。riskyShortWords 会把 modes4 里的 name:"Agent" 翻译成"智能体"，
+ * 但用户要求 mode 下拉的 Agent 保持英文（Plan/Debug/Multitask/Ask 同理保持原名）。
+ * 在短词替换后调用，只还原 mode 定义数组里的 name 字段，不影响其他"智能体"文案。
+ * 注意：只匹配 id:"xxx",name:"中文" 的 mode 定义形态，避免误伤其他 UI。
+ */
+function restoreComposerModeNames(jsContent) {
+    // mode id → 应显示的英文名（与 modes4 里的原名一致）
+    const modeNames = {
+        agent: "Agent",
+        triage: "Triage",
+        plan: "Plan",
+        spec: "Spec",
+        debug: "Debug",
+        multitask: "Multitask",
+        ask: "Ask",
+        project: "Project",
+    };
+    return jsContent.replace(/id:"([a-z]+)",name:"[^"]*"/g, (match, id) => {
+        const name = modeNames[id];
+        return name ? `id:"${id}",name:"${name}"` : match;
+    });
+}
+
 // ═══════════════════════════════════════════════
 // 终端进度展示
 // ═══════════════════════════════════════════════
@@ -989,6 +1013,21 @@ const auxiliaryInterfaceReplacements = [
     ['title:"Next Palette Filter"', 'title:"下一个面板筛选器"'],
     ['title:"Previous Palette Filter"', 'title:"上一个面板筛选器"'],
     ['title:"Select Model"', 'title:"选择模型"'],
+    ['label:"Select Model"', 'label:"选择模型"'],
+    ['tooltipTitle:"Select Model"', 'tooltipTitle:"选择模型"'],
+    ['?void 0:"Select Model"', '?void 0:"选择模型"'],
+    ['title:"Select Model",icon:"sparkle', 'title:"选择模型",icon:"sparkle'],
+    // ── 用户反馈缺失：Git 提交面板（图7）──
+    ['?"No committed changes":`No ${e} Changes`', '?"无已提交更改":`无 ${e} 更改`'],
+    ['`No committed changes against ${e}`', '`相对 ${e} 无已提交更改`'],
+    ['"No branch changes"', '"无分支更改"'],
+    ['"No changes in selected commits"', '"所选提交中无更改"'],
+    ['"No Changes"', '"无更改"'],
+    ['"1 File Changed"', '"1 个文件已更改"'],
+    ['`${e.length} Files Changed`', '`${e.length} 个文件已更改`'],
+    ['"Files Changed"', '"文件已更改"'],
+    ['n===1?"Commit":"Commits"', 'n===1?"提交":"提交"'],
+    ['n===1?"Change":"Changes"', 'n===1?"更改":"更改"'],
     ['title:"Open Instance Selector"', 'title:"打开实例选择器"'],
     ['title:"Checkout Agent Branch"', 'title:"检出智能体分支"'],
     ['title:"Cycle Mode"', 'title:"切换模式"'],
@@ -1148,6 +1187,23 @@ const auxiliaryInterfaceReplacements = [
     ['title:"Add a to-do to get started"', 'title:"添加待办事项即可开始"'],
     ['title:"Adjust Plan"', 'title:"调整套餐"'],
     ['title:"Archive All"', 'title:"全部归档"'],
+    ['children:"Archive All"', 'children:"全部归档"'],
+    ['label:"Archive All"', 'label:"全部归档"'],
+    ['?"Confirm":"Archive All"', '?"确认":"全部归档"'],
+    ['children:"Remove from Sidebar"', 'children:"从侧边栏移除"'],
+    ['label:"Remove from Sidebar"', 'label:"从侧边栏移除"'],
+    ['children:"Connect SSH"', 'children:"连接 SSH"'],
+    ['label:"Connect SSH"', 'label:"连接 SSH"'],
+    ['children:"Connect WSL"', 'children:"连接 WSL"'],
+    ['label:"Connect WSL"', 'label:"连接 WSL"'],
+    ['"aria-label":"More actions"', '"aria-label":"更多操作"'],
+    ['hintText:"More actions"', 'hintText:"更多操作"'],
+    ['children:"No Commits"', 'children:"暂无提交"'],
+    ['?"Loading Commits":"No Commits"', '?"正在加载提交":"暂无提交"'],
+    ['children:"Click to select, drag to draw"', 'children:"点击选择，拖动绘制"'],
+    ['hint.textContent = \'Click to select, drag to draw\'', 'hint.textContent = \'点击选择，拖动绘制\''],
+    ['children:["Click or hold "', 'children:["点击或按住 "'],
+    ['" to dictate"', '" 听写"'],
     ['title:"Archive Prior Chats"', 'title:"归档之前的聊天"'],
     ['title:"Ask Agent"', 'title:"询问智能体"'],
     ['title:"Ask Sidechat"', 'title:"询问侧边聊天"'],
@@ -2644,6 +2700,7 @@ function translateAuxiliaryJsFile(filePath, productJsonPath) {
     progress.step('动态模板处理完成');
 
     jsContent = applyRiskyShortWords(jsContent, changes, progress);
+    jsContent = restoreComposerModeNames(jsContent);
     progress.step('短词处理完成');
 
     try {
@@ -3942,7 +3999,12 @@ function translate(paths) {
         ['label:"Source",children:"Source"', 'label:"来源",children:"来源"'],
         ['children:"Mark All as Read"', 'children:"全部标为已读"'],
         ['children:"Archive All"', 'children:"全部归档"'],
+        ['?"Confirm":"Archive All"', '?"确认":"全部归档"'],
         ['children:"Remove from Sidebar"', 'children:"从侧边栏移除"'],
+        ['"aria-label":"More actions"', '"aria-label":"更多操作"'],
+        ['hintText:"More actions"', 'hintText:"更多操作"'],
+        ['children:["Click or hold "', 'children:["点击或按住 "'],
+        ['" to dictate"', '" 听写"'],
         ['a?.label??"Expand All"', 'a?.label??"全部展开"'],
         ['children:"Expand All"', 'children:"全部展开"'],
         ['children:"Collapse All"', 'children:"全部折叠"'],
@@ -4934,6 +4996,7 @@ function translate(paths) {
     // 6. 危险短词：精准 UI 属性替换（跳过键盘扫描表等键位元数据）
     progress.update('处理短词', '仅替换可见 UI 属性，跳过键盘扫描表');
     jsContent = applyRiskyShortWords(jsContent, changes, progress);
+    jsContent = restoreComposerModeNames(jsContent);
     progress.step('短词处理完成');
 
     progress.finish('核心代码处理完成');

@@ -440,6 +440,7 @@ const safeGlobalDict = {
     "Stay on Current Branch": "留在当前分支",
     "Agent disconnected": "智能体已断开连接",
     "Context Usage": "上下文用量",
+    "Show context usage": "显示上下文用量",
     "Search or Paste Link": "搜索或粘贴链接",
     "OAuth Client ID (optional)": "OAuth 客户端 ID（可选）",
     "OAuth Client Secret (optional)": "OAuth 客户端密钥（可选）",
