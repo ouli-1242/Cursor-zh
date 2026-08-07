@@ -1028,7 +1028,52 @@ const auxiliaryInterfaceReplacements = [
     ['"Files Changed"', '"文件已更改"'],
     ['n===1?"Commit":"Commits"', 'n===1?"提交":"提交"'],
     ['n===1?"Change":"Changes"', 'n===1?"更改":"更改"'],
+    // ── 用户反馈缺失：Git 空状态（图12-15）──
+    ['"No uncommitted changes on your local branch"', '"本地分支上无未提交更改"'],
+    ['`No uncommitted changes \xB7 ${Aa} ${Aa===1?"commit":"commits"}`', '`无未提交更改 \xB7 ${Aa} 个${Aa===1?"提交":"提交"}`'],
+    ['"No uncommitted changes"', '"无未提交更改"'],
+    ['"No unstaged changes"', '"无未暂存更改"'],
+    ['"No staged changes"', '"无暂存更改"'],
+    ['"No changed files"', '"无更改文件"'],
+    ['"No changed files to show"', '"没有要显示的更改文件"'],
+    ['hintText:"Add files"', 'hintText:"添加文件"'],
+
+    // ── 用户反馈缺失：图16/18/19 ──
+    ['?"Move to Trash":"Discard"', '?"移到回收站":"丢弃"'],
+    ['E("glassRecycle","Move to Recycle Bin")', 'E("glassRecycle","移到回收站")'],
+    ['E("glassTrash","Move to Trash")', 'E("glassTrash","移到回收站")'],
+    ['E("glassDelete","Delete")', 'E("glassDelete","删除")'],
+    ['QLt={image:"Image",attachments:"', 'QLt={image:"图片",attachments:"'],
+    ['$=d==="image"?"Image":"File"', '$=d==="image"?"图片":"文件"'],
+    ['case"image":return"Image"', 'case"image":return"图片"'],
+    ['i?"Close Settings":"设置"', 'i?"关闭设置":"设置"'],
+    ['"Close Settings"', '"关闭设置"'],
     ['title:"Open Instance Selector"', 'title:"打开实例选择器"'],
+    // ── 编辑菜单 nls 索引转字面量（Agents 窗口 nls 不生效时 fallback 英文）──
+    ['title:E(192,null)', 'title:"撤销"'],
+    ['title:E(193,null)', 'title:"撤销"'],
+    ['title:E(194,null)', 'title:"撤销"'],
+    ['title:E(195,null)', 'title:"重做"'],
+    ['title:E(196,null)', 'title:"重做"'],
+    ['title:E(197,null)', 'title:"重做"'],
+    ['title:E(198,null)', 'title:"全选"'],
+    ['title:E(199,null)', 'title:"全选"'],
+    ['title:E(945,null)', 'title:"转到匹配括号"'],
+    ['title:E(953,null)', 'title:"剪切"'],
+    ['title:E(954,null)', 'title:"剪切"'],
+    ['title:E(955,null)', 'title:"剪切"'],
+    ['title:E(956,null)', 'title:"剪切"'],
+    ['title:E(957,null)', 'title:"复制"'],
+    ['title:E(958,null)', 'title:"复制"'],
+    ['title:E(959,null)', 'title:"复制"'],
+    ['title:E(960,null)', 'title:"复制"'],
+    ['title:E(961,null)', 'title:"粘贴"'],
+    ['title:E(962,null)', 'title:"粘贴"'],
+    ['title:E(963,null)', 'title:"粘贴"'],
+    ['title:E(964,null)', 'title:"粘贴"'],
+    ['message:"Use a Git repository to track changes"', 'message:"使用 Git 仓库跟踪更改"'],
+    ['children:"Initialize Repository"', 'children:"初始化仓库"'],
+    ['label:"Initialize Repository"', 'label:"初始化仓库"'],
     ['title:"Checkout Agent Branch"', 'title:"检出智能体分支"'],
     ['title:"Cycle Mode"', 'title:"切换模式"'],
     ['title:"Focus Chat Input"', 'title:"聚焦聊天输入"'],
@@ -2644,6 +2689,45 @@ const trickyReplacements = [
         regex: /="Discard Untracked Changes"/g,
         zh: '="放弃未跟踪更改"'
     },
+    {
+        // AI Code Tracking 状态栏（图10）：Most Recent Commit Scored 模板
+        regex: /Most Recent Commit Scored:\n/g,
+        zh: '最近评分的提交：\n'
+    },
+    {
+        regex: /AI-Generated: \$\{this\.recentCommit\.aiPercentage\}% \(\$\{n\} lines\)/g,
+        zh: 'AI 生成：${this.recentCommit.aiPercentage}% (${n} 行)'
+    },
+    {
+        regex: /  - Tab: \$\{i\} lines /g,
+        zh: '  - Tab 补全：${i} 行 '
+    },
+    {
+        regex: /  - Composer: \$\{r\} lines /g,
+        zh: '  - Composer：${r} 行 '
+    },
+    {
+        regex: /Total Changes: \$\{this\.recentCommit\.linesAdded\} added, \$\{this\.recentCommit\.linesDeleted\} deleted/g,
+        zh: '总更改：新增 ${this.recentCommit.linesAdded}，删除 ${this.recentCommit.linesDeleted}'
+    },
+    {
+        // AI Code Tracking 组件名
+        regex: /name:"AI Code Tracking - Recent Commit"/g,
+        zh: 'name:"AI 代码追踪 - 最近提交"'
+    },
+    {
+        // AI-Generated Lines 变体
+        regex: /AI-Generated Lines: \$\{a\} \(\$\{c\}%\)/g,
+        zh: 'AI 生成行数：${a} (${c}%)'
+    },
+    {
+        regex: /AI-Generated Lines: \$\{C\}/g,
+        zh: 'AI 生成行数：${C}'
+    },
+    {
+        regex: /AI-Generated: \$\{T\} \(\$\{C\.aiPercentage\|\|"/g,
+        zh: 'AI 生成：${T} (${C.aiPercentage||"'
+    },
 ];
 
 /**
@@ -4134,6 +4218,15 @@ function translate(paths) {
         ['children:"Image"', 'children:"图片"'],
         ['label:"Image"', 'label:"图片"'],
         ['title:"Image"', 'title:"图片"'],
+        ['QLt={image:"Image",attachments:"', 'QLt={image:"图片",attachments:"'],
+        ['case"image":return"Image"', 'case"image":return"图片"'],
+        ['"Image":"File"', '"图片":"文件"'],
+        ['?"Move to Trash":"Discard"', '?"移到回收站":"丢弃"'],
+        ['E("glassRecycle","Move to Recycle Bin")', 'E("glassRecycle","移到回收站")'],
+        ['E("glassTrash","Move to Trash")', 'E("glassTrash","移到回收站")'],
+        ['E("glassDelete","Delete")', 'E("glassDelete","删除")'],
+        ['i?"Close Settings":"设置"', 'i?"关闭设置":"设置"'],
+        ['"Close Settings"', '"关闭设置"'],
         // Cloud 在 UI 属性中
         ['children:"Cloud"', 'children:"云端"'],
         ['label:"Cloud"', 'label:"云端"'],
@@ -4962,6 +5055,13 @@ function translate(paths) {
         ["collapseAll: 'Collapse All'", "collapseAll: '全部折叠'"],
         // ── 用户反馈缺失：Docs（case"docs" 模板）──
         ['case"docs":return`Documentation: ${n||t}`', 'case"docs":return`文档：${n||t}`'],
+        // ── 用户反馈缺失：Git 空状态 + AI Code Tracking（desktop）──
+        ['"No uncommitted changes"', '"无未提交更改"'],
+        ['hintText:"Add files"', 'hintText:"添加文件"'],
+        ['name:"AI Code Tracking - Recent Commit"', 'name:"AI 代码追踪 - 最近提交"'],
+        ['"Most Recent Commit Scored:"', '"最近评分的提交："'],
+        ['"AI-Generated:"', '"AI 生成："'],
+        ['"Total Changes:"', '"总更改："'],
     ];
 
     // 合并大正则：单次扫描替代逐条替换（~1803条 → 1次扫描）
