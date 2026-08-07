@@ -160,12 +160,12 @@ function translateModes(appPath) {
                 return;
             }
 
-            let changed = 0;
+            let modeChanged = 0, paramChanged = 0;
             for (const mode of data.composerState.modes4) {
                 const zh = modeDescriptionDict[mode.id];
                 if (zh && mode.description !== zh) {
                     mode.description = zh;
-                    changed++;
+                    modeChanged++;
                 }
             }
 
@@ -185,15 +185,15 @@ function translateModes(appPath) {
                             const zh = dict[pd[field]];
                             if (zh && pd[field] !== zh) {
                                 pd[field] = zh;
-                                changed++;
+                                paramChanged++;
                             }
                         }
                     }
                 }
             }
 
-            if (changed === 0) {
-                console.log('  ℹ️  modes4 描述与参数定义已是中文，无需修改。');
+            if (modeChanged + paramChanged === 0) {
+                console.log('  ℹ️  模式描述与参数定义已是中文，无需修改。');
                 db.close();
                 return;
             }
@@ -203,7 +203,7 @@ function translateModes(appPath) {
                 if (err) {
                     console.log('  ⚠️  更新失败:', err.message);
                 } else {
-                    console.log(`  ✅ 已汉化 ${changed} 个模式描述（modes4）`);
+                    console.log(`  ✅ 已汉化 ${modeChanged} 个模式描述 + ${paramChanged} 个参数定义（Thinking intensity 等）`);
                 }
                 db.close();
             });

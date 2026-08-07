@@ -686,6 +686,13 @@ const auxiliaryInterfaceReplacements = [
         ['"copy","Copy"', '"copy","复制"'],
         ['"paste","Paste"', '"paste","粘贴"'],
         ['"selectAll","Select All"', '"selectAll","全选"'],
+        // ── Glass 编辑菜单 OS 原生组：title:E({key:"glassOsEditXXX",...},"&&Undo") 查不到 nls 翻译 fallback 英文，转字面量 ──
+        ['title:E({key:"glassOsEditUndo",comment:["&& denotes a mnemonic"]},"&&Undo")', 'title:"撤销"'],
+        ['title:E({key:"glassOsEditRedo",comment:["&& denotes a mnemonic"]},"&&Redo")', 'title:"重做"'],
+        ['title:E({key:"glassOsEditCut",comment:["&& denotes a mnemonic"]},"Cu&&t")', 'title:"剪切"'],
+        ['title:E({key:"glassOsEditCopy",comment:["&& denotes a mnemonic"]},"&&Copy")', 'title:"复制"'],
+        ['title:E({key:"glassOsEditPaste",comment:["&& denotes a mnemonic"]},"&&Paste")', 'title:"粘贴"'],
+        ['title:E({key:"glassOsEditSelectAll",comment:["&& denotes a mnemonic"]},"Select &&All")', 'title:"全选"'],
         // ── Agents 操作按钮动态文本（Undo/Copy 三元表达式，非 label 属性形式）──
         ['?"Undo Cell":"Undo"', '?"撤销单元格":"撤销"'],
         ['?"Undo Apply":"Undo"', '?"撤销应用":"撤销"'],
@@ -709,6 +716,75 @@ const auxiliaryInterfaceReplacements = [
     ['pageTitle:"Automations"', 'pageTitle:"自动化"'],
     ['defaultLabel:"Changes"', 'defaultLabel:"更改"'],
 
+    // ── 用户反馈的未翻译词条：Glass/Agents 窗口专用 ──
+    // ── 命令管理面板：筛选/排序下拉选项 ──
+    ['label:"Filter By",ariaLabel:"Filter by options"', 'label:"筛选",ariaLabel:"筛选选项"'],
+    ['{value:"scope",label:"Source",icon:"folder"}', '{value:"scope",label:"来源",icon:"folder"}'],
+    ['{value:"author",label:"Author",icon:"person"}', '{value:"author",label:"作者",icon:"person"}'],
+    ['{value:"name",label:"Name",icon:"text-aa"}', '{value:"name",label:"名称",icon:"text-aa"}'],
+    // ── 命令/规则列表项操作按钮 ──
+    ['?"Manage in Dashboard":"Open"', '?"在仪表盘中管理":"打开"'],
+    // ── Show {num} more / Show more ──
+    ['children:`Show ${k} more`', 'children:`显示 ${k} 更多`'],
+    ['children:["Show ",g," more"]', 'children:["显示 ",g," 更多"]'],
+    ['moreLabel:"Show more"', 'moreLabel:"显示更多"'],
+    ['?"收起":"Show more"', '?"收起":"显示更多"'],
+    // ── Prompt 对话框默认按钮与标题 ──
+    ['confirmLabel??"Confirm"', 'confirmLabel??"确认"'],
+    ['cancelLabel??"Cancel"', 'cancelLabel??"取消"'],
+    ['title??"Prompt"', 'title??"提示"'],
+    // ── 命令创建对话框（nls 索引转字面量 + 字面量版）──
+    ['title:E(7683,null),placeHolder:E(7684,null),prompt:E(7685,null)', 'title:"输入命令名称",placeHolder:"e.g., my-custom-command",prompt:"请为新命令输入名称"'],
+    ['prompt:"Enter Command Name",placeHolder:"Command name"', 'prompt:"输入命令名称",placeHolder:"命令名称"'],
+    // ── New User Skill/Subagent 创建对话框（ne/T/oe/M 大写变量改中文供 title/prompt 用；skill/subagent 保持英文供占位符示例用）──
+    ['Z==="skill"?"Skill":"Subagent"', 'Z==="skill"?"技能":"子代理"'],
+    ['C==="skill"?"Skill":"Subagent"', 'C==="skill"?"技能":"子代理"'],
+    ['title:`New User ${ne}`', 'title:`新建用户${ne}`'],
+    ['prompt:`Enter a name for the new ${Y}`', 'prompt:`为新的${ne}输入名称`'],
+    ['title:`New User ${T}`', 'title:`新建用户${T}`'],
+    ['prompt:`Enter a name for the new ${x}`', 'prompt:`为新的${T}输入名称`'],
+    // ── User Rules 提示 ──
+    ['prompt:"User Rules apply to all of your chats"', 'prompt:"用户规则适用于你的所有对话"'],
+    // ── 主题显示名 ──
+    ['p$m={light:"Light",dark:"Dark",lightHighContrast:"Light High Contrast",darkHighContrast:"Dark High Contrast"}', 'p$m={light:"浅色",dark:"深色",lightHighContrast:"浅色高对比度",darkHighContrast:"深色高对比度"}'],
+    // ── Git 面板加载状态 / 追问按钮 ──
+    ['"Loading changes..."', '"正在加载更改..."'],
+    ['"Loading changes"', '"正在加载更改"'],
+    ['"Loading cloud agent changes"', '"正在加载云智能体更改"'],
+    ['"Preparing workspace"', '"正在准备工作区"'],
+    ['"Send follow-up with subagent"', '"带子代理发送追问"'],
+    ['"Continue chatting in Cursor"', '"在 Cursor 中继续聊天"'],
+    ['"Send follow-up"', '"发送追问"'],
+    // ── Cycle 命令（循环切换模型参数，Ctrl+Alt+/；参数名由 vscdb 补丁翻译）──
+    ['title:{value:"Cycle model parameter",original:"Cycle model parameter"}', 'title:{value:"循环切换模型参数",original:"循环切换模型参数"}'],
+    ['title:"Cycle Model Parameter"', 'title:"循环切换模型参数"'],
+    ['label:`Cycle ${EP}`', 'label:`循环切换 ${EP}`'],
+    ['\\xB7 Cycle ${En} (${bi})', '\\xB7 循环切换 ${En} (${bi})'],
+    // ── Done（完成）：按钮/状态/标签 ──
+    ['primaryButtonLabel??"Done"', 'primaryButtonLabel??"完成"'],
+    ['`Done \\u2022 ${s}`', '`完成 \\u2022 ${s}`'],
+    ['"Agent complete"', '"智能体完成"'],
+    ['"Done"', '"完成"'],
+    // ── 欢迎页：Recent projects / Settings / Import / Show more ──
+    ['<span>Recent projects</span>', '<span>最近项目</span>'],
+    ['opacity-80">Settings\'', 'opacity-80">设置\''],
+    ['?"Success!":', '?"成功!":'],
+    ['?"Importing":"Import"', '?"导入中":"导入"'],
+    ['`Show ${s} more recent ${s===1?"agent":"agents"}`', '`显示 ${s} 个更多最近智能体`'],
+    // ── Thinking intensity 持久翻译：kR_ 注入参数名映射（服务端覆盖数据后仍显示中文）──
+    ['function kR_(t){const e=XYo(t);return e.variants=e.variants??[],e.parameterDefinitions=e.parameterDefinitions??[],e}', 'function kR_(t){const e=XYo(t);return e.variants=e.variants??[],e.parameterDefinitions=(e.parameterDefinitions??[]).map(function(p){if(p&&p.name==="Thinking intensity")p.name="思考强度";return p}),e}'],
+    // ── 远程扩展显示名（通用功能词，专有名词保持）──
+    ['"Remote - SSH"', '"远程 - SSH"'],
+    ['"Remote - WSL"', '"远程 - WSL"'],
+    // ── 文件树/资源管理器/终端/预览/删除状态 ──
+    ['Copied branch name to clipboard', '已复制分支名称到剪贴板'],
+    ['"New Folder"', '"新建文件夹"'],
+    ['"New File"', '"新建文件"'],
+    ['"Refresh Explorer"', '"刷新资源管理器"'],
+    ['"Deleted"', '"已删除"'],
+    ['"Terminal"', '"终端"'],
+    ['"Preview"', '"预览"'],
+    ['label:"Source",ariaLabel:"Source"', 'label:"源码",ariaLabel:"源码"'],
     // ── 用户反馈的未翻译词条：Glass/Agents 窗口专用 ──
     // "New" 作为独立 UI 文案（不加入 riskyShortWords 因为会误伤 trimNew 等代码）
     ['children:"New"', 'children:"新建"'],
@@ -926,8 +1002,7 @@ const auxiliaryInterfaceReplacements = [
     ['.LABEL="New Tab"', '.LABEL="新建标签页"'],
     ['"collapse-all","Collapse All"', '"collapse-all","全部折叠"'],
     ['children:"Mark All as Read"', 'children:"全部标记为已读"'],
-    // ── 模式（Plan/Debug/Multitask/Ask 保留英文，仅翻译 Agent Mode）──
-    ['title:"Agent Mode"', 'title:"智能体模式"'],
+    // ── 模式（Plan/Agent/Ask/Debug/Multitask 全部保留英文）──
     ['title:"Toggle Git Blame"', 'title:"切换 Git Blame"'],
     // ── 命令面板 ──
     ['label:"Open Customize"', 'label:"打开自定义"'],
@@ -1074,6 +1149,18 @@ const auxiliaryInterfaceReplacements = [
     ['message:"Use a Git repository to track changes"', 'message:"使用 Git 仓库跟踪更改"'],
     ['children:"Initialize Repository"', 'children:"初始化仓库"'],
     ['label:"Initialize Repository"', 'label:"初始化仓库"'],
+    ['title:"Initialize a git repository to create worktrees."', 'title:"初始化 Git 仓库以创建工作树。"'],
+    ['children:"Initialize a git repository to create worktrees."', 'children:"初始化 Git 仓库以创建工作树。"'],
+    ['"Cloud agents work in secure, isolated VMs with a clone of your repo. Connect your project and git provider to get started."', '"云智能体在安全、隔离的虚拟机中运行，带有你的仓库副本。连接你的项目和 Git 提供商即可开始。"'],
+    ['"Cloud agents work in secure, isolated VMs with a clone of your repo. Connect to get started."', '"云智能体在安全、隔离的虚拟机中运行，带有你的仓库副本。连接即可开始。"'],
+    // ── Expand/Collapse 三元（Agents 窗口）──
+    ['?"Expand":"Collapse"', '?"展开":"折叠"'],
+    ['?"Collapse":"Expand"', '?"折叠":"展开"'],
+    ['content:"Expand",offset:6', 'content:"展开",offset:6'],
+    ['"aria-label":"Expand"', '"aria-label":"展开"'],
+    ['"aria-label":"Collapse"', '"aria-label":"折叠"'],
+    ['t[t.Expand=1]="Expand"', 't[t.Expand=1]="展开"'],
+    ['e[e.Expand=1]="Expand"', 'e[e.Expand=1]="展开"'],
     ['title:"Checkout Agent Branch"', 'title:"检出智能体分支"'],
     ['title:"Cycle Mode"', 'title:"切换模式"'],
     ['title:"Focus Chat Input"', 'title:"聚焦聊天输入"'],
@@ -3197,6 +3284,47 @@ function translate(paths) {
 
     // 5.1 设置侧边栏映射与部分编译模板片段
     const scopedReplacements = [
+        // ── 命令管理面板：筛选/排序下拉选项（desktop 同款）──
+        ['label:"Filter By",ariaLabel:"Filter by options"', 'label:"筛选",ariaLabel:"筛选选项"'],
+        ['{value:"scope",label:"Source",icon:"folder"}', '{value:"scope",label:"来源",icon:"folder"}'],
+        ['{value:"author",label:"Author",icon:"person"}', '{value:"author",label:"作者",icon:"person"}'],
+        ['{value:"name",label:"Name",icon:"text-aa"}', '{value:"name",label:"名称",icon:"text-aa"}'],
+        ['?"Manage in Dashboard":"Open"', '?"在仪表盘中管理":"打开"'],
+        ['prompt:"Enter Command Name",placeHolder:"Command name"', 'prompt:"输入命令名称",placeHolder:"命令名称"'],
+        ['?"收起":"Show more"', '?"收起":"显示更多"'],
+        ['prompt:"User Rules apply to all of your chats"', 'prompt:"用户规则适用于你的所有对话"'],
+        // ── New User Skill/Subagent 创建对话框（desktop：oe/M 大写变量改中文供 title/prompt 用；skill/subagent 保持英文供占位符示例用）──
+        ['te==="skill"?"Skill":"Subagent"', 'te==="skill"?"技能":"子代理"'],
+        ['x==="skill"?"Skill":"Subagent"', 'x==="skill"?"技能":"子代理"'],
+        ['title:`New User ${oe}`', 'title:`新建用户${oe}`'],
+        ['prompt:`Enter a name for the new ${ee}`', 'prompt:`为新的${oe}输入名称`'],
+        ['title:`New User ${M}`', 'title:`新建用户${M}`'],
+        ['prompt:`Enter a name for the new ${I}`', 'prompt:`为新的${M}输入名称`'],
+        // ── Git 面板加载状态 ──
+        ['"Loading changes..."', '"正在加载更改..."'],
+        ['"Loading changes"', '"正在加载更改"'],
+        // ── Cycle 命令（desktop 状态栏）──
+        ['title:{value:"Cycle model parameter",original:"Cycle model parameter"}', 'title:{value:"循环切换模型参数",original:"循环切换模型参数"}'],
+        ['\\xB7 Cycle ${Jn} (${Lr})', '\\xB7 循环切换 ${Jn} (${Lr})'],
+        // ── Done（完成）：状态文本 ──
+        ['`Done \\u2022 ${s}`', '`完成 \\u2022 ${s}`'],
+        ['"Agent complete"', '"智能体完成"'],
+        // ── 欢迎页：Recent projects / Settings / Import / Show more ──
+        ['<span>Recent projects</span>', '<span>最近项目</span>'],
+        ['opacity-80">Settings\'', 'opacity-80">设置\''],
+        ['?"Success!":', '?"成功!":'],
+        ['?"Importing":"Import"', '?"导入中":"导入"'],
+        ['`Show ${T} more`', '`显示 ${T} 更多`'],
+        // ── Thinking intensity 持久翻译：mSg 注入参数名映射（服务端覆盖数据后仍显示中文）──
+        ['function mSg(e){const t=ERs(e);return t.variants=t.variants??[],t.parameterDefinitions=t.parameterDefinitions??[],t}', 'function mSg(e){const t=ERs(e);return t.variants=t.variants??[],t.parameterDefinitions=(t.parameterDefinitions??[]).map(function(p){if(p&&p.name==="Thinking intensity")p.name="思考强度";return p}),t}'],
+        // ── 文件树/资源管理器/终端/预览/删除状态 ──
+        ['"New Folder"', '"新建文件夹"'],
+        ['"New File"', '"新建文件"'],
+        ['"Refresh Explorer"', '"刷新资源管理器"'],
+        ['"Deleted"', '"已删除"'],
+        ['"Terminal"', '"终端"'],
+        ['"Preview"', '"预览"'],
+        ['label:"Source",ariaLabel:"Source"', 'label:"源码",ariaLabel:"源码"'],
         ['general:"General"', 'general:"通用"'],
         ['profile:"Profile"', 'profile:"个人资料"'],
         ['appearance:"Appearance"', 'appearance:"外观"'],
@@ -4299,10 +4427,8 @@ function translate(paths) {
         // ── 命令面板/Agent 菜单 Suggested 分区标题 ──
         ['heading:"Suggested"', 'heading:"推荐"'],
 
-        // ── 套餐与用量页：% used 标签（HTML 内联）──
-        ['>% used<', '>已用 %<'],
-        ['text-xs text-[var(--cursor-text-secondary)] ml-auto">% used', 'text-xs text-[var(--cursor-text-secondary)] ml-auto">已用 %'],
-        ['font-medium text-[var(--cursor-text-secondary)]">% used', 'font-medium text-[var(--cursor-text-secondary)]">已用 %'],
+        // ── 套餐与用量页：% used 标签保持英文（用户要求不翻译）──
+        // 原规则已移除：['>% used<', '>已用 %<'] 等
         // ── 套餐与用量页：Adjust Plan 按钮 ──
         ['title:"Adjust Plan"', 'title:"调整套餐"'],
         // ── glass.js 远程窗口 SSH 命令 ──
@@ -4424,8 +4550,7 @@ function translate(paths) {
         ['title:"Search Files"', 'title:"搜索文件"'],
         ['title:"Browse Files"', 'title:"浏览文件"'],
         ['.LABEL="New Tab"', '.LABEL="新建标签页"'],
-        // ── 模式（Plan/Debug/Multitask/Ask 保留英文，仅翻译 Agent Mode）──
-        ['title:"Agent Mode"', 'title:"智能体模式"'],
+        // ── 模式（Plan/Agent/Ask/Debug/Multitask 全部保留英文）──
         ['title:"Toggle Git Blame"', 'title:"切换 Git Blame"'],
         // ── 命令面板 ──
         ['label:"Open Customize"', 'label:"打开自定义"'],
@@ -4500,6 +4625,9 @@ function translate(paths) {
         ['label:"Review Changes"', 'label:"审查更改"'],
         // ── 共享 UI 文案（title/label/children 三类）──
         ['title:"Close Settings"', 'title:"关闭设置"'],
+        ['e[e.Expand=1]="Expand"', 'e[e.Expand=1]="展开"'],
+        ['?"Expand":"Collapse"', '?"展开":"折叠"'],
+        ['?"Collapse":"Expand"', '?"折叠":"展开"'],
         ['title:"Open Settings"', 'title:"打开设置"'],
         ['title:"Open Composer Settings"', 'title:"打开编写器设置"'],
         ['title:"Agent Settings"', 'title:"智能体设置"'],

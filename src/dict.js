@@ -6,6 +6,8 @@
  */
 
 const safeGlobalDict = {
+    "Always Local Singleton": "始终本地单例",
+    "Conversation Search": "对话搜索",
     "Manage Account": "管理账号",
     "Manage your account and billing": "管理您的账号与账单",
     "Invite Team Members": "邀请团队成员",
