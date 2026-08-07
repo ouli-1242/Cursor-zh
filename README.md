@@ -16,7 +16,8 @@ Cursor-zh 是一个用于汉化 Cursor 编辑器界面的本地工具。它通�
 - **移除 `keys.json`**：将辅助数据合并入 `dict.js`，简化项目结构。
 - **性能优化**：合并大正则 + 预编译 + 预检跳过，短词替换阶段从 37 秒降至 0.27 秒（提速 99%）；界面片段替换从逐条扫描 ~3500 次合并为 2 次大正则扫描，整体汉化耗时从约 40 秒降至 3 秒以内。详见下文[性能优化](#性能优化)。
 - **健壮性增强**：备份文件增加版本检测，Cursor 升级后自动更新备份避免版本降级；写入采用原子复制策略避免数据丢失窗口；附加功能（扩展翻译、存储翻译）失败不中断核心汉化。
-- **用户存储翻译**：通过 SQLite 操作 `state.vscdb`，翻译动态加载的 Agents 模式描述等运行时数据。
+- **用户存储翻译**：通过 SQLite 操作 `state.vscdb`，翻译动态加载的 Agents 模式描述与模型参数定义（`Thinking intensity` → `思考强度` 等）。
+- **参数名显示层映射**：在模型转换函数注入映射，即使 Cursor 启动后服务端刷新模型配置将数据覆盖回英文，界面仍显示中文，避免"汉化后过一会儿恢复英文"。
 - **用户扩展翻译**：自动翻译远程开发扩展（remote-ssh/remote-wsl/remote-containers）的命令面板文本。
 
 ## 它解决什么
@@ -107,7 +108,8 @@ node index.js --action=restore --cursor-path="/Applications/Cursor.app/Contents/
 
 8. 翻译用户扩展。扫描 `~/.cursor/extensions/` 中的远程开发扩展（remote-ssh/remote-wsl/remote-containers），翻译其 `package.json` 中的命令面板标题和分类。失败时跳过，不影响核心汉化。
 
-9. 翻译用户存储。通过 SQLite 操作 `state.vscdb`，翻译 `composerState.modes4` 中动态加载的 Agents 模式描述。需 Cursor 已完全退出，失败时跳过。
+9. 翻译用户存储。通过 SQLite 操作 `state.vscdb`，翻译 `composerState.modes4` 中动态加载的 Agents 模式描述，以及 `availableDefaultModels2` 中的模型参数定义（如 `Thinking intensity`）。需 Cursor 已完全退出，失败时跳过。
+10. 参数名显示层映射。在模型转换函数（`kR_`/`mSg`）注入参数名映射，保证界面常显中文，抵抗 Cursor 启动时服务端对模型配置的覆盖。
 
 ## 文件说明
 
@@ -117,7 +119,7 @@ node index.js --action=restore --cursor-path="/Applications/Cursor.app/Contents/
 | `src/platform.js` | 跨平台路径检测、配置保存、权限检查、提权执行 |
 | `src/i18n-core.js` | 核心汉化、备份恢复、校验修复、macOS 签名处理 |
 | `src/dict.js` | 安全词典（`safeGlobalDict`）、原生 NLS 词典（`nativeNlsDict`）、短词词典（`riskyShortWords`） |
-| `src/storage.js` | 用户存储翻译（state.vscdb 中 Agents 模式描述的 SQLite 操作） |
+| `src/storage.js` | 用户存储翻译（state.vscdb 中 Agents 模式描述与模型参数定义的 SQLite 操作，含参数定义汉化计数日志） |
 | `scripts/package-release.js` | 打包脚本，生成压缩包和 SHA-256 校验文件 |
 
 ## 性能优化
@@ -192,6 +194,10 @@ codesign --force --deep --sign - /Applications/Cursor.app
 ### Cursor 更新后英文又出现
 
 Cursor 更新会覆盖已修改的资源文件。重新运行本工具即可。如果新版本增加了新的英文文案，需要补充词典或核心替换规则。
+
+### 模型参数（如 Thinking intensity）汉化后过一会儿恢复英文
+
+Cursor 启动时可能从服务端刷新模型配置，覆盖 `state.vscdb` 中的参数名。本工具已通过显示层映射解决：在模型转换函数（`kR_`/`mSg`）注入参数名映射，即使数据被覆盖回英文，界面仍显示中文，无需重复汉化。
 
 ### 可以恢复官方英文吗
 
