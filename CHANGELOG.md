@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+### 改进
+
+- 大幅扩充翻译词典（`safeGlobalDict`），新增 500+ 条 UI 文案，覆盖 Agents 窗口、浏览器工具、聊天操作、Automations、设置页、更新渠道名称等新版界面。
+- 新增 `nativeNlsDict` 原生 NLS 词典，覆盖 `nls.messages.json` 中的菜单项、窗口标题和加载状态。
+- 新增 `riskyShortWords` 短词词典，仅在 UI 属性上下文（`children`、`title`、`label`、`placeholder` 等）中替换，避免误伤代码逻辑。
+- 新增 `isProtectedKeybindingContext` 检测，跳过键盘扫描表、VK 键名和 KeyCode 枚举等代码区域。
+- 新增作用域替换（`scopedReplacements`）和辅助窗口替换（`auxiliaryInterfaceReplacements`），精确处理动态模板字符串、三元表达式和编译后变量名。
+- 新增顽固词条正则（`trickyReplacements`），处理带标点、特殊转义、单双引号混用的复杂长句。
+- 新增 `workbench.glass.main.js` 独立处理流程，覆盖新版 Cursor Glass / Agents 窗口中的独立界面文案。
+- 新增 Electron 主进程文件（`out/main.js`）处理路径，覆盖系统托盘菜单和更新提示。
+- 将 `heading` 属性加入 UI 属性列表，覆盖命令面板分区标题的短词替换。
+
+### 变更
+
+- 移除 `keys.json`，将辅助数据合并入 `src/dict.js`。
+- 移除 `dist/` 目录下的编译产物，改由 GitHub Release 分发。
+- 更新 README 和 LICENSE，补充原项目归属说明。
+- 项目更名为 `Cursor-zh`（npm 包名 `cursor-zh`），配置目录改为 `~/.cursor-zh/`。
+
 ## 1.0.7 - 2026-07-22
 
 ### 改进
@@ -86,7 +107,7 @@
 
 ## 1.0.0 - 2026-06-20
 
-首次正式发布 `cursor chinese`。
+首次正式发布 `Cursor-zh`。
 
 ### 新增
 
@@ -94,16 +115,16 @@
 - 支持一键恢复英文原版，恢复时优先使用首次运行生成的原始备份文件。
 - 支持自动定位 Cursor 常见安装路径，也支持通过 `--cursor-path` 手动指定 `resources/app` 目录。
 - 提供 Windows、macOS 和 Linux 的预编译成品：
-  - `cursor-chinese-win-x64.exe`
-  - `cursor-chinese-macos-arm64`
-  - `cursor-chinese-macos-x64`
-  - `cursor-chinese-linux-x64`
-  - `cursor-chinese-linux-arm64`
+  - `cursor-zh-win-x64.exe`
+  - `cursor-zh-macos-arm64`
+  - `cursor-zh-macos-x64`
+  - `cursor-zh-linux-x64`
+  - `cursor-zh-linux-arm64`
 - 新增 Linux 常见安装路径支持，覆盖 `/opt/Cursor`、`/usr/share/cursor`、`/usr/lib/cursor`、`~/.local/share/cursor` 等路径。
 
 ### 改进
 
-- 将项目名称统一为 `cursor chinese`。
+- 将项目名称统一为 `Cursor-zh`。
 - 自动更新 `product.json` 中资源文件 checksum，减少 Cursor 提示安装损坏的概率。
 - macOS 下自动清理隔离属性并尝试重新签名，降低系统安全机制拦截概率。
 - README 已补充使用方式、工作逻辑、解决的问题、创建问题说明和兼容性说明。

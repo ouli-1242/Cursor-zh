@@ -1,10 +1,10 @@
 {
-  "name": "cursor-chinese",
+  "name": "cursor-zh",
   "version": "1.0.7",
-  "description": "cursor chinese — Cursor 编辑器一键汉化工具",
+  "description": "Cursor-zh — Cursor 编辑器一键汉化工具",
   "main": "index.js",
   "bin": {
-    "cursor-chinese": "index.js"
+    "cursor-zh": "index.js"
   },
   "scripts": {
     "start": "node index.js",

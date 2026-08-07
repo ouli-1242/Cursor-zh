@@ -20,32 +20,32 @@ const checksumFile = path.join(distDir, 'SHA256SUMS');
 
 const artifacts = [
     {
-        input: 'cursor-chinese-macos-arm64',
-        output: 'cursor-chinese-macos-arm64.tar.gz',
+        input: 'cursor-zh-macos-arm64',
+        output: 'cursor-zh-macos-arm64.tar.gz',
         type: 'tar',
         executable: true,
     },
     {
-        input: 'cursor-chinese-macos-x64',
-        output: 'cursor-chinese-macos-x64.tar.gz',
+        input: 'cursor-zh-macos-x64',
+        output: 'cursor-zh-macos-x64.tar.gz',
         type: 'tar',
         executable: true,
     },
     {
-        input: 'cursor-chinese-linux-arm64',
-        output: 'cursor-chinese-linux-arm64.tar.gz',
+        input: 'cursor-zh-linux-arm64',
+        output: 'cursor-zh-linux-arm64.tar.gz',
         type: 'tar',
         executable: true,
     },
     {
-        input: 'cursor-chinese-linux-x64',
-        output: 'cursor-chinese-linux-x64.tar.gz',
+        input: 'cursor-zh-linux-x64',
+        output: 'cursor-zh-linux-x64.tar.gz',
         type: 'tar',
         executable: true,
     },
     {
-        input: 'cursor-chinese-win-x64.exe',
-        output: 'cursor-chinese-win-x64.zip',
+        input: 'cursor-zh-win-x64.exe',
+        output: 'cursor-zh-win-x64.zip',
         type: 'zip',
         executable: false,
     },

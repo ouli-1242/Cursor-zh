@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * cursor chinese — 入口文件
+ * Cursor-zh — 入口文件
  *
  * 执行逻辑 (防止 sudo-prompt + inquirer 死锁):
  *
@@ -223,7 +223,7 @@ async function runSilent(action) {
 
 async function runInteractive() {
     console.log('');
-    console.log(chalk.cyan.bold('  cursor chinese'));
+    console.log(chalk.cyan.bold('  Cursor-zh'));
     console.log(chalk.gray('  Cursor 本地汉化工具 · 一键汉化 / 随时还原'));
     console.log(chalk.gray('  ──────────────────────────────────────'));
     console.log('');
@@ -302,7 +302,11 @@ async function waitForExit() {
 
 const silentAction = parseAction();
 if (silentAction) {
-    runSilent(silentAction);
+    runSilent(silentAction).catch(err => {
+        console.error(chalk.red('❌ 操作失败: ') + err.message);
+        console.error(chalk.yellow('  可尝试运行还原操作恢复英文原版。'));
+        process.exit(1);
+    });
 } else {
     runInteractive().catch(err => {
         console.error(chalk.red('❌ 发生未预料的错误: ') + err.message);

@@ -1,8 +1,23 @@
-# cursor chinese
+# Cursor-zh
 
-cursor chinese 是一个用于汉化 Cursor 编辑器界面的本地工具。它通过修改 Cursor 安装目录中的前端资源文件，将部分英文界面文案替换为中文，并同步修复 Cursor 的文件校验信息，尽量避免出现“安装已损坏”等提示。
+Cursor-zh 是一个用于汉化 Cursor 编辑器界面的本地工具。它通过修改 Cursor 安装目录中的前端资源文件，将部分英文界面文案替换为中文，并同步修复 Cursor 的文件校验信息，尽量避免出现"安装已损坏"等提示。
 
 > 注意：本工具不是 Cursor 官方项目，也不会修改 Cursor 的账号、模型、插件、项目代码或云端配置。它只处理本机已安装 Cursor 的应用资源文件。
+
+## 致谢
+
+本项目基于 [rongwei-lab/cursor-chinese](https://github.com/rongwei-lab/cursor-chinese) 改进，感谢原作者的工作。在此基础上进行了以下增强：
+
+- **大幅扩充翻译词典**：新增 500+ 条 UI 文案翻译，覆盖 Agents 窗口、浏览器工具、聊天操作、Automations、设置页等新版界面。
+- **增强替换引擎**：新增作用域替换（scoped replacements）、辅助窗口替换（auxiliary interface replacements）和顽固词条正则（tricky regex），精确处理动态模板字符串、三元表达式和编译后变量名。
+- **短词保护机制**：引入 `isProtectedKeybindingContext` 检测，避免在键盘扫描表、VK 键名等代码上下文中误替换短词，防止白屏。
+- **Glass 窗口独立处理**：针对 Cursor 新版拆分的 `workbench.glass.main.js` 独立 bundle，实现与主窗口一致的替换能力。
+- **Electron 主进程支持**：新增 `out/main.js` 处理路径，覆盖系统托盘菜单和更新提示等原生界面。
+- **移除 `keys.json`**：将辅助数据合并入 `dict.js`，简化项目结构。
+- **性能优化**：合并大正则 + 预编译 + 预检跳过，短词替换阶段从 37 秒降至 0.27 秒（提速 99%）；界面片段替换从逐条扫描 ~3500 次合并为 2 次大正则扫描，整体汉化耗时从约 40 秒降至 3 秒以内。详见下文[性能优化](#性能优化)。
+- **健壮性增强**：备份文件增加版本检测，Cursor 升级后自动更新备份避免版本降级；写入采用原子复制策略避免数据丢失窗口；附加功能（扩展翻译、存储翻译）失败不中断核心汉化。
+- **用户存储翻译**：通过 SQLite 操作 `state.vscdb`，翻译动态加载的 Agents 模式描述等运行时数据。
+- **用户扩展翻译**：自动翻译远程开发扩展（remote-ssh/remote-wsl/remote-containers）的命令面板文本。
 
 ## 它解决什么
 
@@ -12,34 +27,10 @@ Cursor 的官方界面中仍有不少英文文案，尤其是设置页、Agent �
 - 补充 Cursor 新版本中遗漏或新增的英文界面。
 - 支持一键汉化和恢复英文原版。
 - 自动备份原始资源文件，便于回退。
-- 自动更新 `product.json` 校验值，减少“安装已损坏”提示。
+- 自动更新 `product.json` 校验值，减少"安装已损坏"提示。
 - macOS 下自动清理隔离属性并重新签名，减少系统拦截。
 
-## 支持平台与产物
-
-预编译产物位于 `dist` 目录。GitHub Release 推荐上传压缩包，不建议直接上传 macOS / Linux 裸二进制文件：
-
-| Release 文件 | 平台 | 架构 |
-| --- | --- | --- |
-| `cursor-chinese-win-x64.zip` | Windows | x64 |
-| `cursor-chinese-macos-arm64.tar.gz` | macOS | Apple Silicon |
-| `cursor-chinese-macos-x64.tar.gz` | macOS | Intel |
-| `cursor-chinese-linux-x64.tar.gz` | Linux | x64 |
-| `cursor-chinese-linux-arm64.tar.gz` | Linux | arm64 |
-
-本地构建后也会保留未压缩的裸二进制：
-
-| 本地文件 | 平台 | 架构 |
-| --- | --- | --- |
-| `cursor-chinese-win-x64.exe` | Windows | x64 |
-| `cursor-chinese-macos-arm64` | macOS | Apple Silicon |
-| `cursor-chinese-macos-x64` | macOS | Intel |
-| `cursor-chinese-linux-x64` | Linux | x64 |
-| `cursor-chinese-linux-arm64` | Linux | arm64 |
-
-> macOS / Linux 的可执行权限依赖 POSIX 文件模式。浏览器下载裸文件时可能丢失 `+x` 权限，Finder 会显示成“文稿”。使用 `.tar.gz` 发布包可以保留权限。
-
-兼容性说明：
+## 支持平台
 
 - Windows：支持常见的 Cursor 用户目录安装和 Program Files 安装路径。
 - macOS：支持 `/Applications/Cursor.app` 和用户目录下的 `Applications/Cursor.app`。
@@ -49,52 +40,7 @@ Cursor 的官方界面中仍有不少英文文案，尤其是设置页、Agent �
 
 ## 使用方式
 
-### 方式一：运行预编译成品
-
-根据系统选择对应 Release 包，解压后运行对应文件：
-
-macOS Apple Silicon：
-
-```bash
-tar -xzf cursor-chinese-macos-arm64.tar.gz
-./cursor-chinese-macos-arm64
-```
-
-macOS Intel：
-
-```bash
-tar -xzf cursor-chinese-macos-x64.tar.gz
-./cursor-chinese-macos-x64
-```
-
-Windows：
-
-```powershell
-Expand-Archive .\cursor-chinese-win-x64.zip
-.\cursor-chinese-win-x64\cursor-chinese-win-x64.exe
-```
-
-Linux x64：
-
-```bash
-tar -xzf cursor-chinese-linux-x64.tar.gz
-./cursor-chinese-linux-x64
-```
-
-Linux arm64：
-
-```bash
-tar -xzf cursor-chinese-linux-arm64.tar.gz
-./cursor-chinese-linux-arm64
-```
-
-运行后按提示选择：
-
-- `一键汉化`：修改 Cursor 资源文件并应用中文。
-- `恢复英文`：从 `.backup` 备份恢复原始文件。
-- `退出`：关闭工具。
-
-### 方式二：使用 Node.js 从源码运行
+需要 Node.js 18 或更高版本。
 
 安装依赖：
 
@@ -108,57 +54,21 @@ npm install
 npm start
 ```
 
-直接指定 Cursor 路径并静默汉化：
+运行后按提示选择：
+
+- `一键汉化`：修改 Cursor 资源文件并应用中文。
+- `恢复英文`：从 `.backup` 备份恢复原始文件。
+- `退出`：关闭工具。
+
+也可以通过命令行静默执行，适合脚本或 CI 场景：
 
 ```bash
+# 汉化
 node index.js --action=translate --cursor-path="/Applications/Cursor.app/Contents/Resources/app"
-```
 
-直接恢复英文：
-
-```bash
+# 恢复英文
 node index.js --action=restore --cursor-path="/Applications/Cursor.app/Contents/Resources/app"
 ```
-
-### 重新编译成品
-
-生成 Windows 和 macOS 三个平台产物：
-
-```bash
-npm run build
-```
-
-仅生成 Windows：
-
-```bash
-npm run build:win
-```
-
-仅生成 macOS：
-
-```bash
-npm run build:mac
-```
-
-仅生成 Linux：
-
-```bash
-npm run build:linux
-```
-
-生成 GitHub Release 上传包：
-
-```bash
-npm run build:release
-```
-
-如果已经执行过 `npm run build`，只重新打包发布文件：
-
-```bash
-npm run pack:release
-```
-
-该命令会在 `dist` 目录生成 `.tar.gz`、`.zip` 和 `SHA256SUMS`。发布到 GitHub 时上传这些压缩包即可。
 
 ## 工作逻辑
 
@@ -170,18 +80,22 @@ npm run pack:release
    - 最后自动扫描常见安装路径。
 
 2. 生成待处理文件路径。
-   - `out/vs/workbench/workbench.desktop.main.js`
+   - `out/vs/workbench/workbench.desktop.main.js`（主窗口）
+   - `out/vs/workbench/workbench.glass.main.js`（Glass / Agents 窗口，新版 Cursor 独有）
+   - `out/nls.messages.json`（原生菜单与提示文案）
    - `out/vs/code/electron-sandbox/workbench/workbench.html`
    - `product.json`
 
 3. 创建原始备份。
-   - 首次运行会生成 `.backup` 文件。
+   - 首次运行会生成 `.backup` 文件和 `.backup.meta` 版本元数据。
    - 再次运行时保留已有备份，避免把已汉化文件覆盖成备份。
+   - Cursor 升级后版本变化时，自动更新备份为新版原版，避免还原导致版本降级。
 
 4. 执行汉化替换。
-   - `src/dict.js` 保存相对安全的全局长句词典。
-   - `src/i18n-core.js` 处理复杂模板、短词保护、作用域替换和顽固词条。
-   - 对 `Read`、`file`、`Agent` 等高频词，尽量使用上下文精准替换，避免误伤代码逻辑。
+   - `src/dict.js` 保存三类词典：`safeGlobalDict`（安全长句）、`nativeNlsDict`（原生 NLS 菜单）、`riskyShortWords`（需上下文保护的短词）。
+   - `src/i18n-core.js` 按以下顺序分层处理：安全长句大正则替换 → 裸文本长句替换 → 作用域精确替换（scoped） → 顽固词条正则（tricky） → 短词 UI 属性上下文替换（含键位表保护）。
+   - 所有正则在模块加载时预编译，短词替换通过 3 个合并大正则单次扫描完成，`replaceStringWithCount` 内置 `indexOf` 预检跳过不匹配规则。
+   - 对 `Read`、`file`、`Agent` 等高频短词，仅在 `children`、`title`、`label`、`placeholder` 等 UI 属性上下文中替换，并通过 `isProtectedKeybindingContext` 跳过键盘扫描表和 VK 键名等代码区域。
 
 5. 写回 Cursor 核心 JS 文件。
 
@@ -191,6 +105,10 @@ npm run pack:release
    - 清理隔离属性：`xattr -cr`
    - 本地重新签名：`codesign --force --deep --sign -`
 
+8. 翻译用户扩展。扫描 `~/.cursor/extensions/` 中的远程开发扩展（remote-ssh/remote-wsl/remote-containers），翻译其 `package.json` 中的命令面板标题和分类。失败时跳过，不影响核心汉化。
+
+9. 翻译用户存储。通过 SQLite 操作 `state.vscdb`，翻译 `composerState.modes4` 中动态加载的 Agents 模式描述。需 Cursor 已完全退出，失败时跳过。
+
 ## 文件说明
 
 | 文件 | 说明 |
@@ -198,27 +116,39 @@ npm run pack:release
 | `index.js` | 命令入口、交互菜单、静默模式入口 |
 | `src/platform.js` | 跨平台路径检测、配置保存、权限检查、提权执行 |
 | `src/i18n-core.js` | 核心汉化、备份恢复、校验修复、macOS 签名处理 |
-| `src/dict.js` | 安全词典和短词词典 |
-| `keys.json` | 词条辅助数据 |
-| `dist/` | 编译后的可执行文件 |
+| `src/dict.js` | 安全词典（`safeGlobalDict`）、原生 NLS 词典（`nativeNlsDict`）、短词词典（`riskyShortWords`） |
+| `src/storage.js` | 用户存储翻译（state.vscdb 中 Agents 模式描述的 SQLite 操作） |
+| `scripts/package-release.js` | 打包脚本，生成压缩包和 SHA-256 校验文件 |
+
+## 性能优化
+
+针对 Cursor 的 `workbench.desktop.main.js`（约 38MB）和 `workbench.glass.main.js`（约 46MB），旧实现逐词循环扫描导致耗时约 37 秒。通过以下优化将短词替换阶段降至 0.27 秒，整体汉化耗时从约 40 秒降至 3 秒以内：
+
+- **合并大正则**：将 191 个短词的 3 类上下文（UI 属性赋值、JSX 文本节点、HTML 标签内文本）分别合并为 1 个大正则（`megaPropRegex`、`megaJsxRegex`、`megaHtmlRegex`），扫描次数从 573 次（191 × 3）降至 3 次，命中数完全一致。
+- **界面片段大正则**：将 `scopedReplacements`（~1803 条）和 `auxiliaryInterfaceReplacements`（~1675 条）各自合并为 1 个大正则 + Map 查找表，扫描次数从 ~3478 次降至 2 次（主文件和 Glass 文件各 1 次）。按 key 长度降序排列确保长串优先匹配。
+- **正则预编译**：所有正则在模块加载时一次性构建并缓存（`safeMegaRegex`、`megaPropRegex` 等），替换阶段直接复用，避免重复 `new RegExp` 开销。键位表保护检测的 `getProtectedRegexes` 也使用 `Map` 缓存按短词惰性构建。
+- **字符串预检跳过**：`replaceStringWithCount` 在替换前先做 `indexOf` 预检，不包含目标字符串时直接返回，避免对 38MB+ 文件执行无谓的 `split`/`join` 操作。
+- **长句优先匹配**：安全长句按长度降序排列构建正则，确保 "Close All" 优先于 "Close" 匹配，既保证正确性又减少后续短词阶段的工作量。
+- **轻量进度条**：TTY 模式下原地刷新进度，非 TTY 模式仅输出阶段完成行，避免日志文件刷出大量重复行。
 
 ## 配置与备份
 
 工具会在用户目录保存 Cursor 路径配置：
 
 ```text
-~/.cursor-chinese/config.json
+~/.cursor-zh/config.json
 ```
 
-工具会在 Cursor 安装目录旁生成备份文件：
+工具会在 Cursor 安装目录旁生成备份文件和版本元数据：
 
 ```text
 workbench.desktop.main.js.backup
+workbench.desktop.main.js.backup.meta    # 记录 Cursor 版本号，用于升级检测
 workbench.html.backup
 product.json.backup
 ```
 
-恢复英文时会优先使用这些备份文件。
+恢复英文时会优先使用这些备份文件，还原后自动删除备份和元数据，下次汉化重新创建。
 
 ## 权限说明
 
@@ -247,7 +177,7 @@ product.json.backup
 本工具会尝试自动更新 `product.json` checksum。若仍出现提示，可以：
 
 - 关闭 Cursor 后重新运行汉化。
-- 使用“恢复英文”回退后再汉化。
+- 使用"恢复英文"回退后再汉化。
 - 检查是否被系统权限或安全软件阻止写入。
 
 ### macOS 提示无法打开或已损坏
@@ -259,30 +189,13 @@ xattr -cr /Applications/Cursor.app
 codesign --force --deep --sign - /Applications/Cursor.app
 ```
 
-### macOS 下载后显示为“文稿”
-
-这是下载裸二进制时常见的权限问题，不是文件内容损坏。推荐从 GitHub Release 下载 `.tar.gz`，解压后运行：
-
-```bash
-tar -xzf cursor-chinese-macos-arm64.tar.gz
-./cursor-chinese-macos-arm64
-```
-
-如果已经下载的是裸文件，可以手动补权限：
-
-```bash
-chmod +x cursor-chinese-macos-arm64
-xattr -d com.apple.quarantine cursor-chinese-macos-arm64 2>/dev/null || true
-./cursor-chinese-macos-arm64
-```
-
 ### Cursor 更新后英文又出现
 
 Cursor 更新会覆盖已修改的资源文件。重新运行本工具即可。如果新版本增加了新的英文文案，需要补充词典或核心替换规则。
 
 ### 可以恢复官方英文吗
 
-可以。运行工具后选择“恢复英文”，或执行：
+可以。运行工具后选择"恢复英文"，或执行：
 
 ```bash
 node index.js --action=restore --cursor-path="/Applications/Cursor.app/Contents/Resources/app"
@@ -294,7 +207,6 @@ node index.js --action=restore --cursor-path="/Applications/Cursor.app/Contents/
 
 - 操作系统和架构，例如 macOS arm64、macOS x64、Windows x64。
 - Cursor 版本号。
-- 使用的是源码运行还是 `dist` 里的成品。
 - 执行命令和完整报错日志。
 - 漏翻界面的截图。
 - 如果是漏翻，尽量提供英文原文。
@@ -324,10 +236,14 @@ node --check src/dict.js
 npm start
 ```
 
-构建：
+如需构建各平台预编译产物（可选）：
 
 ```bash
-npm run build
+npm run build          # 全部平台
+npm run build:win      # 仅 Windows
+npm run build:mac      # 仅 macOS
+npm run build:linux    # 仅 Linux
+npm run build:release  # 构建 + 打包发布压缩包和校验文件
 ```
 
 ## 安全边界
@@ -339,6 +255,10 @@ npm run build
 - 从可信来源获取工具或自行从源码构建。
 - 不要把未知来源的二进制文件放到生产或敏感环境中直接运行。
 
+## 贡献
+
+欢迎提交 Issue 和 Pull Request。如果是漏翻或误翻，请附上英文原文和界面截图。参与贡献前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
 ## 许可证
 
-本项目使用 MIT License。详见 [LICENSE](LICENSE)。
+本项目使用 MIT License。详见 [LICENSE](LICENSE)。本项目基于 [rongwei-lab/cursor-chinese](https://github.com/rongwei-lab/cursor-chinese)（MIT License）改进。

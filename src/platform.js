@@ -9,7 +9,8 @@ const sudo = require('sudo-prompt');
 
 const PLATFORM = os.platform(); // 'win32' | 'darwin' | 'linux'
 
-const CONFIG_DIR = path.join(os.homedir(), '.cursor-chinese');
+const CONFIG_DIR = path.join(os.homedir(), '.cursor-zh');
+const LEGACY_CONFIG_DIR = path.join(os.homedir(), '.cursor-chinese');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 const LEGACY_CONFIG_FILE = path.join(os.homedir(), '.cursor-i18n-tool', 'config.json');
 
@@ -37,6 +38,8 @@ function buildPathsFromAppPath(appPath) {
         // 该文件在旧版本中不存在，因此后续处理都要按可选文件对待。
         glassJsPath: path.join(normalized, WORKBENCH_GLASS_MAIN),
         nlsMessagesPath: path.join(normalized, NLS_MESSAGES),
+        // Electron 主进程文件：系统托盘菜单、更新提示等原生菜单在这里构建。
+        mainProcessJsPath: path.join(normalized, 'out', 'main.js'),
         htmlPath: path.join(normalized, 'out', 'vs', 'code', 'electron-sandbox', 'workbench', 'workbench.html'),
         productJsonPath: path.join(normalized, 'product.json'),
     };
@@ -261,10 +264,20 @@ function findAllCursorCandidates() {
 
 function loadConfig() {
     try {
-        const configPath = fs.existsSync(CONFIG_FILE)
-            ? CONFIG_FILE
-            : LEGACY_CONFIG_FILE;
-        if (!fs.existsSync(configPath)) return {};
+        // 优先新路径，其次旧版 .cursor-chinese，最后 .cursor-i18n-tool
+        let configPath = null;
+        if (fs.existsSync(CONFIG_FILE)) {
+            configPath = CONFIG_FILE;
+        } else {
+            const legacyPaths = [
+                path.join(LEGACY_CONFIG_DIR, 'config.json'),
+                LEGACY_CONFIG_FILE,
+            ];
+            for (const p of legacyPaths) {
+                if (fs.existsSync(p)) { configPath = p; break; }
+            }
+        }
+        if (!configPath) return {};
         const raw = fs.readFileSync(configPath, 'utf8');
         const data = JSON.parse(raw);
         return typeof data === 'object' && data !== null ? data : {};
@@ -386,7 +399,7 @@ function elevateAndRun(action, cursorAppPath) {
         }
 
         const options = {
-            name: 'cursor chinese',
+            name: 'Cursor-zh',
         };
 
         sudo.exec(command, options, (error, stdout, stderr) => {

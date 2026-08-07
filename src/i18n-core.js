@@ -4,6 +4,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const crypto = require('crypto');
 const { execSync } = require('child_process');
 const { safeGlobalDict, nativeNlsDict, riskyShortWords } = require('./dict');
@@ -31,41 +32,98 @@ const longMegaRegex = longPattern ? new RegExp(`(${longPattern})`, 'g') : null;
 // 危险短词的 UI 属性列表（仅限可见 UI 文案，勿覆盖键位/扫描表）
 const uiProps = [
     'children', 'title', 'label', 'placeholder', 'description', 'tooltip', 'text',
-    'name', 'message', 'detail',
+    'name', 'message', 'detail', 'heading',
     'markdownDescription', 'aria-label', 'ariaLabel', 'emptyStateText',
     'currentLabel', 'breadcrumbLabel',
 ];
 const uiPropsPattern = uiProps.join('|');
 
+/** 键盘扫描表动态正则缓存：避免每次命中都 new RegExp，短词命中量大时收益明显 */
+const protectedRegexCache = new Map();
+function getProtectedRegexes(word) {
+    let cached = protectedRegexCache.get(word);
+    if (!cached) {
+        const escaped = escapeRegExp(word);
+        cached = {
+            // 键盘扫描表格式: [数字,数字,"词"]
+            scanTable: new RegExp(`\\[\\s*\\d+\\s*,\\s*\\d+\\s*,\\s*["']${escaped}["']`),
+            // 扫描表另一形态: "词",数字,"词"
+            scanTableAlt: new RegExp(`["']${escaped}["']\\s*,\\s*\\d+\\s*,\\s*["']${escaped}["']`),
+        };
+        protectedRegexCache.set(word, cached);
+    }
+    return cached;
+}
+
 /** 键盘扫描表、VK_*、KeyCode 等键位元数据 — 禁止汉化短词误伤 */
 function isProtectedKeybindingContext(content, index, word) {
-    const radius = 160;
+    // 只检查紧邻的小范围（80 字符），避免误伤附近恰好引用 keybindingService 的 UI 代码
+    const radius = 80;
     const start = Math.max(0, index - radius);
     const end = Math.min(content.length, index + radius + word.length);
     const slice = content.slice(start, end);
-    const escaped = escapeRegExp(word);
 
     if (/VK_[A-Z0-9_]+/.test(slice)) return true;
-    if (/\bKeyCode\b|\bScanCode\b|keybindingService|KeyboardEvent/.test(slice)) return true;
-    if (new RegExp(`\\[\\s*\\d+\\s*,\\s*\\d+\\s*,\\s*["']${escaped}["']`).test(slice)) return true;
-    if (new RegExp(`["']${escaped}["']\\s*,\\s*\\d+\\s*,\\s*["']${escaped}["']`).test(slice)) return true;
+    if (/\bKeyCode\b|\bScanCode\b/.test(slice)) return true;
+    // 键盘扫描表格式: [数字,数字,"词"] 或 "词",数字,"词"
+    const { scanTable, scanTableAlt } = getProtectedRegexes(word);
+    if (scanTable.test(slice)) return true;
+    if (scanTableAlt.test(slice)) return true;
 
     return false;
 }
 
-// 为每个危险短词预编译 3 种正则
-const riskyRegexes = Object.entries(riskyShortWords).map(([en, zh]) => {
-    const escaped = escapeRegExp(en);
-    return {
-        en, zh,
-        // UI 属性赋值: children: "General"
-        propRegex: new RegExp(`(${uiPropsPattern})\\s*:\\s*(["'\`])(${escaped})\\2`, 'g'),
-        // JSX 文本节点: React.createElement("div", null, "General")
-        jsxRegex: new RegExp(`(null|}|\\w)\\s*,\\s*(["'\`])(${escaped})\\2\\s*(?=[,)])`, 'g'),
-        // HTML 标签内文本: >General<
-        htmlRegex: new RegExp(`>\\s*(${escaped})\\s*<`, 'g'),
-    };
-});
+// 危险短词：按长度降序排列后合并为 3 个大正则，单次扫描覆盖全部短词。
+// 旧实现为每个短词单独建 3 个正则并循环全量扫描（191 词 × 3 = 573 次 38MB 扫描，约 37s），
+// 合并后仅 3 次扫描，实测提速 99%（37s → 0.27s），命中数完全一致。
+const riskyWordsDesc = Object.keys(riskyShortWords).sort((a, b) => b.length - a.length);
+const riskyWordsPattern = riskyWordsDesc.map(escapeRegExp).join('|');
+
+// UI 属性赋值: children: "General"
+const megaPropRegex = new RegExp(`(${uiPropsPattern})\\s*:\\s*(["'\`])(${riskyWordsPattern})\\2`, 'g');
+// JSX 文本节点: React.createElement("div", null, "General")
+const megaJsxRegex = new RegExp(`(null|}|\\w)\\s*,\\s*(["'\`])(${riskyWordsPattern})\\2\\s*(?=[,)])`, 'g');
+// HTML 标签内文本: >General<
+const megaHtmlRegex = new RegExp(`>\\s*(${riskyWordsPattern})\\s*<`, 'g');
+
+/**
+ * 用合并大正则处理危险短词：单次扫描替代 191 次循环。
+ * 命中后通过 riskyShortWords[word] 查表得中文，并经 isProtectedKeybindingContext 跳过键位表。
+ * @param {string} jsContent
+ * @param {{ record: (group: string, from: string, to: string, count: number) => void }} changes
+ * @param {{ update: (label: string, detail?: string) => void }} [progress]
+ * @returns {string}
+ */
+function applyRiskyShortWords(jsContent, changes, progress) {
+    let propCount = 0;
+    jsContent = jsContent.replace(megaPropRegex, (match, prop, quote, word, offset) => {
+        if (isProtectedKeybindingContext(jsContent, offset, word)) return match;
+        propCount++;
+        changes.record('UI 属性短词', word, riskyShortWords[word], 1);
+        return `${prop}: ${quote}${riskyShortWords[word]}${quote}`;
+    });
+    if (propCount > 0 && progress) progress.update('替换短词', `UI 属性 ${propCount} 处`);
+
+    let jsxCount = 0;
+    jsContent = jsContent.replace(megaJsxRegex, (match, pre, quote, word, offset) => {
+        if (isProtectedKeybindingContext(jsContent, offset, word)) return match;
+        jsxCount++;
+        changes.record('JSX 文本短词', word, riskyShortWords[word], 1);
+        return `${pre}, ${quote}${riskyShortWords[word]}${quote}`;
+    });
+    if (jsxCount > 0 && progress) progress.update('替换短词', `JSX 文本 ${jsxCount} 处`);
+
+    let htmlCount = 0;
+    jsContent = jsContent.replace(megaHtmlRegex, (match, word, offset) => {
+        if (isProtectedKeybindingContext(jsContent, offset, word)) return match;
+        htmlCount++;
+        changes.record('HTML 文本短词', word, riskyShortWords[word], 1);
+        return `>${riskyShortWords[word]}<`;
+    });
+    if (htmlCount > 0 && progress) progress.update('替换短词', `HTML 文本 ${htmlCount} 处`);
+
+    return jsContent;
+}
 
 // ═══════════════════════════════════════════════
 // 终端进度展示
@@ -148,22 +206,14 @@ function replaceRegexWithCount(content, regex, replacement) {
     return { content: nextContent, count };
 }
 
-function countStringOccurrences(content, needle) {
-    if (!needle) return 0;
-
-    let count = 0;
-    let index = 0;
-    while ((index = content.indexOf(needle, index)) !== -1) {
-        count++;
-        index += needle.length;
-    }
-    return count;
-}
-
 function replaceStringWithCount(content, search, replacement) {
-    const count = countStringOccurrences(content, search);
+    // 预检：不包含直接返回，避免对 10MB+ 文件做无谓的 split/join 扫描
+    if (!search || content.indexOf(search) === -1) return { content, count: 0 };
+    // 单次 split 即可同时得到替换结果与命中次数，省掉一次独立计数扫描
+    const parts = content.split(search);
+    const count = parts.length - 1;
     if (count === 0) return { content, count };
-    return { content: content.split(search).join(replacement), count };
+    return { content: parts.join(replacement), count };
 }
 
 function createChangeTracker(maxSamples = 12) {
@@ -205,15 +255,44 @@ function createChangeTracker(maxSamples = 12) {
 // 备份与还原
 // ═══════════════════════════════════════════════
 
-function backupFile(filePath) {
+function backupFile(filePath, productJsonPath) {
     const backupPath = filePath + '.backup';
+    const metaPath = backupPath + '.meta';
     const fileName = path.basename(filePath);
+
+    // 读取当前 Cursor 版本（用于检测升级后备份是否陈旧）
+    let currentVersion = null;
+    if (productJsonPath && fs.existsSync(productJsonPath)) {
+        try {
+            const product = JSON.parse(fs.readFileSync(productJsonPath, 'utf8'));
+            currentVersion = product.version || null;
+        } catch { /* ignore */ }
+    }
+
     if (fs.existsSync(backupPath)) {
-        // 已有备份 → 保留当前文件，避免重复汉化时覆盖现有补丁
+        // 检测备份是否对应当前版本（Cursor 升级后旧备份需覆盖）
+        let backupVersion = null;
+        try {
+            if (fs.existsSync(metaPath)) {
+                backupVersion = JSON.parse(fs.readFileSync(metaPath, 'utf8')).version || null;
+            }
+        } catch { /* ignore */ }
+
+        if (currentVersion && backupVersion && currentVersion !== backupVersion) {
+            // 版本不一致 → Cursor 已升级，旧备份是陈旧原版，覆盖为新原版
+            fs.copyFileSync(filePath, backupPath);
+            if (currentVersion) {
+                try { fs.writeFileSync(metaPath, JSON.stringify({ version: currentVersion }), 'utf8'); } catch { /* ignore */ }
+            }
+            return `🔄 ${fileName}: 检测到 Cursor 升级（${backupVersion} → ${currentVersion}），已更新备份`;
+        }
         return `🧩 ${fileName}: 已发现原版备份，保留当前文件继续汉化`;
     } else if (fs.existsSync(filePath)) {
         // 首次运行 → 创建备份
         fs.copyFileSync(filePath, backupPath);
+        if (currentVersion) {
+            try { fs.writeFileSync(metaPath, JSON.stringify({ version: currentVersion }), 'utf8'); } catch { /* ignore */ }
+        }
         return `💾 ${fileName}: 已备份纯净原版文件`;
     }
     return null;
@@ -221,8 +300,14 @@ function backupFile(filePath) {
 
 function restoreFromBackup(filePath) {
     const backupPath = filePath + '.backup';
+    const metaPath = backupPath + '.meta';
     if (fs.existsSync(backupPath)) {
         fs.copyFileSync(backupPath, filePath);
+        // 还原后删除备份和版本元数据，下次汉化重新创建
+        try {
+            fs.unlinkSync(backupPath);
+            if (fs.existsSync(metaPath)) fs.unlinkSync(metaPath);
+        } catch { /* ignore */ }
         return true;
     }
     return false;
@@ -265,8 +350,10 @@ function writeFileSafe(filePath, content, encoding = 'utf8') {
     try {
         fs.writeFileSync(tmpPath, content, encoding);
         try {
-            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-            fs.renameSync(tmpPath, filePath);
+            // 用 copyFileSync 覆盖目标（避免先 unlink 再 rename 的窗口期，
+            // 若原文件被占用 copyFileSync 会抛异常，原文件不受影响）
+            fs.copyFileSync(tmpPath, filePath);
+            cleanupTmp();
             verifyExists();
             return;
         } catch {
@@ -397,9 +484,6 @@ const auxiliaryInterfaceReplacements = [
     ['`Ask questions without making changes...`', '`提问但不修改...`'],
     ['placeholder:"Ask questions without making changes..."', 'placeholder:"提问但不修改..."'],
     ['description:"Ask questions without making changes"', 'description:"提问但不修改"'],
-    ['label:"Ask"', 'label:"对话"'],
-    ['title:"Ask"', 'title:"对话"'],
-    ['children:"Ask"', 'children:"对话"'],
     ['label:"Local"', 'label:"本地"'],
     ['title:"Local"', 'title:"本地"'],
     ['children:"Local"', 'children:"本地"'],
@@ -422,8 +506,8 @@ const auxiliaryInterfaceReplacements = [
     ['title:"New Agent with Query"', 'title:"使用查询新建智能体"'],
     ['title:"New Agent with Context"', 'title:"使用上下文新建智能体"'],
     ['title:"New Agent (preserve editor panel)"', 'title:"新建智能体（保留编辑器面板）"'],
-    ['description:"New Agents Window (Glass)"', 'description:"新建智能体窗口"'],
-    ['metadata:{description:"New Agents Window (Glass)"}', 'metadata:{description:"新建智能体窗口"}'],
+    ['description:"New Agents Window (Glass)"', 'description:"新建 Agents Window"'],
+    ['metadata:{description:"New Agents Window (Glass)"}', 'metadata:{description:"新建 Agents Window"}'],
     ['`New Agent in ${tr}`', '`在 ${tr} 中新建智能体`'],
     ['`New Agent in ${ti.name}`', '`在 ${ti.name} 中新建智能体`'],
     ['`New Agent in ${n.displayName}`', '`在 ${n.displayName} 中新建智能体`'],
@@ -457,18 +541,14 @@ const auxiliaryInterfaceReplacements = [
     ['"Open in Editor Window"', '"在编辑器窗口中打开"'],
     ['"Import from Editor Window"', '"从编辑器窗口导入"'],
     ['`Import from Editor Window (${S})`', '`从编辑器窗口导入 (${S})`'],
-    ['label:"Multitask"', 'label:"多任务"'],
-    ['title:"Multitask"', 'title:"多任务"'],
-    ['children:"Multitask"', 'children:"多任务"'],
-    ['"Multitask"', '"多任务"'],
     ['message:"Failed to start multitasking."', 'message:"启动多任务失败。"'],
     ['"Starting Multitask"', '"正在启动多任务"'],
     ['"Start Multitasking"', '"启动多任务"'],
     ['title:"Run tasks in parallel"', 'title:"并行运行任务"'],
-    ['label:"Open Agents Window on startup"', 'label:"启动时打开智能体窗口"'],
-    ['description:"When launching Cursor, open Agents Window by default"', 'description:"启动 Cursor 时默认打开智能体窗口"'],
-    ['label:"Open Agents Window on Startup"', 'label:"启动时打开智能体窗口"'],
-    ['description:"Open the Agents Window by default when Cursor launches"', 'description:"Cursor 启动时默认打开智能体窗口"'],
+    ['label:"Open Agents Window on startup"', 'label:"启动时打开 Agents Window"'],
+    ['description:"When launching Cursor, open Agents Window by default"', 'description:"启动 Cursor 时默认打开 Agents Window"'],
+    ['label:"Open Agents Window on Startup"', 'label:"启动时打开 Agents Window"'],
+    ['description:"Open the Agents Window by default when Cursor launches"', 'description:"Cursor 启动时默认打开 Agents Window"'],
     ['label:"Code Block Word Wrap"', 'label:"代码块自动换行"'],
     ['description:"Wrap long lines in Agent conversation code blocks"', 'description:"在智能体对话代码块中自动换行长行"'],
     ['label:"Voice Submit Keywords"', 'label:"语音提交关键词"'],
@@ -567,24 +647,1843 @@ const auxiliaryInterfaceReplacements = [
     ['description:"Glob patterns for files where Cursor Tab will not suggest"', 'description:"Cursor Tab 不提供建议的文件 Glob 匹配模式"'],
     ['placeholder:"e.g., *.md, **/generated/**"', 'placeholder:"例如：*.md, **/generated/**"'],
     ['title:"Configure Ignored Files"', 'title:"配置忽略文件"'],
+
+    // 附加窗口（Glass）独有或 HTML 包裹的片段。
+    ['"<div>Web Fetch Tool"', '"<div>网络抓取工具"'],
+    ['"<div><span>Task Models"', '"<div><span>任务模型"'],
+    ['automations:"Automations"', 'automations:"自动化"'],
+        ['themeLabel:"Light"', 'themeLabel:"浅色"'],
+        ['themeLabel:"Dark"', 'themeLabel:"深色"'],
+        ['themeLabel:"High Contrast"', 'themeLabel:"高对比度"'],
+        ['<span>On-Demand Usage', '<span>按需用量'],
+        ['"undo","Undo"', '"undo","撤销"'],
+        ['"redo","Redo"', '"redo","重做"'],
+        ['"cut","Cut"', '"cut","剪切"'],
+        ['"copy","Copy"', '"copy","复制"'],
+        ['"paste","Paste"', '"paste","粘贴"'],
+        ['"selectAll","Select All"', '"selectAll","全选"'],
+        // ── Agents 操作按钮动态文本（Undo/Copy 三元表达式，非 label 属性形式）──
+        ['?"Undo Cell":"Undo"', '?"撤销单元格":"撤销"'],
+        ['?"Undo Apply":"Undo"', '?"撤销应用":"撤销"'],
+        ['?"Undo":"Undo All"', '?"撤销":"全部撤销"'],
+        ['?"Undo All":"Undo"', '?"全部撤销":"撤销"'],
+        ['?"Undo":"Accept"', '?"撤销":"接受"'],
+        ['?"Copy Message":"Copy"', '?"复制消息":"复制"'],
+        ['?"Copied":"Copy"', '?"已复制":"复制"'],
+        ['reject:"Undo"', 'reject:"撤销"'],
+        ['??"Undo"', '??"撤销"'],
+        ['return"Undo All"', 'return"全部撤销"'],
+        ['"glass.agentMetadataTooltip.copy","Copy"', '"glass.agentMetadataTooltip.copy","复制"'],
+        ['"glassFileTreeCopyOp","Copy"', '"glassFileTreeCopyOp","复制"'],
+        ['"glassFileTreeMove","Move"', '"glassFileTreeMove","移动"'],
+        ['marketplace:"Marketplace"', 'marketplace:"插件市场"'],
+        ['?"自定义":"Marketplace"', '?"自定义":"插件市场"'],
+        ['rootLabel:"Marketplace"', 'rootLabel:"插件市场"'],
+        ['[" ","Marketplace"]', '[" ","插件市场"]'],
+        ['all:"All"', 'all:"全部"'],
+        ['return"All"', 'return"全部"'],
+    ['pageTitle:"Automations"', 'pageTitle:"自动化"'],
+    ['defaultLabel:"Changes"', 'defaultLabel:"更改"'],
+
+    // ── 用户反馈的未翻译词条：Glass/Agents 窗口专用 ──
+    // "New" 作为独立 UI 文案（不加入 riskyShortWords 因为会误伤 trimNew 等代码）
+    ['children:"New"', 'children:"新建"'],
+    ['label:"New"', 'label:"新建"'],
+    ['title:"New"', 'title:"新建"'],
+    ['placeholder:"New"', 'placeholder:"新建"'],
+    ['name:"New"', 'name:"新建"'],
+    ['>"New"', '>"新建"'],
+    // Documentation
+    ['children:"Documentation"', 'children:"文档"'],
+    ['label:"Documentation"', 'label:"文档"'],
+    ['title:"Documentation"', 'title:"文档"'],
+    // Connected
+    ['children:"Connected"', 'children:"已连接"'],
+    ['label:"Connected"', 'label:"已连接"'],
+    ['title:"Connected"', 'title:"已连接"'],
+    ['>"Connected"', '>"已连接"'],
+    // Installed
+    ['children:"Installed"', 'children:"已安装"'],
+    ['label:"Installed"', 'label:"已安装"'],
+    ['title:"Installed"', 'title:"已安装"'],
+    ['>"Installed"', '>"已安装"'],
+    // Image
+    ['children:"Image"', 'children:"图片"'],
+    ['label:"Image"', 'label:"图片"'],
+    ['title:"Image"', 'title:"图片"'],
+    // Cloud
+    ['children:"Cloud"', 'children:"云端"'],
+    ['label:"Cloud"', 'label:"云端"'],
+    ['title:"Cloud"', 'title:"云端"'],
+    ['>"Cloud"', '>"云端"'],
+    // Recents
+    ['children:"Recents"', 'children:"最近"'],
+    ['label:"Recents"', 'label:"最近"'],
+    ['title:"Recents"', 'title:"最近"'],
+    ['>"Recents"', '>"最近"'],
+    // Run on / This PC
+    ['children:"Run on"', 'children:"运行于"'],
+    ['label:"Run on"', 'label:"运行于"'],
+    ['children:"This PC"', 'children:"此电脑"'],
+    ['label:"This PC"', 'label:"此电脑"'],
+    ['"Run on This PC"', '"在此电脑上运行"'],
+    ['"Run on Cloud"', '"在云端运行"'],
+    // + Add
+    ['children:"+ Add"', 'children:"+ 添加"'],
+    ['label:"+ Add"', 'label:"+ 添加"'],
+    ['>"+ Add"', '>"+ 添加"'],
+    // User Config
+    ['children:"User Config"', 'children:"用户配置"'],
+    ['label:"User Config"', 'label:"用户配置"'],
+    ['title:"User Config"', 'title:"用户配置"'],
+    // From Marketplace / From Local Repo
+    ['children:"From Marketplace"', 'children:"从插件市场"'],
+    ['children:"From Local Repo"', 'children:"从本地仓库"'],
+    // New Worktree
+    ['children:"New Worktree"', 'children:"新建工作树"'],
+    ['label:"New Worktree"', 'label:"新建工作树"'],
+    ['title:"New Worktree"', 'title:"新建工作树"'],
+    // Click or hold Ctrl M to dictate
+    ['children:"Click or hold Ctrl M to dictate"', 'children:"点击或按住 Ctrl M 进行听写"'],
+    ['placeholder:"Click or hold Ctrl M to dictate"', 'placeholder:"点击或按住 Ctrl M 进行听写"'],
+    // Run Cursor anywhere...
+    ['children:"Run Cursor anywhere..."', 'children:"在任何地方运行 Cursor..."'],
+    ['placeholder:"Run Cursor anywhere..."', 'placeholder:"在任何地方运行 Cursor..."'],
+    // Learn more（HTML 上下文）
+    ['>Learn more\'', '>了解更多\''],
+    ['>Learn more"', '>了解更多"'],
+    ['>Learn more<', '>了解更多<'],
+    // Give Feedback...
+    ['"Give Feedback..."', '"提供反馈..."'],
+    ['children:"Give Feedback..."', 'children:"提供反馈..."'],
+    ['label:"Give Feedback..."', 'label:"提供反馈..."'],
+    // 模板字符串中的动态 tooltip（safeMegaRegex 无法匹配反引号）
+    ['`Toggle Agents Side Bar (${', '`切换智能体侧边栏 (${'],
+    ['`Toggle Agents (${', '`切换智能体 (${'],
+    ['`Toggle Primary Side Bar (${', '`切换主侧边栏 (${'],
+    ['`Show Agents Side Bar (${', '`显示智能体侧边栏 (${'],
+    // title 属性直接赋值（非 Te()/ft() 包裹，glass.js 中常见）
+    ['title:"Show Terminal"', 'title:"显示终端"'],
+    ['title:"Toggle Developer Tools"', 'title:"切换开发者工具"'],
+    ['title:"Open Process Explorer"', 'title:"打开进程浏览器"'],
+    ['title:"Report Issue"', 'title:"报告问题"'],
+    // LABEL 直接赋值（Help菜单中的 Report Issue）
+    ['.LABEL="Report Issue"', '.LABEL="报告问题"'],
+    // ── 字体大小选项（Small/Default/Large/超大）──
+    ['case .85:return"Small";case 1:return"Default";case 1.15:return"Large";case 1.3:return"超大"', 'case .85:return"小";case 1:return"默认";case 1.15:return"大";case 1.3:return"超大"'],
+    // ── Show/Hide 切换按钮（title getter 三元表达式）──
+    ['?"Hide":"Show"', '?"隐藏":"显示"'],
+    // ── Import 按钮（Importing... 状态）──
+    ['?"Importing\u2026":"Import"', '?"正在导入…":"导入"'],
+    ['?"Importing...":"Import"', '?"正在导入...":"导入"'],
+    // ── claude-code-import-indicator 状态标签 ──
+    ['case"claude-code-import-indicator":return"Import"', 'case"claude-code-import-indicator":return"导入"'],
+    // ── 模型列表刷新按钮（Refreshing.../Refresh model list 三元）──
+    ['?"Refreshing...":"Refresh model list"', '?"正在刷新...":"刷新模型列表"'],
+    // ── 模型选择器 Results/Suggested 标题（minified 变量名 tt）──
+    ['title:tt?"Results":"Suggested"', 'title:tt?"结果":"推荐"'],
+    // ── 命令面板/Agent 菜单 Suggested 分区标题 ──
+    ['heading:"Suggested"', 'heading:"推荐"'],
+    // ── 模型选择器搜索框 placeholder ──
+    ['placeholder:"Add or search model"', 'placeholder:"添加或搜索模型"'],
+    // ── 更新渠道名称：switch case 返回值 ──
+    ['case"prerelease":return"Early Access"', 'case"prerelease":return"抢先体验"'],
+    ['case"dev":return"Nightly"', 'case"dev":return"每夜构建"'],
+    ['case"dogfood":return"Dogfood"', 'case"dogfood":return"内部测试"'],
+    ['case"candidate":return"Candidate"', 'case"candidate":return"候选版"'],
+    // ── 版本号解析中的渠道名 ──
+    ['case"9":return"Nightly"', 'case"9":return"每夜构建"'],
+    // ── 更新渠道名称：选项列表 label ──
+    ['label:"Dogfood",id:"dogfood"', 'label:"内部测试",id:"dogfood"'],
+    ['label:"Candidate",id:"candidate"', 'label:"候选版",id:"candidate"'],
+    // ── 快捷键提示中的连词 or ──
+    ['{children:"or"})', '{children:"或"})'],
+    // ── Agent 面板底部快捷键提示（Select/Open/Back）──
+    ['shortcut:"\\u2191\\u2193"}),label:"Select"', 'shortcut:"\\u2191\\u2193"}),label:"选择"'],
+    ['{name:"return",size:"sm"}),label:"Open"', '{name:"return",size:"sm"}),label:"打开"'],
+    ['shortcut:"backspace"}),label:"Back"', 'shortcut:"backspace"}),label:"返回"'],
+    // ── 远程窗口 SSH/容器命令（glass.js 中出现）──
+    ['title:"Open SSH Configuration File"', 'title:"打开 SSH 配置文件"'],
+    ['label:"Dev Containers"', 'label:"开发容器"'],
+    ['glassCategory:"Workspace"', 'glassCategory:"工作区"'],
+    // ── Cursor Tab 通知/状态栏悬浮框（glass.js）──
+    ['n.textContent="Model"', 'n.textContent="模型"'],
+    ['o.textContent=n?"Unsnooze":"Snooze"', 'o.textContent=n?"取消暂停":"暂停"'],
+    ['K$i="auto (default)"', 'K$i="自动（默认）"'],
+    ['"Disable globally"', '"全局禁用"'],
+    ['"No commit has been scored yet"', '"暂无已评分的提交"'],
+    ['"$(git-commit) No commit scored"', '"$(git-commit) 无提交评分"'],
+    ['"Select Cursor Tab snooze duration"', '"选择 Cursor Tab 暂停时长"'],
+    ['"Temporarily disable Cursor Tab suggestions for a specified duration. You can unsnooze at any time."', '"临时禁用 Cursor Tab 建议一段指定时间，可随时取消暂停。"'],
+    ['.LABEL="Snooze Cursor Tab"', '.LABEL="暂停 Cursor Tab"'],
+    ['.LABEL="Unsnooze Cursor Tab"', '.LABEL="取消暂停 Cursor Tab"'],
+    // ── Agents 面板：分组/排序/筛选标签 ──
+    ['label:"Grouping"', 'label:"分组"'],
+    ['children:"Grouping"', 'children:"分组"'],
+    ['label:"Ordering"', 'label:"排序"'],
+    ['children:"Ordering"', 'children:"排序"'],
+    ['title:"Filters"', 'title:"筛选器"'],
+    ['value:"repository",label:"Repository"', 'value:"repository",label:"仓库"'],
+    ['value:"workspace",label:"Workspace"', 'value:"workspace",label:"工作区"'],
+    ['value:"time",label:"Updated"', 'value:"time",label:"更新时间"'],
+    ['value:"status",label:"Status"', 'value:"status",label:"状态"'],
+    ['value:"environment",label:"Environment"', 'value:"environment",label:"环境"'],
+    ['value:"updated",label:"Updated"', 'value:"updated",label:"更新时间"'],
+    ['value:"created",label:"Created"', 'value:"created",label:"创建时间"'],
+    ['value:"needs_attention",label:"Needs Attention"', 'value:"needs_attention",label:"需要关注"'],
+    ['value:"unread_only",label:"Unread"', 'value:"unread_only",label:"未读"'],
+    ['value:"running",label:"Working"', 'value:"running",label:"进行中"'],
+    ['value:"draft",label:"Draft"', 'value:"draft",label:"草稿"'],
+    ['value:"done",label:"Done"', 'value:"done",label:"已完成"'],
+    ['value:"git:draft",label:"PR Draft"', 'value:"git:draft",label:"PR 草稿"'],
+    ['value:"git:open",label:"PR Open"', 'value:"git:open",label:"PR 开放"'],
+    ['value:"git:merged",label:"PR Merged"', 'value:"git:merged",label:"PR 已合并"'],
+    ['value:"git:closed",label:"PR Closed"', 'value:"git:closed",label:"PR 已关闭"'],
+    ['value:"git:none",label:"No PR"', 'value:"git:none",label:"无 PR"'],
+    ['label:"Any time"', 'label:"任意时间"'],
+    ['label:"Past day"', 'label:"过去一天"'],
+    ['label:"Past week"', 'label:"过去一周"'],
+    ['label:"Past month"', 'label:"过去一个月"'],
+    ['value:"branch",label:"Branch"', 'value:"branch",label:"分支"'],
+    ['value:"timestamp",label:"Updated"', 'value:"timestamp",label:"更新时间"'],
+    ['value:"source",label:"Source"', 'value:"source",label:"来源"'],
+    ['value:"cloud",label:"Cloud"', 'value:"cloud",label:"云端"'],
+    ['value:"local",label:"Local"', 'value:"local",label:"本地"'],
+    ['label:"Show",children:"Show"', 'label:"显示",children:"显示"'],
+    ['{label:"Reset",onClick:', '{label:"重置",onClick:'],
+    ['label:"Status",trailing:sb(dAi', 'label:"状态",trailing:sb(dAi'],
+    ['children:"Machine"', 'children:"机器"'],
+    // ── Group by 子菜单 ──
+    ['label:"Group by Workspace"', 'label:"按工作区分组"'],
+    ['label:"Group by Repository"', 'label:"按仓库分组"'],
+    ['label:"Group by Updated"', 'label:"按更新时间分组"'],
+    ['label:"Group by Status"', 'label:"按状态分组"'],
+    ['label:"Group by Environment"', 'label:"按环境分组"'],
+    // ── Changes 视图：作用域标签 ──
+    ['lastTurn:"Last Turn",uncommitted:"Uncommitted",allChanges:"All",unstaged:"Unstaged",staged:"Staged",branch:"Branch"',
+     'lastTurn:"最近一轮",uncommitted:"未提交",allChanges:"全部",unstaged:"未暂存",staged:"已暂存",branch:"分支"'],
+    ['?"Branch Commits"', '?"分支提交"'],
+    ['?"All Changes"', '?"所有更改"'],
+    // ── Changes 视图：Stage/Unstage 操作 ──
+    ['"Unstage All"', '"全部取消暂存"'],
+    ['"Stage All Remaining Changes"', '"暂存所有剩余更改"'],
+    ['"Stage All"', '"全部暂存"'],
+    ['"Stage Remaining Changes"', '"暂存剩余更改"'],
+    ['"Unstage File"', '"取消暂存文件"'],
+    ['"Stage File"', '"暂存文件"'],
+    ['children:"Find in Changes"', 'children:"在更改中查找"'],
+    ['children:"Refresh Changes"', 'children:"刷新更改"'],
+    ['content:"Discard All Changes"', 'content:"放弃所有更改"'],
+    // ── Diff 视图：设置开关 ──
+    ['{value:"unified",label:"Unified"}', '{value:"unified",label:"统一视图"}'],
+    ['{value:"split",label:"Split"}', '{value:"split",label:"拆分视图"}'],
+    ['children:"Ignore Whitespace"', 'children:"忽略空白字符"'],
+    ['children:"Word Wrap"', 'children:"自动换行"'],
+    ['children:"Line Numbers"', 'children:"行号"'],
+    ['children:"Auto Save"', 'children:"自动保存"'],
+    ['children:"Format on Save"', 'children:"保存时格式化"'],
+    // ── 全屏/终端/URL 栏 ──
+    ['?"Exit Full Screen":"Enter Full Screen"', '?"退出全屏":"进入全屏"'],
+    ['?"Hide Terminal List":"Show Terminal List"', '?"隐藏终端列表":"显示终端列表"'],
+    ['"aria-label":"Search or enter URL"', '"aria-label":"搜索或输入 URL"'],
+    ['children:"Show Bookmark Bar"', 'children:"显示书签栏"'],
+    // ── Canvas ──
+    ['"Create a Canvas from chat"', '"从聊天创建画布"'],
+    ['?"Hide Canvas List":"Show Canvas List"', '?"隐藏画布列表":"显示画布列表"'],
+    // ── 文件操作 ──
+    ['"Open a file to get started"', '"打开一个文件即可开始"'],
+    ['label:"New File"', 'label:"新建文件"'],
+    ['children:"No workspace folder open"', 'children:"没有打开的工作区文件夹"'],
+    ['children:"Save File"', 'children:"保存文件"'],
+    ['label:"Discard Changes"', 'label:"放弃更改"'],
+    ['title:"Search Files"', 'title:"搜索文件"'],
+    ['title:"Browse Files"', 'title:"浏览文件"'],
+    ['title:"New Tab"', 'title:"新建标签页"'],
+    ['.LABEL="New Tab"', '.LABEL="新建标签页"'],
+    ['"collapse-all","Collapse All"', '"collapse-all","全部折叠"'],
+    ['children:"Mark All as Read"', 'children:"全部标记为已读"'],
+    // ── 模式（Plan/Debug/Multitask/Ask 保留英文，仅翻译 Agent Mode）──
+    ['title:"Agent Mode"', 'title:"智能体模式"'],
+    ['title:"Toggle Git Blame"', 'title:"切换 Git Blame"'],
+    // ── 命令面板 ──
+    ['label:"Open Customize"', 'label:"打开自定义"'],
+    ['label:"Open Skills"', 'label:"打开技能"'],
+    ['label:"Open Subagents"', 'label:"打开子智能体"'],
+    ['label:"Open Commands"', 'label:"打开命令"'],
+    ['title:"Switch Theme"', 'title:"切换主题"'],
+    ['title:"Switch to Cursor Light"', 'title:"切换到 Cursor 浅色"'],
+    ['title:"Switch to Cursor Dark"', 'title:"切换到 Cursor 深色"'],
+    ['title:"Switch to Cursor High Contrast"', 'title:"切换到 Cursor 高对比度"'],
+    ['"Reset In-App Ad Views"', '"重置应用内广告视图"'],
+    ['title:"Developer: Open Logs Folder"', 'title:"开发者：打开日志文件夹"'],
+    ['title:"About Cursor"', 'title:"关于 Cursor"'],
+    // ── 集成来源标签（glass.js 中的对象字面量）──
+    ['desktop:"Desktop",sand:"Sand",web:"Web",mobile:"Mobile"', 'desktop:"桌面",sand:"沙盒",web:"网页",mobile:"移动端"'],
+    ['scm:"Source Control"', 'scm:"源代码管理"'],
+    ['setup:"Setup"', 'setup:"设置"'],
+    ['automations:"Automations"', 'automations:"自动化"'],
+    ['qabot_frontend:"Frontend QA"', 'qabot_frontend:"前端 QA"'],
+    ['local:"Local",internal:"Subagent"', 'local:"本地",internal:"子智能体"'],
+    ['text:"Desktop",title:"Open Desktop"', 'text:"桌面",title:"打开桌面"'],
+    // ── glass 翻译键回退值 ──
+    ['"glassFileTreeCreateFileLabel","New File"', '"glassFileTreeCreateFileLabel","新建文件"'],
+    ['"glassCopyRelativePath","Copy Relative Path"', '"glassCopyRelativePath","复制相对路径"'],
+    ['?"Copied Path":"Copy Path"', '?"已复制路径":"复制路径"'],
+    ['return"Needs attention"', 'return"需要关注"'],
+    ['void 0?"Automations"', 'void 0?"自动化"'],
+    // ── Canvas 空状态描述 ──
+    ['"glass.canvasActivationEmptyState.descriptionPrefix","Type"', '"glass.canvasActivationEmptyState.descriptionPrefix","输入"'],
+    ['"glass.canvasActivationEmptyState.descriptionSuffix","to create or open a Canvas."', '"glass.canvasActivationEmptyState.descriptionSuffix","来创建或打开画布。"'],
+    // ── Skills & Commands 分区标题 ──
+    ['heading:"Skills & Commands"', 'heading:"技能与命令"'],
+    // ── Open Customize 标题 ──
+    ['title:"Open Customize"', 'title:"打开自定义"'],
+    // ── Appearance 标题/标签 ──
+    ['title:"Appearance"', 'title:"外观"'],
+    ['label:"Appearance"', 'label:"外观"'],
+    // ── Agents 面板：Environment/Source 子菜单触发器 ──
+    ['label:"Environment",trailing:sb(dAi', 'label:"环境",trailing:sb(dAi'],
+    ['children:"Environment"}', 'children:"环境"}'],
+    ['label:"Source",trailing:sb(dAi', 'label:"来源",trailing:sb(dAi'],
+    ['children:"Source"}', 'children:"来源"}'],
+    // ── Changes 侧边栏 ──
+    ['"aria-label":"Changes Sidebar"', '"aria-label":"更改侧边栏"'],
+    ['"aria-label":"Discard All Changes"', '"aria-label":"放弃所有更改"'],
+    ['title:"Uncommitted Changes"', 'title:"未提交的更改"'],
+    // ── Git 操作按钮（Sgi 对象）──
+    ['createBranchAndCommit:{label:"Create Branch & Commit",loadingLabel:"Committing..."}', 'createBranchAndCommit:{label:"创建分支并提交",loadingLabel:"提交中..."}'],
+    ['createBranchCommitAndPush:{label:"Create Branch, Commit & Push",loadingLabel:"Committing..."}', 'createBranchCommitAndPush:{label:"创建分支、提交并推送",loadingLabel:"提交中..."}'],
+    ['createBranch:{label:"Create Branch",loadingLabel:"Creating Branch..."}', 'createBranch:{label:"创建分支",loadingLabel:"创建分支中..."}'],
+    ['commit:{label:"Commit",loadingLabel:"Committing..."}', 'commit:{label:"提交",loadingLabel:"提交中..."}'],
+    ['commitAndPush:{label:"Commit & Push",loadingLabel:"Committing..."}', 'commitAndPush:{label:"提交并推送",loadingLabel:"提交中..."}'],
+    ['createPrWithChanges:{label:"Commit & Create PR",loadingLabel:"Creating PR..."}', 'createPrWithChanges:{label:"提交并创建 PR",loadingLabel:"创建 PR 中..."}'],
+    ['push:{label:"Push",loadingLabel:"Pushing..."}', 'push:{label:"推送",loadingLabel:"推送中..."}'],
+    ['createPr:{label:"Create PR",loadingLabel:"Creating PR..."}', 'createPr:{label:"创建 PR",loadingLabel:"创建 PR 中..."}'],
+    // ── Diff 标签页操作 ──
+    ['action:"Create Branch"', 'action:"创建分支"'],
+    ['action:"Commit"', 'action:"提交"'],
+    ['action:"Push"', 'action:"推送"'],
+    ['children:"Commit"', 'children:"提交"'],
+    ['children:"Push"', 'children:"推送"'],
+    // ── 命令面板 ──
+    ['title:"Go to File"', 'title:"转到文件"'],
+    // ── Debug 模式描述 ──
+    ['description:"Systematically diagnose and fix bugs using runtime traces"', 'description:"使用运行时跟踪系统性地诊断和修复 Bug"'],
+    // ── 日期分组 ──
+    ['{today:"Today",yesterday:"Yesterday",last7Days:"Last 7 days",last30Days:"Last 30 days",older:"Older"}', '{today:"今天",yesterday:"昨天",last7Days:"过去 7 天",last30Days:"过去 30 天",older:"更早"}'],
+    ['key:"today",label:"Today"', 'key:"today",label:"今天"'],
+    ['key:"yesterday",label:"Yesterday"', 'key:"yesterday",label:"昨天"'],
+    ['key:"last_7_days",label:"Last 7 Days"', 'key:"last_7_days",label:"过去 7 天"'],
+    ['key:"last_30_days",label:"Last 30 Days"', 'key:"last_30_days",label:"过去 30 天"'],
+    ['key:"older",label:"Older"', 'key:"older",label:"更早"'],
+    ['["Today","Yesterday","This week","Older"]', '["今天","昨天","本周","更早"]'],
+    ['?"Today":', '?"今天":'],
+    ['?"Yesterday":', '?"昨天":'],
+    ['?"This week":"Older"', '?"本周":"更早"'],
+    ['"Previous 7 days"', '"过去 7 天"'],
+    // ── "Changes" 标签/返回值 ──
+    ['label:"Changes"', 'label:"更改"'],
+    ['return"Changes"', 'return"更改"'],
+    ['?"Change":"Changes"', '?"处更改":"处更改"'],
+    // ── Glass 命令面板：键绑定命令标题 ──
+    ['title:"Next Palette Filter"', 'title:"下一个面板筛选器"'],
+    ['title:"Previous Palette Filter"', 'title:"上一个面板筛选器"'],
+    ['title:"Select Model"', 'title:"选择模型"'],
+    ['title:"Open Instance Selector"', 'title:"打开实例选择器"'],
+    ['title:"Checkout Agent Branch"', 'title:"检出智能体分支"'],
+    ['title:"Cycle Mode"', 'title:"切换模式"'],
+    ['title:"Focus Chat Input"', 'title:"聚焦聊天输入"'],
+    ['title:"Mark as Fixed"', 'title:"标记为已修复"'],
+    ['title:"Proceed"', 'title:"继续"'],
+    ['title:"Jump to Next File"', 'title:"跳转到下一个文件"'],
+    ['title:"Jump to Previous File"', 'title:"跳转到上一个文件"'],
+    ['title:"Jump to Next User Message"', 'title:"跳转到下一条用户消息"'],
+    ['title:"Jump to Previous User Message"', 'title:"跳转到上一条用户消息"'],
+    ['title:"Open diff menu"', 'title:"打开差异菜单"'],
+    ['title:"Refresh Changes"', 'title:"刷新更改"'],
+    ['title:"Review Changes"', 'title:"审查更改"'],
+    ['title:"Scroll Down"', 'title:"向下滚动"'],
+    ['title:"Scroll Up"', 'title:"向上滚动"'],
+    ['title:"Edit Queued Message"', 'title:"编辑排队消息"'],
+    ['title:"Remove Queued Message"', 'title:"移除排队消息"'],
+    ['title:"Send Queued Message"', 'title:"发送排队消息"'],
+    ['title:"Find in Terminal"', 'title:"在终端中查找"'],
+    ['title:"Focus in Terminal"', 'title:"聚焦终端"'],
+    ['title:"Go to Line"', 'title:"转到行"'],
+    ['title:"Next Tab"', 'title:"下一个标签页"'],
+    ['title:"Previous Tab"', 'title:"上一个标签页"'],
+    ['title:"Toggle Fullscreen"', 'title:"切换全屏"'],
+    ['title:"Toggle Design Mode"', 'title:"切换设计模式"'],
+    ['title:"Accept Mode Switch"', 'title:"接受模式切换"'],
+    ['title:"Toggle Performance Bar"', 'title:"切换性能栏"'],
+    ['title:"Edit Pull Request Title"', 'title:"编辑拉取请求标题"'],
+    ['title:"Use Current Branch"', 'title:"使用当前分支"'],
+    ['title:"Copy Agent Deeplink"', 'title:"复制智能体深链接"'],
+    ['title:"Edit Nearest User Message"', 'title:"编辑最近的用户消息"'],
+    ['title:"Close Browser Tab"', 'title:"关闭浏览器标签页"'],
+    ['title:"Find in Browser Page"', 'title:"在浏览器页面中查找"'],
+    ['title:"Find Previous in Browser Page"', 'title:"在浏览器页面中查找上一个"'],
+    ['title:"Hard Reload Browser Tab"', 'title:"硬刷新浏览器标签页"'],
+    ['title:"Close Find in Preview"', 'title:"关闭预览中的查找"'],
+    ['title:"Toggle Selection of File"', 'title:"切换文件选中状态"'],
+    // ── Canvas / Marketplace ──
+    ['children:"Create new canvas"', 'children:"创建新画布"'],
+    ['children:"Create New"', 'children:"新建"'],
+    ['description:"Set up a team marketplace"', 'description:"设置团队市场"'],
+    ['description:"Add a marketplace from a repository"', 'description:"从仓库添加市场"'],
+    ['description:"Add a marketplace from your local computer"', 'description:"从本地计算机添加市场"'],
+    ['children:"Import from Github"', 'children:"从 Github 导入"'],
+    ['children:"Import from Disk"', 'children:"从磁盘导入"'],
+    // ── 面板标签 ──
+    ['title:"Plans"', 'title:"计划"'],
+    ['label:"Plans"', 'label:"计划"'],
+    ['children:"Actions"', 'children:"操作"'],
+    ['label:"On"', 'label:"开"'],
+    ['label:"Off"', 'label:"关"'],
+    ['open_browser:"Open Browser"', 'open_browser:"打开浏览器"'],
+    // ── 按钮/标签 ──
+    ['title:"Previous",shortcut:', 'title:"上一个",shortcut:'],
+    ['title:"Build"', 'title:"构建"'],
+    ['title:"Open",type:"tertiary"', 'title:"打开",type:"tertiary"'],
+    ['children:"Proceed"', 'children:"继续"'],
+    ['label:"Proceed"', 'label:"继续"'],
+    ['return"Window"', 'return"窗口"'],
+    ['"Notification Progress Demo: Starting demo..."', '"通知进度演示：正在启动演示..."'],
+    // ── 设置页 ──
+    ['title:"Close Settings"', 'title:"关闭设置"'],
+    ['title:"Open Settings"', 'title:"打开设置"'],
+    ['title:"Open Composer Settings"', 'title:"打开编写器设置"'],
+    ['title:"Agent Settings"', 'title:"智能体设置"'],
+    ['title:"Open Documentation"', 'title:"打开文档"'],
+    ['title:"Open Source Control"', 'title:"打开源代码管理"'],
+    ['title:"Open Usage Based Pricing"', 'title:"打开基于用量的定价"'],
+    ['title:"Open Hooks"', 'title:"打开钩子"'],
+    ['title:"Open Rules"', 'title:"打开规则"'],
+    ['title:"Open Rule"', 'title:"打开规则"'],
+    ['title:"Open Plugins"', 'title:"打开插件"'],
+    ['title:"Open MCPs"', 'title:"打开 MCP"'],
+    ['title:"Open Skills"', 'title:"打开技能"'],
+    ['title:"Open Automations"', 'title:"打开自动化"'],
+    ['title:"Open Tasks"', 'title:"打开任务"'],
+    ['title:"Open Issues"', 'title:"打开问题"'],
+    ['title:"Open Build Menu"', 'title:"打开构建菜单"'],
+    ['title:"Open Canvas"', 'title:"打开画布"'],
+    ['title:"Open Apps Panel"', 'title:"打开应用面板"'],
+    ['title:"Open Gallery"', 'title:"打开画廊"'],
+    ['title:"Open Run"', 'title:"打开运行"'],
+    ['title:"Open Window"', 'title:"打开窗口"'],
+    ['title:"Open Agent"', 'title:"打开智能体"'],
+    ['title:"Open Agent by ID"', 'title:"按 ID 打开智能体"'],
+    ['title:"Open Cloud Agent View by ID"', 'title:"按 ID 打开云智能体视图"'],
+    ['title:"Open Cloud Agent by ID"', 'title:"按 ID 打开云智能体"'],
+    ['title:"Open PR"', 'title:"打开 PR"'],
+    ['title:"Open Plan"', 'title:"打开计划"'],
+    ['title:"Open File"', 'title:"打开文件"'],
+    ['title:"Open File (Right Pane)"', 'title:"打开文件（右侧面板）"'],
+    ['title:"Open Tab"', 'title:"打开标签页"'],
+    ['title:"Open Tabs"', 'title:"打开标签页"'],
+    ['title:"Open SSH Config"', 'title:"打开 SSH 配置"'],
+    ['title:"Open Virtual Machine"', 'title:"打开虚拟机"'],
+    ['title:"Open Existing"', 'title:"打开现有"'],
+    ['title:"Open Branch Selector"', 'title:"打开分支选择器"'],
+    ['title:"Open Debug Directory"', 'title:"打开调试目录"'],
+    ['title:"Open Recording Folder"', 'title:"打开录制文件夹"'],
+    ['title:"Open Request Logs"', 'title:"打开请求日志"'],
+    ['title:"Open Datadog Logs"', 'title:"打开 Datadog 日志"'],
+    ['title:"Open Section Headers Quick Pick"', 'title:"打开分区标题快速选择"'],
+    ['title:"Open Prompt Quality"', 'title:"打开提示词质量"'],
+    ['title:"Open Project Tasks Page"', 'title:"打开项目任务页面"'],
+    ['title:"Open Background Agent Overview"', 'title:"打开后台智能体概览"'],
+    ['title:"Open Diff Menu"', 'title:"打开差异菜单"'],
+    ['title:"Open Changes Menu"', 'title:"打开更改菜单"'],
+    ['title:"Open Least Recent Agents"', 'title:"打开最久使用的智能体"'],
+    ['title:"Open Recent Agents"', 'title:"打开最近使用的智能体"'],
+    ['title:"Open environment.json"', 'title:"打开 environment.json"'],
+    ['title:"Open from new branch"', 'title:"从新分支打开"'],
+    ['title:"Open from this branch"', 'title:"从当前分支打开"'],
+    ['title:"Open in Browser"', 'title:"在浏览器中打开"'],
+    ['title:"Open in Cursor Browser"', 'title:"在 Cursor 浏览器中打开"'],
+    ['title:"Open in Design Mode"', 'title:"在设计模式中打开"'],
+    ['title:"Open in External Browser"', 'title:"在外部浏览器中打开"'],
+    ['title:"Open in IDE"', 'title:"在 IDE 中打开"'],
+    ['title:"Open in Prompt Quality"', 'title:"在提示词质量中打开"'],
+    ['title:"Open in Datadog"', 'title:"在 Datadog 中打开"'],
+    ['title:"Open in Statsig"', 'title:"在 Statsig 中打开"'],
+    ['title:"Open a different workspace"', 'title:"打开其他工作区"'],
+    ['title:"Open pull request"', 'title:"打开拉取请求"'],
+    ['title:"Open new window in worktree"', 'title:"在工作树中打开新窗口"'],
+    ['title:"Open terminal in worktree"', 'title:"在工作树中打开终端"'],
+    ['title:"Open build menu"', 'title:"打开构建菜单"'],
+    ['title:"Open settings"', 'title:"打开设置"'],
+    ['title:"Open Link"', 'title:"打开链接"'],
+    ['title:"Open Browser Tab"', 'title:"打开浏览器标签页"'],
+    ['title:"About Allowlist"', 'title:"关于白名单"'],
+    ['title:"About Cursor"', 'title:"关于 Cursor"'],
+    ['title:"Access Settings"', 'title:"访问设置"'],
+    ['title:"Agent Layout"', 'title:"智能体布局"'],
+    ['title:"Agent Window"', 'title:"智能体窗口"'],
+    ['title:"Agent Stores"', 'title:"智能体商店"'],
+    ['title:"Agent Instructions"', 'title:"智能体指令"'],
+    ['title:"Agent Settings"', 'title:"智能体设置"'],
+    ['title:"Add Doc"', 'title:"添加文档"'],
+    ['title:"Add MCP"', 'title:"添加 MCP"'],
+    ['title:"Add MCP Server"', 'title:"添加 MCP 服务器"'],
+    ['title:"Add Models"', 'title:"添加模型"'],
+    ['title:"Add Path"', 'title:"添加路径"'],
+    ['title:"Add Port"', 'title:"添加端口"'],
+    ['title:"Add Secrets"', 'title:"添加密钥"'],
+    ['title:"Add Skills"', 'title:"添加技能"'],
+    ['title:"Add Folder"', 'title:"添加文件夹"'],
+    ['title:"Add Link"', 'title:"添加链接"'],
+    ['title:"Add link"', 'title:"添加链接"'],
+    ['title:"Add folder"', 'title:"添加文件夹"'],
+    ['title:"Add Marketplace"', 'title:"添加市场"'],
+    ['title:"Add to Chat"', 'title:"添加到聊天"'],
+    ['title:"Add to Home"', 'title:"添加到主页"'],
+    ['title:"Add to Project"', 'title:"添加到项目"'],
+    ['title:"Add to Side Chat"', 'title:"添加到侧边聊天"'],
+    ['title:"Add to Team"', 'title:"添加到团队"'],
+    ['title:"Add for Myself"', 'title:"为自己添加"'],
+    ['title:"Add an agent to get started"', 'title:"添加智能体即可开始"'],
+    ['title:"Add a to-do to get started"', 'title:"添加待办事项即可开始"'],
+    ['title:"Adjust Plan"', 'title:"调整套餐"'],
+    ['title:"Archive All"', 'title:"全部归档"'],
+    ['title:"Archive Prior Chats"', 'title:"归档之前的聊天"'],
+    ['title:"Ask Agent"', 'title:"询问智能体"'],
+    ['title:"Ask Sidechat"', 'title:"询问侧边聊天"'],
+    ['title:"Ask question"', 'title:"提问"'],
+    ['title:"Accept All"', 'title:"全部接受"'],
+    ['title:"Accept Edits"', 'title:"接受编辑"'],
+    ['title:"Accept Suggestion"', 'title:"接受建议"'],
+    ['title:"Accept Cursor Tab Suggestion"', 'title:"接受 Cursor Tab 建议"'],
+    ['title:"Accept Partial Edit"', 'title:"接受部分编辑"'],
+    ['title:"Accept & Run"', 'title:"接受并运行"'],
+    ['title:"Apply Changes"', 'title:"应用更改"'],
+    ['title:"Apply Manually"', 'title:"手动应用"'],
+    ['title:"Apply Intelligently"', 'title:"智能应用"'],
+    ['title:"Abort Chat"', 'title:"中止聊天"'],
+    ['title:"Abort Agent and Restore Query"', 'title:"中止智能体并恢复查询"'],
+    ['title:"Browse Files"', 'title:"浏览文件"'],
+    ['title:"Browse MCPs"', 'title:"浏览 MCP"'],
+    ['title:"Browse Marketplace"', 'title:"浏览市场"'],
+    ['title:"Build Locally"', 'title:"本地构建"'],
+    ['title:"Build in Cloud"', 'title:"在云端构建"'],
+    ['title:"Build in New Agent"', 'title:"在新智能体中构建"'],
+    ['title:"Build in Parallel"', 'title:"并行构建"'],
+    ['title:"Build Plan"', 'title:"构建计划"'],
+    ['title:"Build Progress"', 'title:"构建进度"'],
+    ['title:"Cancel"', 'title:"取消"'],
+    ['title:"Close Settings"', 'title:"关闭设置"'],
+    ['title:"Copy Agent Deeplink"', 'title:"复制智能体深链接"'],
+    ['title:"Discard Changes"', 'title:"放弃更改"'],
+    ['title:"Discard All Changes"', 'title:"放弃所有更改"'],
+    ['title:"Reject All Edits"', 'title:"拒绝所有编辑"'],
+    ['title:"Reject Partial Edit"', 'title:"拒绝部分编辑"'],
+    ['title:"Undo Edits"', 'title:"撤销编辑"'],
+    ['title:"Undo All"', 'title:"全部撤销"'],
+    ['title:"Undo & Apply"', 'title:"撤销并应用"'],
+    ['title:"Undo Apply"', 'title:"撤销应用"'],
+    ['title:"Undo File"', 'title:"撤销文件"'],
+    ['title:"Rename Chat"', 'title:"重命名聊天"'],
+    ['title:"Rename Folder"', 'title:"重命名文件夹"'],
+    ['title:"Rename bookmark"', 'title:"重命名书签"'],
+    ['title:"Rename folder"', 'title:"重命名文件夹"'],
+    ['title:"Remove folder"', 'title:"移除文件夹"'],
+    ['title:"Remove from History"', 'title:"从历史记录中移除"'],
+    ['title:"Remove from List"', 'title:"从列表中移除"'],
+    ['title:"Remove model"', 'title:"移除模型"'],
+    ['title:"Remove Favorite"', 'title:"移除收藏"'],
+    ['title:"Remove local plugin"', 'title:"移除本地插件"'],
+    ['title:"Refresh All"', 'title:"全部刷新"'],
+    ['title:"Refresh Explorer"', 'title:"刷新资源管理器"'],
+    ['title:"Refresh Selected"', 'title:"刷新选中项"'],
+    ['title:"Refresh Status"', 'title:"刷新状态"'],
+    ['title:"Replace All"', 'title:"全部替换"'],
+    ['title:"Replace Chat"', 'title:"替换聊天"'],
+    ['title:"Replace Agent"', 'title:"替换智能体"'],
+    ['title:"Reset All"', 'title:"全部重置"'],
+    ['title:"Reset Chat Mode to Default"', 'title:"重置聊天模式为默认"'],
+    ['title:"Reset Position"', 'title:"重置位置"'],
+    ['title:"Reset cache"', 'title:"重置缓存"'],
+    ['title:"Reset zoom"', 'title:"重置缩放"'],
+    ['title:"Reset zoom to 100%"', 'title:"重置缩放至 100%"'],
+    ['title:"Restore defaults"', 'title:"恢复默认值"'],
+    ['title:"Run Now"', 'title:"立即运行"'],
+    ['title:"Run Task"', 'title:"运行任务"'],
+    ['title:"Run in Background"', 'title:"在后台运行"'],
+    ['title:"Run Autonomously"', 'title:"自主运行"'],
+    ['title:"Reopen Last Closed Tab"', 'title:"重新打开上次关闭的标签页"'],
+    ['title:"Reopen PR"', 'title:"重新打开 PR"'],
+    ['title:"Reopen conversation"', 'title:"重新打开对话"'],
+    ['title:"Review Again"', 'title:"再次审查"'],
+    ['title:"Review Code with Bugbot"', 'title:"用 Bugbot 审查代码"'],
+    ['title:"Review Next File"', 'title:"审查下一个文件"'],
+    ['title:"Review Plan"', 'title:"审查计划"'],
+    ['title:"Review changes"', 'title:"审查更改"'],
+    ['title:"Review next file"', 'title:"审查下一个文件"'],
+    ['title:"Save Automation"', 'title:"保存自动化"'],
+    ['title:"Save Environment"', 'title:"保存环境"'],
+    ['title:"Save Environment as"', 'title:"保存环境为"'],
+    ['title:"Save Image As..."', 'title:"另存图片为..."'],
+    ['title:"Search Agents"', 'title:"搜索智能体"'],
+    ['title:"Search Cursor Settings"', 'title:"搜索 Cursor 设置"'],
+    ['title:"Search Extensions"', 'title:"搜索扩展"'],
+    ['title:"Select Backend"', 'title:"选择后端"'],
+    ['title:"Select Environment"', 'title:"选择环境"'],
+    ['title:"Select Workspace"', 'title:"选择工作区"'],
+    ['title:"Select Multiple"', 'title:"多选"'],
+    ['title:"Send to Chat"', 'title:"发送到聊天"'],
+    ['title:"Send to Cloud"', 'title:"发送到云端"'],
+    ['title:"Send Test Notification"', 'title:"发送测试通知"'],
+    ['title:"Send Queued Message Now"', 'title:"立即发送排队消息"'],
+    ['title:"Send invite"', 'title:"发送邀请"'],
+    ['title:"Share Transcript"', 'title:"分享记录"'],
+    ['title:"Sign In"', 'title:"登录"'],
+    ['title:"Sign Up"', 'title:"注册"'],
+    ['title:"Skip For Now"', 'title:"暂时跳过"'],
+    ['title:"Start New Chat"', 'title:"开始新聊天"'],
+    ['title:"Start New Chat?"', 'title:"开始新聊天？"'],
+    ['title:"Start New Thread With Summary"', 'title:"以摘要开始新线程"'],
+    ['title:"Start onboarding"', 'title:"开始引导"'],
+    ['title:"Stash Changes"', 'title:"暂存更改"'],
+    ['title:"Suggest Changes"', 'title:"建议更改"'],
+    ['title:"Switch mode"', 'title:"切换模式"'],
+    ['title:"Switch to Auto"', 'title:"切换到自动"'],
+    ['title:"Take Control"', 'title:"接管控制"'],
+    ['title:"Take control"', 'title:"接管控制"'],
+    ['title:"Try Again"', 'title:"重试"'],
+    ['title:"Try again"', 'title:"重试"'],
+    ['title:"Try Cloud Agent"', 'title:"试试云智能体"'],
+    ['title:"Trust & Continue"', 'title:"信任并继续"'],
+    ['title:"Undo All"', 'title:"全部撤销"'],
+    ['title:"Unfold All"', 'title:"全部展开"'],
+    ['title:"Unlink PR"', 'title:"取消关联 PR"'],
+    ['title:"Unpublish Skill"', 'title:"取消发布技能"'],
+    ['title:"Publish Skill"', 'title:"发布技能"'],
+    ['title:"Update Cursor"', 'title:"更新 Cursor"'],
+    ['title:"Upgrade to Pro"', 'title:"升级到 Pro"'],
+    ['title:"Upgrade to Pro+"', 'title:"升级到 Pro+"'],
+    ['title:"Upgrade to Ultra"', 'title:"升级到 Ultra"'],
+    ['title:"Upgrade to use Cloud Agents"', 'title:"升级以使用云智能体"'],
+    ['title:"View Agent"', 'title:"查看智能体"'],
+    ['title:"View All Changes"', 'title:"查看所有更改"'],
+    ['title:"View Automation"', 'title:"查看自动化"'],
+    ['title:"View Changes"', 'title:"查看更改"'],
+    ['title:"View Current Branch"', 'title:"查看当前分支"'],
+    ['title:"View PR"', 'title:"查看 PR"'],
+    ['title:"View Source"', 'title:"查看源代码"'],
+    ['title:"View changelog"', 'title:"查看更新日志"'],
+    ['title:"View on Web"', 'title:"在网页中查看"'],
+    ['title:"View docs"', 'title:"查看文档"'],
+    ['title:"View setup instructions"', 'title:"查看设置说明"'],
+    ['title:"View referral history"', 'title:"查看推荐历史"'],
+    ['title:"View Uncommitted Changes"', 'title:"查看未提交的更改"'],
+    ['title:"Show History"', 'title:"显示历史记录"'],
+    ['title:"Show Less"', 'title:"显示更少"'],
+    ['title:"Show More"', 'title:"显示更多"'],
+    ['title:"Show Minimap"', 'title:"显示缩略图"'],
+    ['title:"Show Chat"', 'title:"显示聊天"'],
+    ['title:"Show Changes"', 'title:"显示更改"'],
+    ['title:"Show conversation"', 'title:"显示对话"'],
+    ['title:"Show files"', 'title:"显示文件"'],
+    ['title:"Show Output"', 'title:"显示输出"'],
+    ['title:"Show Options"', 'title:"显示选项"'],
+    ['title:"Show Status Bar"', 'title:"显示状态栏"'],
+    ['title:"Shut down"', 'title:"关闭"'],
+    ['title:"Pause Indexing"', 'title:"暂停索引"'],
+    ['title:"Pause goal"', 'title:"暂停目标"'],
+    ['title:"Resume goal"', 'title:"恢复目标"'],
+    ['title:"Replace all"', 'title:"全部替换"'],
+    ['title:"Preserve Case"', 'title:"保留大小写"'],
+    ['title:"Use Regular Expression"', 'title:"使用正则表达式"'],
+    ['title:"Use Cursor Browser"', 'title:"使用 Cursor 浏览器"'],
+    ['title:"Use External Browser"', 'title:"使用外部浏览器"'],
+    ['title:"Use Existing..."', 'title:"使用现有..."'],
+    ['title:"Use in IDE"', 'title:"在 IDE 中使用"'],
+    ['title:"Use in Agents Window"', 'title:"在智能体窗口中使用"'],
+    ['title:"Use DMs"', 'title:"使用私信"'],
+    ['title:"Use commit hash"', 'title:"使用提交哈希"'],
+    ['title:"Pin / Unpin Agent"', 'title:"固定/取消固定智能体"'],
+    ['title:"Pin to workspace"', 'title:"固定到工作区"'],
+    ['title:"Recent commits"', 'title:"最近提交"'],
+    ['title:"Recent commits - Select Commits"', 'title:"最近提交 - 选择提交"'],
+    ['title:"Recent commits - Select Repositories"', 'title:"最近提交 - 选择仓库"'],
+    ['title:"Recently changed"', 'title:"最近更改"'],
+    ['title:"Your Tasks"', 'title:"你的任务"'],
+    ['title:"Your branches"', 'title:"你的分支"'],
+    ['title:"Other Agents"', 'title:"其他智能体"'],
+    ['title:"Other Marketplaces"', 'title:"其他市场"'],
+    ['title:"Available Marketplaces"', 'title:"可用市场"'],
+    ['title:"All Plugins"', 'title:"所有插件"'],
+    ['title:"All Members"', 'title:"所有成员"'],
+    ['title:"All Tasks"', 'title:"所有任务"'],
+    ['title:"All repositories"', 'title:"所有仓库"'],
+    ['title:"All repos"', 'title:"所有仓库"'],
+    ['title:"Team agents"', 'title:"团队智能体"'],
+    ['title:"Team Default"', 'title:"团队默认"'],
+    ['title:"Personal Usage"', 'title:"个人用量"'],
+    ['title:"Usage Remaining"', 'title:"剩余用量"'],
+    ['title:"Quick Question"', 'title:"快速提问"'],
+    ['title:"Side Chat"', 'title:"侧边聊天"'],
+    ['title:"Side chats"', 'title:"侧边聊天"'],
+    ['title:"Past Chat"', 'title:"历史聊天"'],
+    ['title:"Same chat"', 'title:"同一聊天"'],
+    ['title:"Previous Agent"', 'title:"上一个智能体"'],
+    ['title:"Previous Chat (Direct)"', 'title:"上一个聊天（直接）"'],
+    ['title:"Previous Search Result"', 'title:"上一个搜索结果"'],
+    ['title:"Self-Driving Mode"', 'title:"自动驾驶模式"'],
+    ['title:"Self-Driving PRs"', 'title:"自动驾驶 PR"'],
+    ['title:"Self-driving Settings"', 'title:"自动驾驶设置"'],
+    ['title:"Remote Control"', 'title:"远程控制"'],
+    ['title:"Remote Host"', 'title:"远程主机"'],
+    ['title:"Background agent"', 'title:"后台智能体"'],
+    ['title:"Browser Menu"', 'title:"浏览器菜单"'],
+    ['title:"Browser Tab"', 'title:"浏览器标签页"'],
+    ['title:"Browser Tools"', 'title:"浏览器工具"'],
+    ['title:"Source Action..."', 'title:"源代码操作..."'],
+    ['title:"Ordered list"', 'title:"有序列表"'],
+    ['title:"Bullet list"', 'title:"无序列表"'],
+    ['title:"Server Status"', 'title:"服务器状态"'],
+    ['title:"Operation Complete"', 'title:"操作完成"'],
+    ['title:"Pending approval"', 'title:"待批准"'],
+    ['title:"Request received"', 'title:"请求已接收"'],
+    ['title:"Something went wrong"', 'title:"出错了"'],
+    ['title:"Something went wrong."', 'title:"出错了。"'],
+    ['title:"Something is off"', 'title:"有问题"'],
+    ['title:"Page isn\'t working"', 'title:"页面无法正常工作"'],
+    ['title:"Can\'t connect to server"', 'title:"无法连接到服务器"'],
+    ['title:"Outdated Client"', 'title:"客户端版本过旧"'],
+    ['title:"Review required"', 'title:"需要审查"'],
+    ['title:"Action Needed"', 'title:"需要操作"'],
+    ['title:"Sign-in restricted"', 'title:"登录受限"'],
+    ['title:"Payment Method Update Required"', 'title:"需要更新付款方式"'],
+    ['title:"Payment failed"', 'title:"付款失败"'],
+    ['title:"Plan ending soon"', 'title:"套餐即将到期"'],
+    ['title:"You\'ve hit your hard limit"', 'title:"你已达到硬性限制"'],
+    ['title:"You\'ve hit your rate limit on your current plan"', 'title:"你已达到当前套餐的速率限制"'],
+    ['title:"Update Required"', 'title:"需要更新"'],
+    ['title:"Restart to Update"', 'title:"重启以更新"'],
+    ['title:"Refer friends, earn usage credits"', 'title:"推荐好友，赚取用量额度"'],
+    ['title:"Referral link"', 'title:"推荐链接"'],
+    ['title:"Public Profile"', 'title:"公开资料"'],
+    ['title:"Profile Image"', 'title:"头像"'],
+    ['title:"Share an invite link or send invites by email."', 'title:"分享邀请链接或通过电子邮件发送邀请。"'],
+    ['title:"Teach Cursor New Skills"', 'title:"教 Cursor 新技能"'],
+    ['title:"What should we build?"', 'title:"我们要构建什么？"'],
+    ['title:"Ship better code, faster"', 'title:"更快地交付更好的代码"'],
+    ['title:"The best way to code with AI"', 'title:"使用 AI 编程的最佳方式"'],
+    ['title:"Verified by Cursor"', 'title:"Cursor 已验证"'],
+    ['title:"Plugins, MCPs, Skills, and Rules have moved to Customize"', 'title:"插件、MCP、技能和规则已移至自定义"'],
+    ['title:"We\'ve introduced a new home for all the ways to customize Cursor."', 'title:"我们为所有自定义 Cursor 的方式推出了新主页。"'],
+    ['title:"Screen recording"', 'title:"屏幕录制"'],
+    ['title:"Prepare workspace"', 'title:"准备工作区"'],
+    ['title:"Preparing workspace"', 'title:"正在准备工作区"'],
+    ['title:"Preparing save form..."', 'title:"正在准备保存表单..."'],
+    ['title:"Preparing secrets form..."', 'title:"正在准备密钥表单..."'],
+    ['title:"Stashing changes..."', 'title:"正在暂存更改..."'],
+    ['title:"Applying changes locally…"', 'title:"正在本地应用更改…"'],
+    ['title:"Starting processes..."', 'title:"正在启动进程..."'],
+    ['title:"Stopping processes..."', 'title:"正在停止进程..."'],
+    ['title:"Processes stopped"', 'title:"进程已停止"'],
+    ['title:"Uploading snapshot to Cursor..."', 'title:"正在上传快照到 Cursor..."'],
+    ['title:"Taking a little while..."', 'title:"需要一点时间..."'],
+    ['title:"Still running locally?"', 'title:"仍在本地运行？"'],
+    ['title:"Working on a Long Task?"', 'title:"正在处理长任务？"'],
+    ['title:"Would you like to remember this preference for future sessions?"', 'title:"是否在以后的会话中记住此偏好？"'],
+    ['title:"This action cannot be undone. Proceed anyway?"', 'title:"此操作无法撤销。确定继续？"'],
+    ['title:"Are you sure you want to close this window?"', 'title:"确定要关闭此窗口吗？"'],
+    ['title:"Are you sure you want to perform this action?"', 'title:"确定要执行此操作吗？"'],
+    ['title:"Your changes will be lost if you don\'t save them."', 'title:"如果不保存，你的更改将丢失。"'],
+    ['title:"This will permanently delete all your data. This action cannot be undone."', 'title:"这将永久删除你的所有数据。此操作无法撤销。"'],
+    ['title:"Proceed anyway (changes might not apply correctly)"', 'title:"仍然继续（更改可能无法正确应用）"'],
+    ['title:"This workspace"', 'title:"此工作区"'],
+    ['title:"Add a Custom MCP Server"', 'title:"添加自定义 MCP 服务器"'],
+    ['title:"Add a plugin to this agent"', 'title:"向此智能体添加插件"'],
+    ['title:"Remove a plugin from this agent"', 'title:"从此智能体移除插件"'],
+    ['title:"Add plugins to this marketplace so your team can install them."', 'title:"向此市场添加插件，以便你的团队可以安装。"'],
+    ['title:"Add plugins or import from GitHub to make them available for your team."', 'title:"添加插件或从 GitHub 导入，以供团队使用。"'],
+    ['title:"Browse the marketplace or import custom plugins to extend"', 'title:"浏览市场或导入自定义插件以扩展功能"'],
+    ['title:"Slack Channel"', 'title:"Slack 频道"'],
+    ['title:"Slack Token"', 'title:"Slack 令牌"'],
+    ['title:"API Key"', 'title:"API 密钥"'],
+    ['title:"Base URL"', 'title:"基础 URL"'],
+    ['title:"OAuth 2.0 Client ID"', 'title:"OAuth 2.0 客户端 ID"'],
+    ['title:"OAuth 2.0 Client Secret (optional)"', 'title:"OAuth 2.0 客户端密钥（可选）"'],
+    ['title:"Access Key ID"', 'title:"访问密钥 ID"'],
+    ['title:"AWS Bedrock"', 'title:"AWS Bedrock"'],
+    ['title:"Azure OpenAI"', 'title:"Azure OpenAI"'],
+    ['title:"Azure DevOps"', 'title:"Azure DevOps"'],
+    ['title:"Anthropic API Key"', 'title:"Anthropic API 密钥"'],
+    ['title:"Backend API"', 'title:"后端 API"'],
+    ['title:"Backend Server"', 'title:"后端服务器"'],
+    ['title:"Production Server"', 'title:"生产服务器"'],
+    ['title:"CLI Credentials"', 'title:"CLI 凭证"'],
+    ['title:"Active Connections"', 'title:"活动连接"'],
+    ['title:"Scheduled Tasks"', 'title:"计划任务"'],
+    ['title:"Save changes not supported yet"', 'title:"尚不支持保存更改"'],
+    ['title:"This chat could not be loaded."', 'title:"无法加载此聊天。"'],
+    ['title:"This pull request cannot be merged"', 'title:"此拉取请求无法合并"'],
+    ['title:"This pull request tab does not have a branch name yet."', 'title:"此拉取请求标签页还没有分支名称。"'],
+    ['title:"This task is missing its pull request URL."', 'title:"此任务缺少拉取请求 URL。"'],
+    ['title:"This automation is private"', 'title:"此自动化是私有的"'],
+    ['title:"This automation can only be viewed by the creator and team admins."', 'title:"此自动化只能由创建者和团队管理员查看。"'],
+    ['title:"You don\'t have access to this automation\'s run history."', 'title:"你无权访问此自动化的运行历史。"'],
+    ['title:"You\'ll be logged out of your Cursor account on this device."', 'title:"你将在此设备上登出 Cursor 账户。"'],
+    ['title:"Unable to load automations."', 'title:"无法加载自动化。"'],
+    ['title:"Unable to load organizations"', 'title:"无法加载组织"'],
+    ['title:"Unable to load Microsoft Teams channels"', 'title:"无法加载 Microsoft Teams 频道"'],
+    ['title:"Unable to load this step."', 'title:"无法加载此步骤。"'],
+    ['title:"We couldn\'t generate your referral link. Try again."', 'title:"无法生成你的推荐链接。请重试。"'],
+    ['title:"An error occurred while processing your request."', 'title:"处理请求时发生错误。"'],
+    ['title:"An unexpected error occurred. Reload the window to try again."', 'title:"发生意外错误。重新加载窗口以重试。"'],
+    ['title:"The certificate for this site is not trusted"', 'title:"此站点的证书不受信任"'],
+    ['title:"Please update your payment method to keep using Cursor."', 'title:"请更新你的付款方式以继续使用 Cursor。"'],
+    ['title:"Re-authorize your UPI payment method to restore automatic payments"', 'title:"重新授权你的 UPI 付款方式以恢复自动付款"'],
+    ['title:"Rate limited by GitHub"', 'title:"被 GitHub 限流"'],
+    ['title:"Reset this pane to a new agent"', 'title:"将此面板重置为新智能体"'],
+    ['title:"Switch where this agent runs"', 'title:"切换此智能体的运行位置"'],
+    ['title:"Open subagent preview in agents tray"', 'title:"在智能体托盘中打开子智能体预览"'],
+    ['title:"Try Open Subagent Preview by ID"', 'title:"按 ID 尝试打开子智能体预览"'],
+    ['title:"Open Browser Tab"', 'title:"打开浏览器标签页"'],
+    ['title:"Activate Browser Tab"', 'title:"激活浏览器标签页"'],
+    ['title:"Resize sidebar"', 'title:"调整侧边栏大小"'],
+    ['title:"Resize sections"', 'title:"调整分区大小"'],
+    ['title:"Resize section"', 'title:"调整分区大小"'],
+    ['title:"Resize terminal tree"', 'title:"调整终端树大小"'],
+    ['title:"Resize changes sidebar"', 'title:"调整更改侧边栏大小"'],
+    ['title:"Resize canvas list"', 'title:"调整画布列表大小"'],
+    ['title:"Resize browser sidebar"', 'title:"调整浏览器侧边栏大小"'],
+    ['title:"Resize diff meter"', 'title:"调整差异度量器大小"'],
+    ['title:"Resize pull request file trees"', 'title:"调整拉取请求文件树大小"'],
+    ['title:"Resize All Heights"', 'title:"调整所有高度"'],
+    ['title:"Try resizing this"', 'title:"试试调整大小"'],
+    ['title:"Actions Palette"', 'title:"操作面板"'],
+    ['title:"Bugbot"', 'title:"Bugbot"'],
+    ['title:"Frontend QA"', 'title:"前端 QA"'],
+    ['title:"Automate with Hooks"', 'title:"用钩子自动化"'],
+    ['title:"Automation name"', 'title:"自动化名称"'],
+    ['title:"Run command"', 'title:"运行命令"'],
+    ['title:"Run in"', 'title:"运行于"'],
+    ['title:"Score Commit for AI Content"', 'title:"为 AI 内容评分提交"'],
+    ['title:"Scan and Triage Security Vulnerabilities"', 'title:"扫描和分类安全漏洞"'],
+    ['title:"PR Routing & Approval"', 'title:"PR 路由与批准"'],
+    ['title:"Squash & Merge"', 'title:"压缩并合并"'],
+    ['title:"Squash merge"', 'title:"压缩合并"'],
+    ['title:"Rebase Merge"', 'title:"变基合并"'],
+    ['title:"Rebase merge"', 'title:"变基合并"'],
+    ['title:"Push branch to remote"', 'title:"推送分支到远程"'],
+    ['title:"Push local branch to remote"', 'title:"推送本地分支到远程"'],
+    ['title:"Push unpushed commits"', 'title:"推送未推送的提交"'],
+    ['title:"Branch Changes"', 'title:"分支更改"'],
+    ['title:"Branch Pull Requests"', 'title:"分支拉取请求"'],
+    ['title:"Branch Prefix"', 'title:"分支前缀"'],
+    ['title:"Branch Name Unavailable"', 'title:"分支名称不可用"'],
+    ['title:"View Current Branch"', 'title:"查看当前分支"'],
+    ['title:"Use Current Branch"', 'title:"使用当前分支"'],
+    ['title:"Checkout Agent Branch"', 'title:"检出智能体分支"'],
+    ['title:"Open from new branch"', 'title:"从新分支打开"'],
+    ['title:"Open from this branch"', 'title:"从当前分支打开"'],
+    ['title:"Permanently discard your current changes before switching branches"', 'title:"切换分支前永久放弃当前更改"'],
+    ['title:"Recommended to ensure correct base for changes"', 'title:"建议执行以确保更改的正确基础"'],
+    ['title:"Save changes to a stash and restore them later"', 'title:"将更改保存到储藏并稍后恢复"'],
+    ['title:"Save your changes and restore them later"', 'title:"保存更改并稍后恢复"'],
+    ['title:"Stash and save your changes so you can restore them later"', 'title:"暂存并保存更改以便稍后恢复"'],
+    ['title:"Stash + Overwrite"', 'title:"暂存并覆盖"'],
+    ['title:"Binary file not shown"', 'title:"二进制文件未显示"'],
+    ['title:"Only whitespace changes"', 'title:"仅有空白字符更改"'],
+    ['title:"Search web"', 'title:"搜索网页"'],
+    ['title:"Search with Google"', 'title:"用 Google 搜索"'],
+    ['title:"Search again in all files"', 'title:"在所有文件中再次搜索"'],
+    ['title:"Type to search actions"', 'title:"输入以搜索操作"'],
+    ['title:"Report Bug"', 'title:"报告 Bug"'],
+    ['title:"Report Good"', 'title:"报告良好"'],
+    ['title:"Report Bad"', 'title:"报告问题"'],
+    ['title:"Report Lag"', 'title:"报告卡顿"'],
+    ['title:"Report with Comment"', 'title:"带评论报告"'],
+    ['title:"Thumbs Up"', 'title:"点赞"'],
+    ['title:"Thumbs Down"', 'title:"踩"'],
+    ['title:"See Details"', 'title:"查看详情"'],
+    ['title:"Show Apps Panel"', 'title:"显示应用面板"'],
+    ['title:"Show Apps Sidebar"', 'title:"显示应用侧边栏"'],
+    ['title:"Show Running Extensions"', 'title:"显示运行中的扩展"'],
+    ['title:"Show Remote SSH Output"', 'title:"显示远程 SSH 输出"'],
+    ['title:"Show Output Channel"', 'title:"显示输出通道"'],
+    ['title:"Show Output Channel in Tab"', 'title:"在标签页中显示输出通道"'],
+    ['title:"Show Status Bar"', 'title:"显示状态栏"'],
+    ['title:"Show Notification Progress Demo"', 'title:"显示通知进度演示"'],
+    ['title:"Reveal in File Explorer"', 'title:"在文件资源管理器中显示"'],
+    ['title:"Open Developer Tools for Extension Host"', 'title:"打开扩展宿主的开发者工具"'],
+    ['title:"Start Electron Trace"', 'title:"开始 Electron 跟踪"'],
+    ['title:"Start Extension Host CPU Profiler"', 'title:"启动扩展宿主 CPU 分析器"'],
+    ['title:"Start Extension Host Heap Allocation Profiler"', 'title:"启动扩展宿主堆分配分析器"'],
+    ['title:"Start Remote Server CPU Profiler"', 'title:"启动远程服务器 CPU 分析器"'],
+    ['title:"Start File Watch Recording"', 'title:"开始文件监视记录"'],
+    ['title:"Start Request"', 'title:"开始请求"'],
+    ['title:"Stop Bisect"', 'title:"停止二分查找"'],
+    ['title:"Stop Control"', 'title:"停止控制"'],
+    ['title:"Toggle Full Screen"', 'title:"切换全屏"'],
+    ['title:"Toggle Search in Files"', 'title:"切换在文件中搜索"'],
+    ['title:"Toggle File Tree"', 'title:"切换文件树"'],
+    ['title:"Toggle Local / GitHub"', 'title:"切换本地 / GitHub"'],
+    ['title:"Toggle Expansion of File"', 'title:"切换文件展开状态"'],
+    ['title:"Reinstall Remote SSH Server and Reload Window"', 'title:"重新安装远程 SSH 服务器并重载窗口"'],
+    ['title:"Open SSH Configuration File"', 'title:"打开 SSH 配置文件"'],
+    ['title:"Set Up Workspace"', 'title:"设置工作区"'],
+    ['title:"Set Value"', 'title:"设置值"'],
+    ['title:"Set Log Level..."', 'title:"设置日志级别..."'],
+    ['title:"Select a canvas from the sidebar"', 'title:"从侧边栏选择画布"'],
+    ['title:"Select a local marketplace folder"', 'title:"选择本地市场文件夹"'],
+    ['title:"Select a local plugin repo"', 'title:"选择本地插件仓库"'],
+    ['title:"Select a Linux distro to connect."', 'title:"选择要连接的 Linux 发行版。"'],
+    ['title:"Select an option"', 'title:"选择一个选项"'],
+    ['title:"Select to End"', 'title:"选择到末尾"'],
+    ['title:"Select All in Diff"', 'title:"在差异中全选"'],
+    ['title:"Select All in File"', 'title:"在文件中全选"'],
+    ['title:"Select Custom Chime Sound"', 'title:"选择自定义提示音"'],
+    ['title:"Choose a mode"', 'title:"选择模式"'],
+    ['title:"Choose a model"', 'title:"选择模型"'],
+    ['title:"Choose a repo"', 'title:"选择仓库"'],
+    ['title:"Choose a workspace"', 'title:"选择工作区"'],
+    ['title:"Choose an environment"', 'title:"选择环境"'],
+    // ── label 类型 ──
+    ['label:"Close Settings"', 'label:"关闭设置"'],
+    ['label:"Open Settings"', 'label:"打开设置"'],
+    ['label:"Agent Mode"', 'label:"智能体模式"'],
+    ['label:"Review Mode"', 'label:"审查模式"'],
+    ['label:"Background Mode"', 'label:"后台模式"'],
+    ['label:"Self-Driving Mode"', 'label:"自动驾驶模式"'],
+    ['label:"Actions Palette"', 'label:"操作面板"'],
+    ['label:"Save Automation"', 'label:"保存自动化"'],
+    ['label:"Run Now"', 'label:"立即运行"'],
+    ['label:"Run Task"', 'label:"运行任务"'],
+    ['label:"Run in Background"', 'label:"在后台运行"'],
+    ['label:"Run Autonomously"', 'label:"自主运行"'],
+    ['label:"Personal Usage"', 'label:"个人用量"'],
+    ['label:"Usage Remaining"', 'label:"剩余用量"'],
+    ['label:"Quick Question"', 'label:"快速提问"'],
+    ['label:"Side Chat"', 'label:"侧边聊天"'],
+    ['label:"Background agent"', 'label:"后台智能体"'],
+    ['label:"Other Agents"', 'label:"其他智能体"'],
+    ['label:"All Tasks"', 'label:"所有任务"'],
+    ['label:"Your Tasks"', 'label:"你的任务"'],
+    ['label:"Team agents"', 'label:"团队智能体"'],
+    ['label:"Available Marketplaces"', 'label:"可用市场"'],
+    ['label:"Other Marketplaces"', 'label:"其他市场"'],
+    ['label:"All Plugins"', 'label:"所有插件"'],
+    ['label:"All Members"', 'label:"所有成员"'],
+    ['label:"Recent commits"', 'label:"最近提交"'],
+    ['label:"Recently changed"', 'label:"最近更改"'],
+    ['label:"Your branches"', 'label:"你的分支"'],
+    ['label:"Team Default"', 'label:"团队默认"'],
+    ['label:"Remote Control"', 'label:"远程控制"'],
+    ['label:"Remote Host"', 'label:"远程主机"'],
+    ['label:"Browser Tab"', 'label:"浏览器标签页"'],
+    ['label:"Browser Tools"', 'label:"浏览器工具"'],
+    ['label:"Browser Menu"', 'label:"浏览器菜单"'],
+    ['label:"Pending approval"', 'label:"待批准"'],
+    ['label:"Action Needed"', 'label:"需要操作"'],
+    ['label:"Review required"', 'label:"需要审查"'],
+    ['label:"Sign In"', 'label:"登录"'],
+    ['label:"Sign Up"', 'label:"注册"'],
+    ['label:"Sign-in restricted"', 'label:"登录受限"'],
+    ['label:"Skip For Now"', 'label:"暂时跳过"'],
+    ['label:"Trust & Continue"', 'label:"信任并继续"'],
+    ['label:"Try Again"', 'label:"重试"'],
+    ['label:"Try Cloud Agent"', 'label:"试试云智能体"'],
+    ['label:"Upgrade to Pro"', 'label:"升级到 Pro"'],
+    ['label:"Upgrade to Pro+"', 'label:"升级到 Pro+"'],
+    ['label:"Upgrade to Ultra"', 'label:"升级到 Ultra"'],
+    ['label:"Refer friends, earn usage credits"', 'label:"推荐好友，赚取用量额度"'],
+    ['label:"Referral link"', 'label:"推荐链接"'],
+    ['label:"Public Profile"', 'label:"公开资料"'],
+    ['label:"Profile Image"', 'label:"头像"'],
+    ['label:"API Key"', 'label:"API 密钥"'],
+    ['label:"Base URL"', 'label:"基础 URL"'],
+    ['label:"Slack Channel"', 'label:"Slack 频道"'],
+    ['label:"Slack Token"', 'label:"Slack 令牌"'],
+    ['label:"AWS Bedrock"', 'label:"AWS Bedrock"'],
+    ['label:"Azure OpenAI"', 'label:"Azure OpenAI"'],
+    ['label:"Azure DevOps"', 'label:"Azure DevOps"'],
+    ['label:"Anthropic API Key"', 'label:"Anthropic API 密钥"'],
+    ['label:"Access Key ID"', 'label:"访问密钥 ID"'],
+    ['label:"OAuth 2.0 Client ID"', 'label:"OAuth 2.0 客户端 ID"'],
+    ['label:"Active Connections"', 'label:"活动连接"'],
+    ['label:"Scheduled Tasks"', 'label:"计划任务"'],
+    ['label:"Server Status"', 'label:"服务器状态"'],
+    ['label:"Operation Complete"', 'label:"操作完成"'],
+    ['label:"Something went wrong"', 'label:"出错了"'],
+    ['label:"Can\'t connect to server"', 'label:"无法连接到服务器"'],
+    ['label:"Outdated Client"', 'label:"客户端版本过旧"'],
+    ['label:"Payment failed"', 'label:"付款失败"'],
+    ['label:"Plan ending soon"', 'label:"套餐即将到期"'],
+    ['label:"Update Required"', 'label:"需要更新"'],
+    ['label:"Restart to Update"', 'label:"重启以更新"'],
+    ['label:"Pause Indexing"', 'label:"暂停索引"'],
+    ['label:"Screen recording"', 'label:"屏幕录制"'],
+    ['label:"Binary file not shown"', 'label:"二进制文件未显示"'],
+    ['label:"Only whitespace changes"', 'label:"仅有空白字符更改"'],
+    ['label:"Stash Changes"', 'label:"暂存更改"'],
+    ['label:"Squash & Merge"', 'label:"压缩并合并"'],
+    ['label:"Rebase Merge"', 'label:"变基合并"'],
+    ['label:"Replace all"', 'label:"全部替换"'],
+    ['label:"Preserve Case"', 'label:"保留大小写"'],
+    ['label:"Use Regular Expression"', 'label:"使用正则表达式"'],
+    ['label:"Ordered list"', 'label:"有序列表"'],
+    ['label:"Bullet list"', 'label:"无序列表"'],
+    ['label:"Select Multiple"', 'label:"多选"'],
+    ['label:"Select Workspace"', 'label:"选择工作区"'],
+    ['label:"Select Environment"', 'label:"选择环境"'],
+    ['label:"Select Backend"', 'label:"选择后端"'],
+    ['label:"Send to Chat"', 'label:"发送到聊天"'],
+    ['label:"Send to Cloud"', 'label:"发送到云端"'],
+    ['label:"Send invite"', 'label:"发送邀请"'],
+    ['label:"Share Transcript"', 'label:"分享记录"'],
+    ['label:"Pin / Unpin Agent"', 'label:"固定/取消固定智能体"'],
+    ['label:"Pin to workspace"', 'label:"固定到工作区"'],
+    ['label:"Previous Agent"', 'label:"上一个智能体"'],
+    ['label:"Add Doc"', 'label:"添加文档"'],
+    ['label:"Add MCP"', 'label:"添加 MCP"'],
+    ['label:"Add Models"', 'label:"添加模型"'],
+    ['label:"Add Skills"', 'label:"添加技能"'],
+    ['label:"Add Folder"', 'label:"添加文件夹"'],
+    ['label:"Add Link"', 'label:"添加链接"'],
+    ['label:"Add Marketplace"', 'label:"添加市场"'],
+    ['label:"Add to Chat"', 'label:"添加到聊天"'],
+    ['label:"Add to Team"', 'label:"添加到团队"'],
+    ['label:"Add for Myself"', 'label:"为自己添加"'],
+    ['label:"Open Documentation"', 'label:"打开文档"'],
+    ['label:"Open Settings"', 'label:"打开设置"'],
+    ['label:"Open Source Control"', 'label:"打开源代码管理"'],
+    ['label:"Open Plugins"', 'label:"打开插件"'],
+    ['label:"Open MCPs"', 'label:"打开 MCP"'],
+    ['label:"Open Skills"', 'label:"打开技能"'],
+    ['label:"Open Hooks"', 'label:"打开钩子"'],
+    ['label:"Open Rules"', 'label:"打开规则"'],
+    ['label:"Open Automations"', 'label:"打开自动化"'],
+    ['label:"Open Build Menu"', 'label:"打开构建菜单"'],
+    ['label:"Open Canvas"', 'label:"打开画布"'],
+    ['label:"Open Gallery"', 'label:"打开画廊"'],
+    ['label:"About Cursor"', 'label:"关于 Cursor"'],
+    ['label:"Access Settings"', 'label:"访问设置"'],
+    ['label:"Agent Settings"', 'label:"智能体设置"'],
+    ['label:"Agent Layout"', 'label:"智能体布局"'],
+    ['label:"Agent Window"', 'label:"智能体窗口"'],
+    ['label:"Agent Instructions"', 'label:"智能体指令"'],
+    ['label:"Agent Stores"', 'label:"智能体商店"'],
+    ['label:"Discard Changes"', 'label:"放弃更改"'],
+    ['label:"Discard All Changes"', 'label:"放弃所有更改"'],
+    ['label:"Reject All Edits"', 'label:"拒绝所有编辑"'],
+    ['label:"Accept All"', 'label:"全部接受"'],
+    ['label:"Accept Edits"', 'label:"接受编辑"'],
+    ['label:"Undo Edits"', 'label:"撤销编辑"'],
+    ['label:"Undo All"', 'label:"全部撤销"'],
+    ['label:"Apply Changes"', 'label:"应用更改"'],
+    ['label:"Apply Manually"', 'label:"手动应用"'],
+    ['label:"Apply Intelligently"', 'label:"智能应用"'],
+    ['label:"Rename Chat"', 'label:"重命名聊天"'],
+    ['label:"Rename Folder"', 'label:"重命名文件夹"'],
+    ['label:"Remove folder"', 'label:"移除文件夹"'],
+    ['label:"Remove model"', 'label:"移除模型"'],
+    ['label:"Remove from List"', 'label:"从列表中移除"'],
+    ['label:"Refresh All"', 'label:"全部刷新"'],
+    ['label:"Refresh Explorer"', 'label:"刷新资源管理器"'],
+    ['label:"Reset All"', 'label:"全部重置"'],
+    ['label:"Reset Position"', 'label:"重置位置"'],
+    ['label:"Reset zoom"', 'label:"重置缩放"'],
+    ['label:"Restore defaults"', 'label:"恢复默认值"'],
+    ['label:"View Agent"', 'label:"查看智能体"'],
+    ['label:"View Changes"', 'label:"查看更改"'],
+    ['label:"View All Changes"', 'label:"查看所有更改"'],
+    ['label:"View PR"', 'label:"查看 PR"'],
+    ['label:"View Source"', 'label:"查看源代码"'],
+    ['label:"View changelog"', 'label:"查看更新日志"'],
+    ['label:"View on Web"', 'label:"在网页中查看"'],
+    ['label:"View docs"', 'label:"查看文档"'],
+    ['label:"Show History"', 'label:"显示历史记录"'],
+    ['label:"Show Less"', 'label:"显示更少"'],
+    ['label:"Show More"', 'label:"显示更多"'],
+    ['label:"Show Chat"', 'label:"显示聊天"'],
+    ['label:"Show Changes"', 'label:"显示更改"'],
+    ['label:"Show files"', 'label:"显示文件"'],
+    ['label:"Show Output"', 'label:"显示输出"'],
+    ['label:"Show Options"', 'label:"显示选项"'],
+    ['label:"Show Status Bar"', 'label:"显示状态栏"'],
+    ['label:"Shut down"', 'label:"关闭"'],
+    ['label:"Take Control"', 'label:"接管控制"'],
+    ['label:"Switch mode"', 'label:"切换模式"'],
+    ['label:"Use Cursor Browser"', 'label:"使用 Cursor 浏览器"'],
+    ['label:"Use External Browser"', 'label:"使用外部浏览器"'],
+    ['label:"Use in IDE"', 'label:"在 IDE 中使用"'],
+    ['label:"Use in Agents Window"', 'label:"在智能体窗口中使用"'],
+    ['label:"Use DMs"', 'label:"使用私信"'],
+    ['label:"Self-Driving PRs"', 'label:"自动驾驶 PR"'],
+    ['label:"Self-driving Settings"', 'label:"自动驾驶设置"'],
+    ['label:"Branch Changes"', 'label:"分支更改"'],
+    ['label:"Branch Pull Requests"', 'label:"分支拉取请求"'],
+    ['label:"Branch Prefix"', 'label:"分支前缀"'],
+    ['label:"PR Routing & Approval"', 'label:"PR 路由与批准"'],
+    ['label:"Scan and Triage Security Vulnerabilities"', 'label:"扫描和分类安全漏洞"'],
+    ['label:"Automate with Hooks"', 'label:"用钩子自动化"'],
+    ['label:"Teach Cursor New Skills"', 'label:"教 Cursor 新技能"'],
+    ['label:"Plugins, MCPs, Skills, and Rules have moved to Customize"', 'label:"插件、MCP、技能和规则已移至自定义"'],
+    ['label:"Verified by Cursor"', 'label:"Cursor 已验证"'],
+    ['label:"The best way to code with AI"', 'label:"使用 AI 编程的最佳方式"'],
+    ['label:"Ship better code, faster"', 'label:"更快地交付更好的代码"'],
+    ['label:"What should we build?"', 'label:"我们要构建什么？"'],
+    ['label:"Pending approval"', 'label:"待批准"'],
+    ['label:"Request received"', 'label:"请求已接收"'],
+    ['label:"Something is off"', 'label:"有问题"'],
+    ['label:"Action Needed"', 'label:"需要操作"'],
+    ['label:"Review required"', 'label:"需要审查"'],
+    ['label:"Background agent"', 'label:"后台智能体"'],
+    ['label:"Quick Question"', 'label:"快速提问"'],
+    ['label:"Side Chat"', 'label:"侧边聊天"'],
+    ['label:"Past Chat"', 'label:"历史聊天"'],
+    ['label:"Same chat"', 'label:"同一聊天"'],
+    ['label:"Save Image As..."', 'label:"另存图片为..."'],
+    ['label:"Run command"', 'label:"运行命令"'],
+    ['label:"Run in"', 'label:"运行于"'],
+    ['label:"Search web"', 'label:"搜索网页"'],
+    ['label:"Search with Google"', 'label:"用 Google 搜索"'],
+    ['label:"Type to search actions"', 'label:"输入以搜索操作"'],
+    ['label:"Report Bug"', 'label:"报告 Bug"'],
+    ['label:"Report Good"', 'label:"报告良好"'],
+    ['label:"Report Bad"', 'label:"报告问题"'],
+    ['label:"Report Lag"', 'label:"报告卡顿"'],
+    ['label:"Thumbs Up"', 'label:"点赞"'],
+    ['label:"Thumbs Down"', 'label:"踩"'],
+    ['label:"See Details"', 'label:"查看详情"'],
+    ['label:"Reveal in File Explorer"', 'label:"在文件资源管理器中显示"'],
+    ['label:"Select All in Diff"', 'label:"在差异中全选"'],
+    ['label:"Select All in File"', 'label:"在文件中全选"'],
+    ['label:"Select to End"', 'label:"选择到末尾"'],
+    ['label:"Open Browser Tab"', 'label:"打开浏览器标签页"'],
+    ['label:"Activate Browser Tab"', 'label:"激活浏览器标签页"'],
+    ['label:"Source Action..."', 'label:"源代码操作..."'],
+    ['label:"Operation Complete"', 'label:"操作完成"'],
+    ['label:"Outdated Client"', 'label:"客户端版本过旧"'],
+    ['label:"Payment Method Update Required"', 'label:"需要更新付款方式"'],
+    ['label:"Payment failed"', 'label:"付款失败"'],
+    ['label:"You\'ve hit your hard limit"', 'label:"你已达到硬性限制"'],
+    ['label:"You\'ve hit your rate limit on your current plan"', 'label:"你已达到当前套餐的速率限制"'],
+    ['label:"Usage Pricing Required"', 'label:"需要用量定价"'],
+    ['label:"This workspace"', 'label:"此工作区"'],
+    ['label:"This automation is private"', 'label:"此自动化是私有的"'],
+    ['label:"Add a Custom MCP Server"', 'label:"添加自定义 MCP 服务器"'],
+    ['label:"Add a plugin to this agent"', 'label:"向此智能体添加插件"'],
+    ['label:"Remove a plugin from this agent"', 'label:"从此智能体移除插件"'],
+    ['label:"Add plugins to this marketplace so your team can install them."', 'label:"向此市场添加插件，以便你的团队可以安装。"'],
+    ['label:"Add plugins or import from GitHub to make them available for your team."', 'label:"添加插件或从 GitHub 导入，以供团队使用。"'],
+    ['label:"Browse the marketplace or import custom plugins to extend"', 'label:"浏览市场或导入自定义插件以扩展功能"'],
+    ['label:"Your changes will be lost if you don\'t save them."', 'label:"如果不保存，你的更改将丢失。"'],
+    ['label:"This action cannot be undone. Proceed anyway?"', 'label:"此操作无法撤销。确定继续？"'],
+    ['label:"Are you sure you want to close this window?"', 'label:"确定要关闭此窗口吗？"'],
+    ['label:"Are you sure you want to perform this action?"', 'label:"确定要执行此操作吗？"'],
+    ['label:"This will permanently delete all your data. This action cannot be undone."', 'label:"这将永久删除你的所有数据。此操作无法撤销。"'],
+    ['label:"Proceed anyway (changes might not apply correctly)"', 'label:"仍然继续（更改可能无法正确应用）"'],
+    ['label:"Would you like to remember this preference for future sessions?"', 'label:"是否在以后的会话中记住此偏好？"'],
+    ['label:"An error occurred while processing your request."', 'label:"处理请求时发生错误。"'],
+    ['label:"An unexpected error occurred. Reload the window to try again."', 'label:"发生意外错误。重新加载窗口以重试。"'],
+    ['label:"The certificate for this site is not trusted"', 'label:"此站点的证书不受信任"'],
+    ['label:"Please update your payment method to keep using Cursor."', 'label:"请更新你的付款方式以继续使用 Cursor。"'],
+    ['label:"Rate limited by GitHub"', 'label:"被 GitHub 限流"'],
+    ['label:"Unable to load automations."', 'label:"无法加载自动化。"'],
+    ['label:"Unable to load organizations"', 'label:"无法加载组织"'],
+    ['label:"Unable to load Microsoft Teams channels"', 'label:"无法加载 Microsoft Teams 频道"'],
+    ['label:"Unable to load this step."', 'label:"无法加载此步骤。"'],
+    ['label:"We couldn\'t generate your referral link. Try again."', 'label:"无法生成你的推荐链接。请重试。"'],
+    ['label:"This chat could not be loaded."', 'label:"无法加载此聊天。"'],
+    ['label:"This pull request cannot be merged"', 'label:"此拉取请求无法合并"'],
+    ['label:"This pull request tab does not have a branch name yet."', 'label:"此拉取请求标签页还没有分支名称。"'],
+    ['label:"This task is missing its pull request URL."', 'label:"此任务缺少拉取请求 URL。"'],
+    ['label:"This automation can only be viewed by the creator and team admins."', 'label:"此自动化只能由创建者和团队管理员查看。"'],
+    ['label:"You don\'t have access to this automation\'s run history."', 'label:"你无权访问此自动化的运行历史。"'],
+    ['label:"You\'ll be logged out of your Cursor account on this device."', 'label:"你将在此设备上登出 Cursor 账户。"'],
+    ['label:"Uploading snapshot to Cursor..."', 'label:"正在上传快照到 Cursor..."'],
+    ['label:"Taking a little while..."', 'label:"需要一点时间..."'],
+    ['label:"Still running locally?"', 'label:"仍在本地运行？"'],
+    ['label:"Working on a Long Task?"', 'label:"正在处理长任务？"'],
+    ['label:"Preparing workspace"', 'label:"正在准备工作区"'],
+    ['label:"Preparing save form..."', 'label:"正在准备保存表单..."'],
+    ['label:"Preparing secrets form..."', 'label:"正在准备密钥表单..."'],
+    ['label:"Stashing changes..."', 'label:"正在暂存更改..."'],
+    ['label:"Applying changes locally…"', 'label:"正在本地应用更改…"'],
+    ['label:"Starting processes..."', 'label:"正在启动进程..."'],
+    ['label:"Stopping processes..."', 'label:"正在停止进程..."'],
+    ['label:"Processes stopped"', 'label:"进程已停止"'],
+    ['label:"Page isn\'t working"', 'label:"页面无法正常工作"'],
+    ['label:"Something went wrong"', 'label:"出错了"'],
+    ['label:"Something went wrong."', 'label:"出错了。"'],
+    ['label:"Add an agent to get started"', 'label:"添加智能体即可开始"'],
+    ['label:"Add a to-do to get started"', 'label:"添加待办事项即可开始"'],
+    ['label:"Select a canvas from the sidebar"', 'label:"从侧边栏选择画布"'],
+    ['label:"Select a local marketplace folder"', 'label:"选择本地市场文件夹"'],
+    ['label:"Select a local plugin repo"', 'label:"选择本地插件仓库"'],
+    ['label:"Select a Linux distro to connect."', 'label:"选择要连接的 Linux 发行版。"'],
+    ['label:"Select an option"', 'label:"选择一个选项"'],
+    ['label:"Select Custom Chime Sound"', 'label:"选择自定义提示音"'],
+    ['label:"Reset this pane to a new agent"', 'label:"将此面板重置为新智能体"'],
+    ['label:"Switch where this agent runs"', 'label:"切换此智能体的运行位置"'],
+    ['label:"Open subagent preview in agents tray"', 'label:"在智能体托盘中打开子智能体预览"'],
+    ['label:"Try Open Subagent Preview by ID"', 'label:"按 ID 尝试打开子智能体预览"'],
+    ['label:"Checkout Agent Branch"', 'label:"检出智能体分支"'],
+    ['label:"Permanently discard your current changes before switching branches"', 'label:"切换分支前永久放弃当前更改"'],
+    ['label:"Recommended to ensure correct base for changes"', 'label:"建议执行以确保更改的正确基础"'],
+    ['label:"Save changes to a stash and restore them later"', 'label:"将更改保存到储藏并稍后恢复"'],
+    ['label:"Save your changes and restore them later"', 'label:"保存更改并稍后恢复"'],
+    ['label:"Stash and save your changes so you can restore them later"', 'label:"暂存并保存更改以便稍后恢复"'],
+    ['label:"Stash + Overwrite"', 'label:"暂存并覆盖"'],
+    ['label:"Push branch to remote"', 'label:"推送分支到远程"'],
+    ['label:"Push local branch to remote"', 'label:"推送本地分支到远程"'],
+    ['label:"Push unpushed commits"', 'label:"推送未推送的提交"'],
+    ['label:"Score Commit for AI Content"', 'label:"为 AI 内容评分提交"'],
+    ['label:"Run in"', 'label:"运行于"'],
+    ['label:"Open from new branch"', 'label:"从新分支打开"'],
+    ['label:"Open from this branch"', 'label:"从当前分支打开"'],
+    ['label:"Replace all"', 'label:"全部替换"'],
+    // ── children 类型 ──
+    ['children:"Close Settings"', 'children:"关闭设置"'],
+    ['children:"Open Settings"', 'children:"打开设置"'],
+    ['children:"Agent Mode"', 'children:"智能体模式"'],
+    ['children:"Review Mode"', 'children:"审查模式"'],
+    ['children:"Background Mode"', 'children:"后台模式"'],
+    ['children:"Self-Driving Mode"', 'children:"自动驾驶模式"'],
+    ['children:"Accept All"', 'children:"全部接受"'],
+    ['children:"Accept Edits"', 'children:"接受编辑"'],
+    ['children:"Reject All Edits"', 'children:"拒绝所有编辑"'],
+    ['children:"Undo Edits"', 'children:"撤销编辑"'],
+    ['children:"Undo All"', 'children:"全部撤销"'],
+    ['children:"Apply Changes"', 'children:"应用更改"'],
+    ['children:"Apply Manually"', 'children:"手动应用"'],
+    ['children:"Discard Changes"', 'children:"放弃更改"'],
+    ['children:"Discard All Changes"', 'children:"放弃所有更改"'],
+    ['children:"Rename Chat"', 'children:"重命名聊天"'],
+    ['children:"Remove folder"', 'children:"移除文件夹"'],
+    ['children:"Reset All"', 'children:"全部重置"'],
+    ['children:"Reset Position"', 'children:"重置位置"'],
+    ['children:"Restore defaults"', 'children:"恢复默认值"'],
+    ['children:"Refresh All"', 'children:"全部刷新"'],
+    ['children:"View Agent"', 'children:"查看智能体"'],
+    ['children:"View Changes"', 'children:"查看更改"'],
+    ['children:"View All Changes"', 'children:"查看所有更改"'],
+    ['children:"View PR"', 'children:"查看 PR"'],
+    ['children:"View Source"', 'children:"查看源代码"'],
+    ['children:"View changelog"', 'children:"查看更新日志"'],
+    ['children:"View on Web"', 'children:"在网页中查看"'],
+    ['children:"View docs"', 'children:"查看文档"'],
+    ['children:"Show History"', 'children:"显示历史记录"'],
+    ['children:"Show Less"', 'children:"显示更少"'],
+    ['children:"Show More"', 'children:"显示更多"'],
+    ['children:"Show Chat"', 'children:"显示聊天"'],
+    ['children:"Show Changes"', 'children:"显示更改"'],
+    ['children:"Show files"', 'children:"显示文件"'],
+    ['children:"Show Output"', 'children:"显示输出"'],
+    ['children:"Show Options"', 'children:"显示选项"'],
+    ['children:"Show Status Bar"', 'children:"显示状态栏"'],
+    ['children:"Shut down"', 'children:"关闭"'],
+    ['children:"Take Control"', 'children:"接管控制"'],
+    ['children:"Take control"', 'children:"接管控制"'],
+    ['children:"Switch mode"', 'children:"切换模式"'],
+    ['children:"Sign In"', 'children:"登录"'],
+    ['children:"Sign Up"', 'children:"注册"'],
+    ['children:"Skip For Now"', 'children:"暂时跳过"'],
+    ['children:"Trust & Continue"', 'children:"信任并继续"'],
+    ['children:"Try Again"', 'children:"重试"'],
+    ['children:"Try again"', 'children:"重试"'],
+    ['children:"Try Cloud Agent"', 'children:"试试云智能体"'],
+    ['children:"Upgrade to Pro"', 'children:"升级到 Pro"'],
+    ['children:"Upgrade to Pro+"', 'children:"升级到 Pro+"'],
+    ['children:"Upgrade to Ultra"', 'children:"升级到 Ultra"'],
+    ['children:"Refer friends, earn usage credits"', 'children:"推荐好友，赚取用量额度"'],
+    ['children:"Referral link"', 'children:"推荐链接"'],
+    ['children:"Pin / Unpin Agent"', 'children:"固定/取消固定智能体"'],
+    ['children:"Pin to workspace"', 'children:"固定到工作区"'],
+    ['children:"Run Now"', 'children:"立即运行"'],
+    ['children:"Run Task"', 'children:"运行任务"'],
+    ['children:"Run in Background"', 'children:"在后台运行"'],
+    ['children:"Run Autonomously"', 'children:"自主运行"'],
+    ['children:"Run command"', 'children:"运行命令"'],
+    ['children:"Pause Indexing"', 'children:"暂停索引"'],
+    ['children:"Pause goal"', 'children:"暂停目标"'],
+    ['children:"Resume goal"', 'children:"恢复目标"'],
+    ['children:"Stash Changes"', 'children:"暂存更改"'],
+    ['children:"Squash & Merge"', 'children:"压缩并合并"'],
+    ['children:"Rebase Merge"', 'children:"变基合并"'],
+    ['children:"Replace all"', 'children:"全部替换"'],
+    ['children:"Preserve Case"', 'children:"保留大小写"'],
+    ['children:"Use Regular Expression"', 'children:"使用正则表达式"'],
+    ['children:"Use Cursor Browser"', 'children:"使用 Cursor 浏览器"'],
+    ['children:"Use External Browser"', 'children:"使用外部浏览器"'],
+    ['children:"Use in IDE"', 'children:"在 IDE 中使用"'],
+    ['children:"Use in Agents Window"', 'children:"在智能体窗口中使用"'],
+    ['children:"Use DMs"', 'children:"使用私信"'],
+    ['children:"Ordered list"', 'children:"有序列表"'],
+    ['children:"Bullet list"', 'children:"无序列表"'],
+    ['children:"Select Multiple"', 'children:"多选"'],
+    ['children:"Select Workspace"', 'children:"选择工作区"'],
+    ['children:"Select Environment"', 'children:"选择环境"'],
+    ['children:"Select Backend"', 'children:"选择后端"'],
+    ['children:"Send to Chat"', 'children:"发送到聊天"'],
+    ['children:"Send to Cloud"', 'children:"发送到云端"'],
+    ['children:"Send invite"', 'children:"发送邀请"'],
+    ['children:"Share Transcript"', 'children:"分享记录"'],
+    ['children:"About Cursor"', 'children:"关于 Cursor"'],
+    ['children:"Access Settings"', 'children:"访问设置"'],
+    ['children:"Add Doc"', 'children:"添加文档"'],
+    ['children:"Add MCP"', 'children:"添加 MCP"'],
+    ['children:"Add Models"', 'children:"添加模型"'],
+    ['children:"Add Skills"', 'children:"添加技能"'],
+    ['children:"Add Folder"', 'children:"添加文件夹"'],
+    ['children:"Add Link"', 'children:"添加链接"'],
+    ['children:"Add link"', 'children:"添加链接"'],
+    ['children:"Add folder"', 'children:"添加文件夹"'],
+    ['children:"Add Marketplace"', 'children:"添加市场"'],
+    ['children:"Add to Chat"', 'children:"添加到聊天"'],
+    ['children:"Add to Team"', 'children:"添加到团队"'],
+    ['children:"Add for Myself"', 'children:"为自己添加"'],
+    ['children:"Open Settings"', 'children:"打开设置"'],
+    ['children:"Open Source Control"', 'children:"打开源代码管理"'],
+    ['children:"Open Plugins"', 'children:"打开插件"'],
+    ['children:"Open MCPs"', 'children:"打开 MCP"'],
+    ['children:"Open Skills"', 'children:"打开技能"'],
+    ['children:"Open Hooks"', 'children:"打开钩子"'],
+    ['children:"Open Rules"', 'children:"打开规则"'],
+    ['children:"Open Automations"', 'children:"打开自动化"'],
+    ['children:"Open Build Menu"', 'children:"打开构建菜单"'],
+    ['children:"Open Canvas"', 'children:"打开画布"'],
+    ['children:"Open Gallery"', 'children:"打开画廊"'],
+    ['children:"Open Documentation"', 'children:"打开文档"'],
+    ['children:"Open File"', 'children:"打开文件"'],
+    ['children:"Open PR"', 'children:"打开 PR"'],
+    ['children:"Open Plan"', 'children:"打开计划"'],
+    ['children:"Open Browser Tab"', 'children:"打开浏览器标签页"'],
+    ['children:"Activate Browser Tab"', 'children:"激活浏览器标签页"'],
+    ['children:"Source Action..."', 'children:"源代码操作..."'],
+    ['children:"Save Image As..."', 'children:"另存图片为..."'],
+    ['children:"Browse Files"', 'children:"浏览文件"'],
+    ['children:"Browse MCPs"', 'children:"浏览 MCP"'],
+    ['children:"Browse Marketplace"', 'children:"浏览市场"'],
+    ['children:"Build Locally"', 'children:"本地构建"'],
+    ['children:"Build in Cloud"', 'children:"在云端构建"'],
+    ['children:"Build in New Agent"', 'children:"在新智能体中构建"'],
+    ['children:"Build in Parallel"', 'children:"并行构建"'],
+    ['children:"Search Agents"', 'children:"搜索智能体"'],
+    ['children:"Search Cursor Settings"', 'children:"搜索 Cursor 设置"'],
+    ['children:"Search Extensions"', 'children:"搜索扩展"'],
+    ['children:"Search web"', 'children:"搜索网页"'],
+    ['children:"Search with Google"', 'children:"用 Google 搜索"'],
+    ['children:"Type to search actions"', 'children:"输入以搜索操作"'],
+    ['children:"Report Bug"', 'children:"报告 Bug"'],
+    ['children:"Report Good"', 'children:"报告良好"'],
+    ['children:"Report Bad"', 'children:"报告问题"'],
+    ['children:"Report Lag"', 'children:"报告卡顿"'],
+    ['children:"Thumbs Up"', 'children:"点赞"'],
+    ['children:"Thumbs Down"', 'children:"踩"'],
+    ['children:"See Details"', 'children:"查看详情"'],
+    ['children:"Reveal in File Explorer"', 'children:"在文件资源管理器中显示"'],
+    ['children:"Select All in Diff"', 'children:"在差异中全选"'],
+    ['children:"Select All in File"', 'children:"在文件中全选"'],
+    ['children:"Select to End"', 'children:"选择到末尾"'],
+    ['children:"Select an option"', 'children:"选择一个选项"'],
+    ['children:"Select Custom Chime Sound"', 'children:"选择自定义提示音"'],
+    ['children:"Reset zoom"', 'children:"重置缩放"'],
+    ['children:"Reset zoom to 100%"', 'children:"重置缩放至 100%"'],
+    ['children:"Reset cache"', 'children:"重置缓存"'],
+    ['children:"Reset this pane to a new agent"', 'children:"将此面板重置为新智能体"'],
+    ['children:"Switch where this agent runs"', 'children:"切换此智能体的运行位置"'],
+    ['children:"Pending approval"', 'children:"待批准"'],
+    ['children:"Action Needed"', 'children:"需要操作"'],
+    ['children:"Review required"', 'children:"需要审查"'],
+    ['children:"Request received"', 'children:"请求已接收"'],
+    ['children:"Operation Complete"', 'children:"操作完成"'],
+    ['children:"Something went wrong"', 'children:"出错了"'],
+    ['children:"Something went wrong."', 'children:"出错了。"'],
+    ['children:"Something is off"', 'children:"有问题"'],
+    ['children:"Can\'t connect to server"', 'children:"无法连接到服务器"'],
+    ['children:"Outdated Client"', 'children:"客户端版本过旧"'],
+    ['children:"Payment Method Update Required"', 'children:"需要更新付款方式"'],
+    ['children:"Payment failed"', 'children:"付款失败"'],
+    ['children:"Plan ending soon"', 'children:"套餐即将到期"'],
+    ['children:"Update Required"', 'children:"需要更新"'],
+    ['children:"Restart to Update"', 'children:"重启以更新"'],
+    ['children:"You\'ve hit your hard limit"', 'children:"你已达到硬性限制"'],
+    ['children:"You\'ve hit your rate limit on your current plan"', 'children:"你已达到当前套餐的速率限制"'],
+    ['children:"Usage Pricing Required"', 'children:"需要用量定价"'],
+    ['children:"Page isn\'t working"', 'children:"页面无法正常工作"'],
+    ['children:"Binary file not shown"', 'children:"二进制文件未显示"'],
+    ['children:"Only whitespace changes"', 'children:"仅有空白字符更改"'],
+    ['children:"This workspace"', 'children:"此工作区"'],
+    ['children:"This automation is private"', 'children:"此自动化是私有的"'],
+    ['children:"Add a Custom MCP Server"', 'children:"添加自定义 MCP 服务器"'],
+    ['children:"Add a plugin to this agent"', 'children:"向此智能体添加插件"'],
+    ['children:"Remove a plugin from this agent"', 'children:"从此智能体移除插件"'],
+    ['children:"Add plugins to this marketplace so your team can install them."', 'children:"向此市场添加插件，以便你的团队可以安装。"'],
+    ['children:"Add plugins or import from GitHub to make them available for your team."', 'children:"添加插件或从 GitHub 导入，以供团队使用。"'],
+    ['children:"Browse the marketplace or import custom plugins to extend"', 'children:"浏览市场或导入自定义插件以扩展功能"'],
+    ['children:"Your changes will be lost if you don\'t save them."', 'children:"如果不保存，你的更改将丢失。"'],
+    ['children:"This action cannot be undone. Proceed anyway?"', 'children:"此操作无法撤销。确定继续？"'],
+    ['children:"Are you sure you want to close this window?"', 'children:"确定要关闭此窗口吗？"'],
+    ['children:"Are you sure you want to perform this action?"', 'children:"确定要执行此操作吗？"'],
+    ['children:"This will permanently delete all your data. This action cannot be undone."', 'children:"这将永久删除你的所有数据。此操作无法撤销。"'],
+    ['children:"Proceed anyway (changes might not apply correctly)"', 'children:"仍然继续（更改可能无法正确应用）"'],
+    ['children:"Would you like to remember this preference for future sessions?"', 'children:"是否在以后的会话中记住此偏好？"'],
+    ['children:"An error occurred while processing your request."', 'children:"处理请求时发生错误。"'],
+    ['children:"An unexpected error occurred. Reload the window to try again."', 'children:"发生意外错误。重新加载窗口以重试。"'],
+    ['children:"The certificate for this site is not trusted"', 'children:"此站点的证书不受信任"'],
+    ['children:"Please update your payment method to keep using Cursor."', 'children:"请更新你的付款方式以继续使用 Cursor。"'],
+    ['children:"Rate limited by GitHub"', 'children:"被 GitHub 限流"'],
+    ['children:"Unable to load automations."', 'children:"无法加载自动化。"'],
+    ['children:"Unable to load organizations"', 'children:"无法加载组织"'],
+    ['children:"Unable to load Microsoft Teams channels"', 'children:"无法加载 Microsoft Teams 频道"'],
+    ['children:"Unable to load this step."', 'children:"无法加载此步骤。"'],
+    ['children:"We couldn\'t generate your referral link. Try again."', 'children:"无法生成你的推荐链接。请重试。"'],
+    ['children:"This chat could not be loaded."', 'children:"无法加载此聊天。"'],
+    ['children:"This pull request cannot be merged"', 'children:"此拉取请求无法合并"'],
+    ['children:"This pull request tab does not have a branch name yet."', 'children:"此拉取请求标签页还没有分支名称。"'],
+    ['children:"This task is missing its pull request URL."', 'children:"此任务缺少拉取请求 URL。"'],
+    ['children:"This automation can only be viewed by the creator and team admins."', 'children:"此自动化只能由创建者和团队管理员查看。"'],
+    ['children:"You don\'t have access to this automation\'s run history."', 'children:"你无权访问此自动化的运行历史。"'],
+    ['children:"You\'ll be logged out of your Cursor account on this device."', 'children:"你将在此设备上登出 Cursor 账户。"'],
+    ['children:"Uploading snapshot to Cursor..."', 'children:"正在上传快照到 Cursor..."'],
+    ['children:"Taking a little while..."', 'children:"需要一点时间..."'],
+    ['children:"Still running locally?"', 'children:"仍在本地运行？"'],
+    ['children:"Working on a Long Task?"', 'children:"正在处理长任务？"'],
+    ['children:"Preparing workspace"', 'children:"正在准备工作区"'],
+    ['children:"Preparing save form..."', 'children:"正在准备保存表单..."'],
+    ['children:"Preparing secrets form..."', 'children:"正在准备密钥表单..."'],
+    ['children:"Stashing changes..."', 'children:"正在暂存更改..."'],
+    ['children:"Applying changes locally…"', 'children:"正在本地应用更改…"'],
+    ['children:"Starting processes..."', 'children:"正在启动进程..."'],
+    ['children:"Stopping processes..."', 'children:"正在停止进程..."'],
+    ['children:"Processes stopped"', 'children:"进程已停止"'],
+    ['children:"Add an agent to get started"', 'children:"添加智能体即可开始"'],
+    ['children:"Add a to-do to get started"', 'children:"添加待办事项即可开始"'],
+    ['children:"Select a canvas from the sidebar"', 'children:"从侧边栏选择画布"'],
+    ['children:"Select a local marketplace folder"', 'children:"选择本地市场文件夹"'],
+    ['children:"Select a local plugin repo"', 'children:"选择本地插件仓库"'],
+    ['children:"Select a Linux distro to connect."', 'children:"选择要连接的 Linux 发行版。"'],
+    ['children:"Open subagent preview in agents tray"', 'children:"在智能体托盘中打开子智能体预览"'],
+    ['children:"Try Open Subagent Preview by ID"', 'children:"按 ID 尝试打开子智能体预览"'],
+    ['children:"Checkout Agent Branch"', 'children:"检出智能体分支"'],
+    ['children:"Permanently discard your current changes before switching branches"', 'children:"切换分支前永久放弃当前更改"'],
+    ['children:"Recommended to ensure correct base for changes"', 'children:"建议执行以确保更改的正确基础"'],
+    ['children:"Save changes to a stash and restore them later"', 'children:"将更改保存到储藏并稍后恢复"'],
+    ['children:"Save your changes and restore them later"', 'children:"保存更改并稍后恢复"'],
+    ['children:"Stash and save your changes so you can restore them later"', 'children:"暂存并保存更改以便稍后恢复"'],
+    ['children:"Stash + Overwrite"', 'children:"暂存并覆盖"'],
+    ['children:"Push branch to remote"', 'children:"推送分支到远程"'],
+    ['children:"Push local branch to remote"', 'children:"推送本地分支到远程"'],
+    ['children:"Push unpushed commits"', 'children:"推送未推送的提交"'],
+    ['children:"Score Commit for AI Content"', 'children:"为 AI 内容评分提交"'],
+    ['children:"Open from new branch"', 'children:"从新分支打开"'],
+    ['children:"Open from this branch"', 'children:"从当前分支打开"'],
+    ['children:"Verified by Cursor"', 'children:"Cursor 已验证"'],
+    ['children:"Plugins, MCPs, Skills, and Rules have moved to Customize"', 'children:"插件、MCP、技能和规则已移至自定义"'],
+    ['children:"The best way to code with AI"', 'children:"使用 AI 编程的最佳方式"'],
+    ['children:"Ship better code, faster"', 'children:"更快地交付更好的代码"'],
+    ['children:"What should we build?"', 'children:"我们要构建什么？"'],
+    ['children:"Teach Cursor New Skills"', 'children:"教 Cursor 新技能"'],
+    ['children:"Automate with Hooks"', 'children:"用钩子自动化"'],
+    ['children:"Scan and Triage Security Vulnerabilities"', 'children:"扫描和分类安全漏洞"'],
+    ['children:"PR Routing & Approval"', 'children:"PR 路由与批准"'],
+    ['children:"Save Automation"', 'children:"保存自动化"'],
+    ['children:"Run in"', 'children:"运行于"'],
+    ['children:"Screen recording"', 'children:"屏幕录制"'],
+    // ── heading 类型 ──
+    ['heading:"Skills & Commands"', 'heading:"技能与命令"'],
+    ['heading:"Actions"', 'heading:"操作"'],
+    ['heading:"Plans"', 'heading:"计划"'],
+    // ── Changes scope 标签（函数返回值）──
+    ['label:()=>"Uncommitted"', 'label:()=>"未提交"'],
+    ['label:()=>"Unstaged"', 'label:()=>"未暂存"'],
+    ['label:()=>"Staged"', 'label:()=>"已暂存"'],
+    // ── 开发者/调试命令 ──
+    ['title:"Start File Watch Recording"', 'title:"开始文件监视记录"'],
+    ['title:"Open Developer Tools for Extension Host"', 'title:"打开扩展宿主的开发者工具"'],
+    ['title:"Start Extension Host CPU Profiler"', 'title:"启动扩展宿主 CPU 分析器"'],
+    ['title:"Start Extension Host Heap Allocation Profiler"', 'title:"启动扩展宿主堆分配分析器"'],
+    ['title:"Start Remote Server CPU Profiler"', 'title:"启动远程服务器 CPU 分析器"'],
+    ['title:"Process Explorer"', 'title:"进程资源管理器"'],
+    ['title:"Start Electron Trace"', 'title:"开始 Electron 跟踪"'],
+    ['title:"Capture and Send Debugging Data"', 'title:"捕获并发送调试数据"'],
+    ['title:"Delete Cloud-Agent Cache"', 'title:"删除云智能体缓存"'],
+    ['title:"Display Workspace Metadata"', 'title:"显示工作区元数据"'],
+    ['title:"Display Explorer Orchestrator Cache"', 'title:"显示资源管理器编排缓存"'],
+    ['title:"Delete Old Chats..."', 'title:"删除旧聊天..."'],
+    ['children:"Workspace Diagnostics"', 'children:"工作区诊断"'],
+    ['original:"Start Extension Host CPU Profiler"', 'original:"启动扩展宿主 CPU 分析器"'],
+    ['original:"Start Extension Host Heap Allocation Profiler"', 'original:"启动扩展宿主堆分配分析器"'],
+    ['original:"Delete Old Chats..."', 'original:"删除旧聊天..."'],
 ];
 
-const auxiliaryRegexReplacements = [
+// 合并大正则：单次扫描替代逐条替换（~1675条 → 1次扫描）
+const auxInterfaceLookup = new Map(auxiliaryInterfaceReplacements.filter(([en]) => en));
+const auxInterfaceMegaRegex = new RegExp(
+    auxiliaryInterfaceReplacements
+        .filter(([en]) => en)
+        .sort((a, b) => b[0].length - a[0].length)
+        .map(([en]) => escapeRegExp(en))
+        .join('|'),
+    'g'
+);
+
+const trickyReplacements = [
     {
+        // 攻克 1：Reset "Don't Ask Again" Dialogs 
+        // 魔法解析：(?:'|\\'|\\u2019|’|&#39;) 涵盖了前端所有的单引号变体，(?:\\?["']|\\u0022|&quot;) 兼容所有双引号变体
+        regex: /Reset\s+(?:\\?["']|\\u201[CD]|\\u0022|&quot;)Don(?:'|\\'|\\u2019|’|&#39;)t\s+Ask\s+Again(?:\\?["']|\\u201[CD]|\\u0022|&quot;)\s+Dialogs/gi,
+        zh: '重置“不再询问”弹窗'
+    },
+    {
+        // 攻克 2：See warnings and tips that you've hidden
+        regex: /See\s+warnings\s+and\s+tips\s+that\s+you(?:'|\\'|\\u2019|’|&#39;)ve\s+hidden/gi,
+        zh: '查看您已隐藏的警告和提示'
+    },
+    {
+        // 攻克 3：No Hidden Dialogs Yet
+        regex: /No\s+Hidden\s+Dialogs\s+Yet/gi,
+        zh: '暂无隐藏的弹窗'
+    },
+    {
+        // 攻克 4：You haven't marked any dialogs as "Don't ask again"...
+        regex: /You\s+haven(?:'|\\'|\\u2019|’|&#39;)t\s+marked\s+any\s+dialogs\s+as\s+(?:\\?["']|\\u201[CD]|\\u0022|&quot;)Don(?:'|\\'|\\u2019|’|&#39;)t\s+ask\s+again(?:\\?["']|\\u201[CD]|\\u0022|&quot;)\.\s*Any\s+hidden\s+dialogs\s+will\s+appear\s+here\s+to\s+manage\./gi,
+        zh: '您尚未将任何弹窗标记为“不再询问”。任何隐藏的弹窗都将显示在此处以供管理。'
+    },
+    {
+        // 攻克 5：截图2 的软链接超长警告
+        // 魔法解析：them 和 Changing 之间可能有 ${...} 条件表达式（团队管理员控制标记）
+        regex: /Use\s+with\s+caution\.\s*Skip\s+symlinks\s+during\s+\.cursorignore\s+file\s+discovery\.\s*Only\s+enable\s+if\s+your\s+repository\s+has\s+many\s+symlinks\s+and\s+all\s+\.cursorignore\s+files\s+are\s+reachable\s+without\s+them(?:\$\{[^}]*\}[^C]*)?\.\s*Changing\s+this\s+setting\s+will\s+require\s+a\s+restart\s+of\s+Cursor\./gi,
+        zh: '请谨慎使用。在查找 .cursorignore 文件时跳过符号链接。仅当代码库包含大量符号链接且均可直接访问时才启用。更改此设置需重启 Cursor。'
+    },
+    {
+        // 攻克 6a：label:`Submit with ${Fs?"⌘ + ":"Ctrl + "}Enter`
         regex: /Submit\s+with\s+(\$\{[^}]+\}|\\u2318\s*\+\s*|⌘\s*\+\s*|Ctrl\s*\+\s*)Enter/gi,
-        zh: '使用 $1Enter 提交',
+        zh: '使用 $1Enter 提交'
     },
     {
+        // 攻克 6b：description:`When enabled, ${Fs?"⌘ + ":"Ctrl + "}Enter submits chat and Enter inserts a newline`
         regex: /When\s+enabled,\s+(\$\{[^}]+\}|\\u2318\s*\+\s*|⌘\s*\+\s*|Ctrl\s*\+\s*)Enter\s+submits\s+chat\s+and\s+Enter\s+inserts\s+a\s+newline/gi,
-        zh: '启用后，$1Enter 提交聊天，Enter 插入换行',
+        zh: '启用后，$1Enter 提交聊天，Enter 插入换行'
     },
     {
+        // 攻克 7：Apply .cursorignore files to all subdirectories...
+        regex: /Apply\s+(.{0,10}?)\.cursorignore(.{0,10}?)\s+files\s+to\s+all\s+subdirectories(?:\$\{[^}]*\}[^C]*)?\.\s*Changing\s+this\s+setting\s+will\s+require\s+a\s+restart\s+of\s+Cursor\./gi,
+        zh: '将 $1.cursorignore$2 文件应用于所有子目录。更改此设置需重启 Cursor。'
+    },
+    {
+        // 攻克 10：Automatically import necessary modules for ${r}
+        // 实际文件中是模板字符串，TypeScript/C++ 通过变量 ${r} 注入
+        regex: /Automatically\s+import\s+necessary\s+modules\s+for\s+(\$\{[^}]+\}|TypeScript|C\+\+)/gi,
+        zh: '自动为 $1 导入必要的模块'
+    },
+    {
+        // 攻克 10.5：Accept the next word of a suggestion via ${...}
+        // 实际文件中快捷键是通过 keybindingService 动态获取的变量
+        regex: /Accept\s+the\s+next\s+word\s+of\s+a\s+suggestion\s+via\s+(\$\{[^}]+\}|Ctrl\+RightArrow)/gi,
+        zh: '使用 $1 接受建议的下一个词'
+    },
+    {
+        // 攻克 11：Embed codebase for improved contextual understanding and knowledge...
+        regex: /Embed\s+codebase\s+for\s+improved\s+contextual\s+understanding\s+and\s+knowledge\.\s*Embeddings\s+and\s+metadata\s+are\s+stored\s+in\s+the\s+([^,]{1,50}?),\s*but\s+all\s+code\s+is\s+stored\s+locally\./gi,
+        zh: '嵌入代码库以提升上下文理解和知识运用。嵌入向量和元数据存储在$1中，但所有代码均存储在本地。'
+    },
+    {
+        // 攻克 13：Files to exclude from indexing in addition to .gitignore.
+        regex: /Files\s+to\s+exclude\s+from\s+indexing\s+in\s+addition\s+to\s+([\s\S]{0,10}?)\.gitignore([\s\S]{0,10}?)\./gi,
+        zh: '除 $1.gitignore$2 外要从索引中排除的额外文件。'
+    },
+    {
+        // 攻克 14：Add documentation to use as context...
+        regex: /Add\s+documentation\s+to\s+use\s+as\s+context\.\s*You\s+can\s+also\s+use\s+([\s\S]{0,20}?)@Add([\s\S]{0,20}?)\s+in\s+Chat\s+or\s+while\s+editing\s+to\s+add\s+a\s+doc\./gi,
+        zh: '添加文档以用作上下文。您也可以在聊天或编辑框中使用 $1@Add$2 来添加文档。'
+    },
+    {
+        // 攻克 15：You're over your current usage limit...
+        regex: /You(?:'|\\'|\\u2019|’|&#39;)re\s+over\s+your\s+current\s+usage\s+limit\s+and\s+your\s+requests\s+are\s+being\s+processed\s+with\s+(.{1,20}?)\s+in\s+the\s+slow\s+queue\./gi,
+        zh: '您已超出当前使用额度，您的请求正在慢速队列中由 $1 处理。'
+    },
+    {
+        // 攻克 16：Automatically parse links when pasted into Quick Edit (${Fs?"⌘":"Ctrl+"}K) input
+        // 实际文件中快捷键部分是三元表达式动态生成
+        regex: /Automatically\s+parse\s+links\s+when\s+pasted\s+into\s+Quick\s+Edit\s+\((\$\{[^}]+\}|Ctrl\+)K\)\s+input/gi,
+        zh: '粘贴到快速编辑 ($1K) 输入框时自动解析链接'
+    },
+    {
+        // 攻克 17：Automatically jump to the next diff when accepting changes with ${Fs?"⌘":"Ctrl+"}Y
+        regex: /Automatically\s+jump\s+to\s+the\s+next\s+diff\s+when\s+accepting\s+changes\s+with\s+(\$\{[^}]+\}|Ctrl\+)Y/gi,
+        zh: '使用 $1Y 接受更改时自动跳转到下一个差异'
+    },
+    {
+        // 攻克 18：Show a hint for ${Fs?"⌘":"Ctrl+"}K in the Terminal
+        regex: /Show\s+a\s+hint\s+for\s+(\$\{[^}]+\}|Ctrl\+)K\s+in\s+the\s+Terminal/gi,
+        zh: '在终端中显示 $1K 提示'
+    },
+    {
+        // 攻克 19：Preview Box for Terminal ${Fs?"⌘":"Ctrl+"}K
+        regex: /Preview\s+Box\s+for\s+Terminal\s+(\$\{[^}]+\}|Ctrl\+)K/gi,
+        zh: '终端 $1K 的预览框'
+    },
+    {
+        // 攻克 20：Automatically index any new folders with fewer than 250,000 files
+        // 实际代码是一个数组：["Automatically index any new folders with fewer than"," ",Ui(()=>...)," ","files"]
         regex: /\[\s*"Automatically\s+index\s+any\s+new\s+folders\s+with\s+fewer\s+than"\s*,\s*" "\s*,\s*(.+?)\s*,\s*" "\s*,\s*"files"\s*\]/gi,
-        zh: '["自动索引少于", " ", $1, " ", "个文件的新文件夹"]',
+        zh: '["自动索引少于", " ", $1, " ", "个文件的新文件夹"]'
     },
     {
+        // 攻克 21：Automatically index repositories to speed up Grep searches. All data is stored locally.
+        regex: /"Automatically\s+index\s+repositories\s+to\s+speed\s+up\s+Grep\s+searches\.\s+All\s+data\s+is\s+stored\s+locally\."/gi,
+        zh: '"自动索引代码库以加速 Grep 搜索。所有数据均存储在本地。"'
+    },
+    {
+        // 用量页重置日期中的动态天数：`${st} (${Bt} days)`。
+        // 只替换带两个模板变量的日期片段，避免误伤普通英文文档或代码标识里的 days。
+        regex: /`\$\{([^}]+)\}\s+\(\$\{([^}]+)\}\s+days\)`/g,
+        zh: '`${$1} (${$2} 天)`'
+    },
+    {
+        // 用量页“包含在当前套餐中”：`Included in ${planName}`。
+        regex: /`Included\s+in\s+\$\{([^}]+)\}`/g,
+        zh: '`包含在 ${$1} 中`'
+    },
+    {
+        // 设置页搜索框占位：`Search settings ${...}`，变量名在 desktop/glass 中会随版本变化。
         regex: /Search\s+settings\s+\$\{([^}]+)\}/g,
-        zh: '搜索设置 ${$1}',
+        zh: '搜索设置 ${$1}'
+    },
+    {
+        // 另一套用量图组件会把套餐名拼成：`Included in ${planName.trim()} Plan`。
+        regex: /`Included\s+in\s+\$\{([^}]+)\}\s+Plan`/g,
+        zh: '`包含在 ${$1} 套餐中`'
+    },
+    {
+        // MCP 服务器状态文案由 fx1() 动态拼接，例如 “2 tools enabled”。
+        regex: /e\.push\(`\$\{n\.enabledToolCount\}\s+tools`\),\(n\.promptCount\?\?0\)>0&&e\.push\(`\$\{n\.promptCount\}\s+prompts`\),\(n\.resourceCount\?\?0\)>0&&e\.push\(`\$\{n\.resourceCount\}\s+resources`\),e\.length>0\?`\$\{e\.join\(", "\)\}\s+enabled`:"No tools, prompts, or resources"/g,
+        zh: 'e.push(`${n.enabledToolCount} 个工具`),(n.promptCount??0)>0&&e.push(`${n.promptCount} 个提示`),(n.resourceCount??0)>0&&e.push(`${n.resourceCount} 个资源`),e.length>0?`${e.join("，")}已启用`:"没有工具、提示或资源"'
+    },
+    {
+        // Agent 运行轨迹：Thought for 1s / Thought for 2s。
+        regex: /Thought\s+for\s+(\d+(?:\.\d+)?)ms/gi,
+        zh: '思考了 $1 毫秒'
+    },
+    {
+        regex: /Thought\s+for\s+(\d+(?:\.\d+)?)s/gi,
+        zh: '思考了 $1 秒'
+    },
+    {
+        regex: /Thought\s+for\s+(\d+(?:\.\d+)?)m/gi,
+        zh: '思考了 $1 分钟'
+    },
+    {
+        // 模板形式：`Thought for ${duration}` 或 `Thought for ${seconds}s`。
+        regex: /`Thought\s+for\s+\$\{([^}]+)\}ms`/g,
+        zh: '`思考了 ${$1} 毫秒`'
+    },
+    {
+        regex: /`Thought\s+for\s+\$\{([^}]+)\}s`/g,
+        zh: '`思考了 ${$1} 秒`'
+    },
+    {
+        regex: /`Thought\s+for\s+\$\{([^}]+)\}m`/g,
+        zh: '`思考了 ${$1} 分钟`'
+    },
+    {
+        regex: /`Thought\s+for\s+\$\{([^}]+)\}`/g,
+        zh: '`思考了 ${$1}`'
+    },
+    {
+        // Agent 运行轨迹：Ran ${toolName}。
+        regex: /`Ran\s+\$\{([^}]+)\}`/g,
+        zh: '`已运行 ${$1}`'
+    },
+    {
+        // Agent 运行轨迹：普通字符串形式，如 "Ran Check recent git history"。
+        // 只处理引号内以 Ran 开头的 UI 文案，避免误伤代码标识。
+        regex: /(["'`])Ran\s+/g,
+        zh: '$1已运行：'
+    },
+    {
+        // 认证错误卡片：Copy Request (${requestId})。
+        regex: /`Copy\s+Request\s+\(\$\{([^}]+)\}\)`/g,
+        zh: '`复制请求 (${$1})`'
+    },
+    {
+        // 插件安装人数：Used by 1 teammate / Used by 2 teammates。
+        regex: /`Used\s+by\s+\$\{([^}]+)\}\s+\$\{([^}]+)\===1\?"teammate":"teammates"\}`/g,
+        zh: '`${$1} 位成员使用`'
+    },
+    {
+        // 插件列表与提示输入里的搜索结果分组。
+        regex: /Gdf\(t,a,d,"Results",c\)/g,
+        zh: 'Gdf(t,a,d,"结果",c)'
+    },
+    {
+        regex: /\{id:"search-results",title:"Results",items:t\}/g,
+        zh: '{id:"search-results",title:"结果",items:t}'
+    },
+    {
+        regex: /\[\{title:"Results",items:m\}\]/g,
+        zh: '[{title:"结果",items:m}]'
+    },
+    {
+        // 模型切换提示：`Switch Agent Mode (${mode})`，变量为当前模式名。
+        regex: /`Switch\s+Agent\s+Mode\s*\(\$\{([^}]+)\}\)`/g,
+        zh: '`切换 Agent 模式 (${$1})`'
+    },
+    {
+        // 提交快捷键描述：`${...} submits chat, Enter inserts a newline, and primary actions move to ${...}`。
+        // 两个片段都是三元表达式动态生成，用两个捕获组原样保留。
+        regex: /`\$\{([^}]*)\}\s*submits chat, Enter inserts a newline, and primary actions move to \$\{([^}]*)\}`/g,
+        zh: '`${$1} 提交聊天，Enter 插入换行，主要操作移到 ${$2}`'
+    },
+    {
+        // PR 链接目标：`Choose ${...} for pull request links on web and desktop`，变量为 GitHub/Graphite/Cursor Review。
+        regex: /`Choose\s+\$\{([^}]+)\}\s+for pull request links on web and desktop`/g,
+        zh: '`为网页和桌面端的 PR 链接选择 ${$1}`'
+    },
+    {
+        // 语音输入按钮：`Voice Input (${shortcut})`，快捷键动态注入。
+        regex: /`Voice\s+Input\s+\(\$\{([^}]+)\}\)`/g,
+        zh: '`语音输入 (${$1})`'
+    },
+    {
+        // 开关状态三元：`...?"Enabled":"Disabled"`。
+        regex: /\?"Enabled":"Disabled"/g,
+        zh: '?"已启用":"已禁用"'
+    },
+    {
+        // Hooks 设置分组标题带数量：`Configured Hooks (${count})`。
+        regex: /`Configured\s+Hooks\s*\(\$\{([^}]+)\}\)`/g,
+        zh: '`已配置的钩子 (${$1})`'
+    },
+    {
+        // heading/title 三元表达式中的 "Recent"
+        regex: /(heading|title):([a-zA-Z_$][\w$.]*(?:\s*[><!=]+\s*[^?]*?))\?"Recent":/g,
+        zh: '$1:$2?"最近":',
+    },
+    {
+        // 套餐用量重置倒计时：days left（单/复数模板）。
+        regex: /`\$\{([^}]+)\}\s+day\$\{[^}]+===1\?"":"s"\}\s+left`/g,
+        zh: '`${$1} 天后重置`'
+    },
+    {
+        // 套餐用量重置倒计时：hours and minutes left（同时显示小时+分钟）。
+        regex: /`\$\{([^}]+)\}\s+hour\$\{[^}]+===1\?"":"s"\}\s+and\s+\$\{([^}]+)\}\s+minute\$\{[^}]+===1\?"":"s"\}\s+left`/g,
+        zh: '`${$1} 小时 ${$2} 分钟后重置`'
+    },
+    {
+        // 套餐用量重置倒计时：hours left（仅小时）。
+        regex: /`\$\{([^}]+)\}\s+hour\$\{[^}]+===1\?"":"s"\}\s+left`/g,
+        zh: '`${$1} 小时后重置`'
+    },
+    {
+        // 套餐用量重置倒计时：minutes left（仅分钟）。
+        regex: /`\$\{([^}]+)\}\s+minute\$\{[^}]+===1\?"":"s"\}\s+left`/g,
+        zh: '`${$1} 分钟后重置`'
+    },
+    {
+        // 套餐用量重置倒计时：0 minutes left。
+        regex: /"0 minutes left"/g,
+        zh: '"已到期"'
+    },
+    {
+        // API usage bar label: "your included API usage"。
+        regex: /apiUsageBarLabel:"your included API usage"/g,
+        zh: 'apiUsageBarLabel:"包含的 API 用量"'
+    },
+    {
+        // Auto usage bar label: "your included total usage"。
+        regex: /autoUsageBarLabel:"your included total usage"/g,
+        zh: 'autoUsageBarLabel:"包含的总用量"'
+    },
+    {
+        // Tab AI 统计 tooltip：`Tab AI Stats (Today): ${a}/${b} lines (${c}%)`。
+        regex: /(`)Tab AI Stats \(Today\): (\$\{this\.todayStats\.tabAcceptedLines\})\/(\$\{this\.todayStats\.tabSuggestedLines\}) lines \((\$\{[^}]+\}%)\)(`)/g,
+        zh: '$1Tab AI 统计（今日）：$2/$3 行（$4）$5'
+    },
+    {
+        // Tab AI 统计状态栏文本：`$(tab) Tab Stats: ${a}/${b} (${c}%)`。
+        regex: /(`)\$\(tab\) Tab Stats: (\$\{this\.todayStats\.tabAcceptedLines\})\/(\$\{this\.todayStats\.tabSuggestedLines\}) \((\$\{[^}]+\}%)\)(`)/g,
+        zh: '$1$(tab) Tab 统计：$2/$3（$4）$5'
+    },
+    {
+        // Tab AI ariaLabel：`Tab AI Stats: ${a} accepted out of ${b} suggested, ${c} percent acceptance rate`。
+        regex: /(`)Tab AI Stats: (\$\{this\.todayStats\.tabAcceptedLines\}) accepted out of (\$\{this\.todayStats\.tabSuggestedLines\}) suggested, (\$\{[^}]+\}) percent acceptance rate(`)/g,
+        zh: '$1Tab AI 统计：$2/$3 已接受，采纳率 $4%$5'
+    },
+    {
+        // Agent AI 统计 tooltip：`Agent AI Stats (Today): ${a}/${b} lines (${c}%)`。
+        regex: /(`)Agent AI Stats \(Today\): (\$\{this\.todayStats\.composerAcceptedLines\})\/(\$\{this\.todayStats\.composerSuggestedLines\}) lines \((\$\{[^}]+\}%)\)(`)/g,
+        zh: '$1Agent AI 统计（今日）：$2/$3 行（$4）$5'
+    },
+    {
+        // Agent AI 统计状态栏文本：`$(comment-discussion) Agent Stats: ${a}/${b} (${c}%)`。
+        regex: /(`)\$\(comment-discussion\) Agent Stats: (\$\{this\.todayStats\.composerAcceptedLines\})\/(\$\{this\.todayStats\.composerSuggestedLines\}) \((\$\{[^}]+\}%)\)(`)/g,
+        zh: '$1$(comment-discussion) Agent 统计：$2/$3（$4）$5'
+    },
+    {
+        // Agent AI ariaLabel。
+        regex: /(`)Agent AI Stats: (\$\{this\.todayStats\.composerAcceptedLines\}) accepted out of (\$\{this\.todayStats\.composerSuggestedLines\}) suggested, (\$\{[^}]+\}) percent acceptance rate(`)/g,
+        zh: '$1Agent AI 统计：$2/$3 已接受，采纳率 $4%$5'
+    },
+    {
+        // 按语言禁用：`Disable for ${lang}`。
+        regex: /`Disable for \$\{([^}]+)\}`/g,
+        zh: '`对 ${$1} 禁用`'
+    },
+    {
+        // 暂停时长选项描述：`Snooze for ${c.label}`。
+        regex: /`Snooze for \$\{([^}]+)\.label\}`/g,
+        zh: '`暂停 ${$1.label}`'
+    },
+    {
+        // 用量重置时间（带天数）：`Your usage resets on ${date} (${n} day/days).`。
+        regex: /`Your usage resets on \$\{([^}]+)\} \(\$\{([^}]+)\} \$\{[^}]+===1\?"day":"days"\}\)\.`/g,
+        zh: '`用量将在 ${$1} 重置（${$2} 天）。`'
+    },
+    {
+        // 用量重置时间（仅日期）：`Your usage resets on ${date}.`。
+        regex: /`Your usage resets on \$\{([^}]+)\}\.`/g,
+        zh: '`用量将在 ${$1} 重置。`'
+    },
+    {
+        // Changes 计数（含 scope）：`${n} ${e} ${n===1?"Change":"Changes"}` → `${n}处更改${e}`
+        regex: /`\$\{(\w+)\} \$\{([^}]+)\} \$\{\1===1\?"Change":"Changes"\}`/g,
+        zh: '`${$1}处更改${$2}`'
+    },
+    {
+        // Changes 计数（无 scope）：`${n} ${n===1?"Change":"Changes"}` → `${n}处更改`
+        regex: /`\$\{(\w+)\} \$\{\1===1\?"Change":"Changes"\}`/g,
+        zh: '`${$1}处更改`'
+    },
+    {
+        // Commits 计数：`${n} ${n===1?"Commit":"Commits"}` → `${n}次提交`
+        regex: /`\$\{(\w+)\} \$\{\1===1\?"Commit":"Commits"\}`/g,
+        zh: '`${$1}次提交`'
+    },
+    {
+        // Uncommitted changes in 仓库：`Uncommitted changes in ${t.repoLabel}` → `${t.repoLabel} 中未提交的更改`
+        regex: /`Uncommitted changes in \$\{([^}]+)\}`/g,
+        zh: '`${$1} 中未提交的更改`'
+    },
+    {
+        // Debug 模式描述（belt-and-suspenders，确保即使 safeMegaRegex 漏匹配也能命中）
+        regex: /description:"Systematically diagnose and fix bugs using runtime traces"/g,
+        zh: 'description:"使用运行时跟踪系统性地诊断和修复 Bug"'
+    },
+    {
+        // 药丸开关 / 布尔参数显示：e.value?"On":"Off" / u==="true"?"On":"Off"
+        regex: /\?"On":"Off"/g,
+        zh: '?"开":"关"'
+    },
+    {
+        // byw 函数：t===!0?"On":t===!1?"Off"
+        regex: /===!0\?"On":(\w+)===!1\?"Off"/g,
+        zh: '===!0?"开":$1===!1?"关"'
+    },
+    {
+        // ariaLabel: `Open ${Rt} in Customize`
+        regex: /`Open \$\{([^}]+)\} in Customize`/g,
+        zh: '`在自定义中打开 ${$1}`'
     },
 ];
 
@@ -604,31 +2503,34 @@ function translateAuxiliaryJsFile(filePath, productJsonPath) {
 
     progress.update('准备汉化附加窗口', fileName);
 
+    let safeHitCount = 0;
     jsContent = jsContent.replace(safeMegaRegex, (match, quote, en) => {
         changes.record('安全长句', en, safeGlobalDict[en], 1);
-        progress.update('替换安全长句', formatReplacementDetail(en, safeGlobalDict[en], 1));
+        if (++safeHitCount % 100 === 0) progress.update('替换安全长句', formatReplacementDetail(en, safeGlobalDict[en], 1));
         return `${quote}${safeGlobalDict[en]}${quote}`;
     });
     if (longMegaRegex) {
+        let longHitCount = 0;
         jsContent = jsContent.replace(longMegaRegex, (match, en) => {
             changes.record('裸文本长句', en, safeGlobalDict[en], 1);
-            progress.update('替换裸文本长句', formatReplacementDetail(en, safeGlobalDict[en], 1));
+            if (++longHitCount % 100 === 0) progress.update('替换裸文本长句', formatReplacementDetail(en, safeGlobalDict[en], 1));
             return safeGlobalDict[en];
         });
     }
     progress.step('安全文本处理完成');
 
-    for (const [en, zh] of auxiliaryInterfaceReplacements) {
-        const result = replaceStringWithCount(jsContent, en, zh);
-        jsContent = result.content;
-        changes.record('附加界面片段', en, zh, result.count);
-        if (result.count > 0) {
-            progress.update('替换附加界面片段', formatReplacementDetail(en, zh, result.count));
-        }
+    let auxInterfaceCount = 0;
+    jsContent = jsContent.replace(auxInterfaceMegaRegex, (match) => {
+        auxInterfaceCount++;
+        return auxInterfaceLookup.get(match);
+    });
+    if (auxInterfaceCount > 0) {
+        progress.update('替换附加界面片段', `${auxInterfaceCount} 处`);
+        changes.record('附加界面片段', '<合并大正则>', '<中文>', auxInterfaceCount);
     }
     progress.step('界面片段处理完成');
 
-    for (const { regex, zh } of auxiliaryRegexReplacements) {
+    for (const { regex, zh } of trickyReplacements) {
         const result = replaceRegexWithCount(jsContent, regex, zh);
         jsContent = result.content;
         changes.record('附加动态模板', regex.source, zh, result.count);
@@ -638,24 +2540,7 @@ function translateAuxiliaryJsFile(filePath, productJsonPath) {
     }
     progress.step('动态模板处理完成');
 
-    for (const { en, zh, propRegex, jsxRegex, htmlRegex } of riskyRegexes) {
-        const guard = (group, regex, build) => {
-            let count = 0;
-            jsContent = jsContent.replace(regex, (...args) => {
-                const offset = args[args.length - 2];
-                if (isProtectedKeybindingContext(jsContent, offset, en)) return args[0];
-                count++;
-                return build(...args);
-            });
-            changes.record(group, en, zh, count);
-            if (count > 0) {
-                progress.update('替换短词', formatReplacementDetail(en, zh, count));
-            }
-        };
-        guard('UI 属性短词', propRegex, (_, p1, p2) => `${p1}: ${p2}${zh}${p2}`);
-        guard('JSX 文本短词', jsxRegex, (_, p1, p2) => `${p1}, ${p2}${zh}${p2}`);
-        guard('HTML 文本短词', htmlRegex, () => `>${zh}<`);
-    }
+    jsContent = applyRiskyShortWords(jsContent, changes, progress);
     progress.step('短词处理完成');
 
     try {
@@ -695,12 +2580,28 @@ function translateNlsMessagesFile(filePath) {
     const progress = createProgress(2);
     const changes = createChangeTracker();
     progress.update('准备汉化原生提示', '正在扫描 nls 消息');
+    /**
+     * NLS 词条查找策略（按优先级）：
+     * 1. 精确匹配整个字符串
+     * 2. 去除所有 &&（助记符标记）后匹配
+     * 3. 去除 {0}/{1} 占位符后匹配基础模板
+     */
     const lookupTranslation = (key) => {
         if (Object.prototype.hasOwnProperty.call(safeGlobalDict, key)) {
             return safeGlobalDict[key];
         }
         if (Object.prototype.hasOwnProperty.call(nativeNlsDict, key)) {
             return nativeNlsDict[key];
+        }
+        // 去除所有 && 后查找（如 "Give &&Feedback..." → "Give Feedback..."）
+        const stripped = key.replace(/&&/g, '');
+        if (stripped !== key) {
+            if (Object.prototype.hasOwnProperty.call(safeGlobalDict, stripped)) {
+                return safeGlobalDict[stripped];
+            }
+            if (Object.prototype.hasOwnProperty.call(nativeNlsDict, stripped)) {
+                return nativeNlsDict[stripped];
+            }
         }
         return null;
     };
@@ -710,21 +2611,15 @@ function translateNlsMessagesFile(filePath) {
 
         const directTranslation = lookupTranslation(value);
         if (directTranslation) {
-            const next = directTranslation;
+            // 如果原文含 &&，翻译后在首字前加 && 以保留助记符快捷键
+            let next = directTranslation;
+            if (value.includes('&&') && !next.includes('&&')) {
+                // 中文不需要字母助记符，去掉 && 避免乱码显示
+                next = directTranslation;
+            }
             changes.record('原生提示词条', value, next, 1);
             progress.update('替换原生提示', formatReplacementDetail(value, next, 1));
             return next;
-        }
-
-        if (value.startsWith('&&')) {
-            const withoutMnemonic = value.slice(2);
-            const mnemonicTranslation = lookupTranslation(withoutMnemonic);
-            if (mnemonicTranslation) {
-                const next = `&&${mnemonicTranslation}`;
-                changes.record('原生提示词条', value, next, 1);
-                progress.update('替换原生提示', formatReplacementDetail(value, next, 1));
-                return next;
-            }
         }
 
         return value;
@@ -748,6 +2643,247 @@ function translateNlsMessagesFile(filePath) {
     return { processed: true };
 }
 
+// ═══════════════════════════════════════════════
+// 主进程 main.js：系统托盘菜单等原生 UI
+// ═══════════════════════════════════════════════
+
+// 托盘菜单等主进程 UI 词条。用精确片段替换，避免 Settings/Quit 等常见词污染全局词典。
+const mainProcessReplacements = [
+    ['label:"Loading agents..."', 'label:"正在加载 Agent..."'],
+    ['label:"Recent Agents"', 'label:"最近的 Agent"'],
+    ['label:"No recent agents"', 'label:"暂无最近 Agent"'],
+    ['label:"Clear All Notifications"', 'label:"清除所有通知"'],
+    ['label:"New Agent"', 'label:"新建 Agent"'],
+    ['label:"Open Cursor"', 'label:"打开 Cursor"'],
+    ['label:"Settings"', 'label:"设置"'],
+    ['label:"Quit"', 'label:"退出"'],
+    ['label:`View More (${i.length})`', 'label:`查看更多 (${i.length})`'],
+];
+
+/**
+ * 汉化 Electron 主进程文件（系统托盘菜单等原生 UI）。
+ * main.js 没有 product.json 校验值，改完无需更新 checksum。
+ */
+function translateMainJsFile(filePath) {
+    if (!filePath || !fs.existsSync(filePath)) return { processed: false };
+
+    console.log('\n⚙️  正在处理主进程文件: main.js（系统托盘菜单）');
+
+    let jsContent = fs.readFileSync(filePath, 'utf8');
+    const progress = createProgress(2);
+    const changes = createChangeTracker();
+    progress.update('处理主进程 UI', '系统托盘菜单');
+
+    for (const [en, zh] of mainProcessReplacements) {
+        const result = replaceStringWithCount(jsContent, en, zh);
+        jsContent = result.content;
+        changes.record('托盘菜单', en, zh, result.count);
+        if (result.count > 0) {
+            progress.update('替换托盘菜单', formatReplacementDetail(en, zh, result.count));
+        }
+    }
+    progress.step('托盘菜单处理完成');
+
+    try {
+        writeFileSafe(filePath, jsContent, 'utf8');
+    } catch (err) {
+        if (err.code === 'EACCES' || err.code === 'EPERM') {
+            throw new Error(`无法写入 ${filePath}：权限不足。请关闭 Cursor 后以管理员身份运行本工具。`);
+        }
+        throw err;
+    }
+
+    progress.finish('主进程文件处理完成');
+    changes.print();
+    console.log('✅ main.js 汉化完成！');
+
+    return { processed: true };
+}
+
+
+// ═══════════════════════════════════════════════
+// 用户扩展翻译（远程 SSH/WSL/容器命令面板）
+// ═══════════════════════════════════════════════
+
+const extensionCommandDict = {
+    // Dev Containers
+    "Open Folder in Container": "在容器中打开文件夹",
+    "Show Dev Containers Log": "显示开发容器日志",
+    "Attach to Running Container": "附加到正在运行的容器",
+    "Open Container Configuration File": "打开容器配置文件",
+    "Attach to Running Kubernetes Container...": "附加到正在运行的 Kubernetes 容器...",
+    "Dev Containers": "开发容器",
+    // Remote-SSH
+    "Connect to Host...": "连接到主机...",
+    "Connect Current Window to Host...": "将当前窗口连接到主机...",
+    "Open SSH Configuration File...": "打开 SSH 配置文件...",
+    "Connect to Host in New Window": "在新窗口中连接到主机",
+    "Connect to Host in Current Window": "在当前窗口中连接到主机",
+    "Remote-SSH": "远程 SSH",
+    // WSL
+    "Connect to WSL": "连接到 WSL",
+    "Connect to WSL using Distro...": "使用指定发行版连接到 WSL...",
+    "Connect to WSL in New Window": "在新窗口中连接到 WSL",
+    "Connect to WSL using Distro in New Window...": "在新窗口中使用指定发行版连接到 WSL...",
+    "Open Folder in WSL": "在 WSL 中打开文件夹",
+};
+
+function translateUserExtensions() {
+    const homeDir = os.homedir();
+    const extDir = path.join(homeDir, '.cursor', 'extensions');
+    if (!fs.existsSync(extDir)) return { processed: 0 };
+
+    console.log('\n⚙️  正在处理用户扩展: 远程开发命令面板');
+    const remotePrefixes = ['anysphere.remote-containers', 'anysphere.remote-ssh', 'anysphere.remote-wsl'];
+    let processed = 0;
+
+    const entries = fs.readdirSync(extDir, { withFileTypes: true });
+    for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        if (!remotePrefixes.some(p => entry.name.startsWith(p))) continue;
+
+        const pkgPath = path.join(extDir, entry.name, 'package.json');
+        if (!fs.existsSync(pkgPath)) continue;
+
+        // 备份
+        const backupMsg = backupFile(pkgPath);
+        if (backupMsg) console.log(`  ${backupMsg}`);
+
+        let pkg;
+        try {
+            pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+        } catch {
+            console.log(`  ⚠️  无法解析 ${entry.name}/package.json，已跳过`);
+            continue;
+        }
+
+        let changed = false;
+        const commands = pkg.contributes?.commands;
+        if (Array.isArray(commands)) {
+            for (const cmd of commands) {
+                if (cmd.title && extensionCommandDict[cmd.title]) {
+                    cmd.title = extensionCommandDict[cmd.title];
+                    changed = true;
+                }
+                if (cmd.category && extensionCommandDict[cmd.category]) {
+                    cmd.category = extensionCommandDict[cmd.category];
+                    changed = true;
+                }
+            }
+        }
+
+        // viewsContainers/views 中的标题也可能包含英文
+        const viewsContainers = pkg.contributes?.viewsContainers;
+        if (viewsContainers) {
+            for (const [, views] of Object.entries(viewsContainers)) {
+                if (Array.isArray(views)) {
+                    for (const v of views) {
+                        if (v.title && extensionCommandDict[v.title]) {
+                            v.title = extensionCommandDict[v.title];
+                            changed = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (changed) {
+            writeFileSafe(pkgPath, JSON.stringify(pkg, null, 2), 'utf8');
+            console.log(`  ✅ ${entry.name}: 已汉化命令面板条目`);
+            processed++;
+        }
+    }
+
+    if (processed === 0) {
+        console.log('  ℹ️  未发现需要汉化的远程扩展（可能尚未安装）。');
+    }
+    return { processed };
+}
+
+function restoreUserExtensions() {
+    const homeDir = os.homedir();
+    const extDir = path.join(homeDir, '.cursor', 'extensions');
+    if (!fs.existsSync(extDir)) return 0;
+
+    let restored = 0;
+    const entries = fs.readdirSync(extDir, { withFileTypes: true });
+    for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        if (!entry.name.startsWith('anysphere.remote-')) continue;
+        const pkgPath = path.join(extDir, entry.name, 'package.json');
+        if (restoreFromBackup(pkgPath)) {
+            console.log(`  ✅ 已还原: ${entry.name}/package.json`);
+            restored++;
+        }
+    }
+    return restored;
+}
+
+
+// ═══════════════════════════════════════════════
+// 用户存储汉化 (state.vscdb → composerState.modes4)
+// ═══════════════════════════════════════════════
+
+/**
+ * 通过 Cursor 内置 node 运行 storage.js，汉化 state.vscdb 中的 modes4 描述
+ * @param {string} appPath Cursor app 路径（含 node_modules/@vscode/sqlite3）
+ */
+function translateUserStorage(appPath) {
+    console.log('\n⚙️  正在处理用户存储 (state.vscdb)...');
+
+    // 定位 Cursor 内置 node（仅 Windows/macOS 有）
+    const nodeCandidates = process.platform === 'win32'
+        ? [path.join(appPath, 'resources', 'helpers', 'node.exe')]
+        : process.platform === 'darwin'
+            ? [path.join(appPath, '..', 'Frameworks', 'Cursor Helper.app', 'Contents', 'MacOS', 'Cursor Helper')]
+            : [];
+
+    const nodeExe = nodeCandidates.find(p => fs.existsSync(p));
+    if (!nodeExe) {
+        console.log('  ℹ️  未找到 Cursor 内置 node，跳过用户存储汉化。');
+        return;
+    }
+
+    const storageScript = path.join(__dirname, 'storage.js');
+    if (!fs.existsSync(storageScript)) {
+        console.log('  ℹ️  storage.js 不存在，跳过用户存储汉化。');
+        return;
+    }
+
+    const { spawnSync } = require('child_process');
+    const result = spawnSync(nodeExe, [storageScript, '--action=translate', `--app-path=${appPath}`], {
+        encoding: 'utf8',
+        stdio: ['ignore', 'inherit', 'inherit'],
+        timeout: 30000
+    });
+
+    if (result.error) {
+        console.log('  ⚠️  用户存储汉化执行失败:', result.error.message);
+    } else if (result.status !== 0) {
+        console.log('  ⚠️  用户存储汉化异常退出（非致命）。');
+    }
+}
+
+/**
+ * 还原 state.vscdb（删除 modes4 翻译）
+ */
+function restoreUserStorage() {
+    const storageScript = path.join(__dirname, 'storage.js');
+    if (!fs.existsSync(storageScript)) {
+        return;
+    }
+
+    // 还原不需要 node 版本匹配（仅文件复制），直接用 storage.js 的 restoreModes
+    try {
+        const { restoreModes } = require('./storage');
+        if (restoreModes()) {
+            console.log('  ✅ 已还原: state.vscdb');
+        }
+    } catch (e) {
+        // 忽略
+    }
+}
+
 
 // ═══════════════════════════════════════════════
 // 核心汉化
@@ -758,16 +2894,17 @@ function translateNlsMessagesFile(filePath) {
  * @param {{ appPath: string, mainJsPath: string, glassJsPath?: string, nlsMessagesPath?: string, htmlPath: string, productJsonPath: string }} paths
  */
 function translate(paths) {
-    const { appPath, mainJsPath, glassJsPath, nlsMessagesPath, htmlPath, productJsonPath } = paths;
+    const { appPath, mainJsPath, glassJsPath, nlsMessagesPath, htmlPath, productJsonPath, mainProcessJsPath } = paths;
 
     // 1. 备份
     console.log('');
     const msgs = [
-        backupFile(htmlPath),
-        backupFile(mainJsPath),
-        glassJsPath && fs.existsSync(glassJsPath) ? backupFile(glassJsPath) : null,
-        nlsMessagesPath && fs.existsSync(nlsMessagesPath) ? backupFile(nlsMessagesPath) : null,
-        backupFile(productJsonPath),
+        backupFile(htmlPath, productJsonPath),
+        backupFile(mainJsPath, productJsonPath),
+        glassJsPath && fs.existsSync(glassJsPath) ? backupFile(glassJsPath, productJsonPath) : null,
+        nlsMessagesPath && fs.existsSync(nlsMessagesPath) ? backupFile(nlsMessagesPath, productJsonPath) : null,
+        mainProcessJsPath && fs.existsSync(mainProcessJsPath) ? backupFile(mainProcessJsPath, productJsonPath) : null,
+        backupFile(productJsonPath, productJsonPath),
     ].filter(Boolean);
     msgs.forEach(m => console.log(`  ${m}`));
 
@@ -779,18 +2916,20 @@ function translate(paths) {
     progress.update('准备汉化词库', '正在扫描可替换文本');
 
     // 3. 安全长句：单次大正则替换
+    let safeHitCount = 0;
     jsContent = jsContent.replace(safeMegaRegex, (match, quote, en) => {
         changes.record('安全长句', en, safeGlobalDict[en], 1);
-        progress.update('替换安全长句', formatReplacementDetail(en, safeGlobalDict[en], 1));
+        if (++safeHitCount % 100 === 0) progress.update('替换安全长句', formatReplacementDetail(en, safeGlobalDict[en], 1));
         return `${quote}${safeGlobalDict[en]}${quote}`;
     });
     progress.step('安全长句替换完成');
 
     // 4. 长句裸文本替换
     if (longMegaRegex) {
+        let longHitCount = 0;
         jsContent = jsContent.replace(longMegaRegex, (match, en) => {
             changes.record('裸文本长句', en, safeGlobalDict[en], 1);
-            progress.update('替换裸文本长句', formatReplacementDetail(en, safeGlobalDict[en], 1));
+            if (++longHitCount % 100 === 0) progress.update('替换裸文本长句', formatReplacementDetail(en, safeGlobalDict[en], 1));
             return safeGlobalDict[en];
         });
     }
@@ -798,204 +2937,6 @@ function translate(paths) {
 
     // 5. 暴力正则破译：处理带标点、特殊转义、单双引号混用的顽固长句
     progress.update('处理顽固词条', '包含特殊符号、动态模板和 Unicode 转义');
-    const trickyReplacements = [
-        {
-            // 攻克 1：Reset "Don't Ask Again" Dialogs 
-            // 魔法解析：(?:'|\\'|\\u2019|’|&#39;) 涵盖了前端所有的单引号变体，(?:\\?["']|\\u0022|&quot;) 兼容所有双引号变体
-            regex: /Reset\s+(?:\\?["']|\\u201[CD]|\\u0022|&quot;)Don(?:'|\\'|\\u2019|’|&#39;)t\s+Ask\s+Again(?:\\?["']|\\u201[CD]|\\u0022|&quot;)\s+Dialogs/gi,
-            zh: '重置“不再询问”弹窗'
-        },
-        {
-            // 攻克 2：See warnings and tips that you've hidden
-            regex: /See\s+warnings\s+and\s+tips\s+that\s+you(?:'|\\'|\\u2019|’|&#39;)ve\s+hidden/gi,
-            zh: '查看您已隐藏的警告和提示'
-        },
-        {
-            // 攻克 3：No Hidden Dialogs Yet
-            regex: /No\s+Hidden\s+Dialogs\s+Yet/gi,
-            zh: '暂无隐藏的弹窗'
-        },
-        {
-            // 攻克 4：You haven't marked any dialogs as "Don't ask again"...
-            regex: /You\s+haven(?:'|\\'|\\u2019|’|&#39;)t\s+marked\s+any\s+dialogs\s+as\s+(?:\\?["']|\\u201[CD]|\\u0022|&quot;)Don(?:'|\\'|\\u2019|’|&#39;)t\s+ask\s+again(?:\\?["']|\\u201[CD]|\\u0022|&quot;)\.\s*Any\s+hidden\s+dialogs\s+will\s+appear\s+here\s+to\s+manage\./gi,
-            zh: '您尚未将任何弹窗标记为“不再询问”。任何隐藏的弹窗都将显示在此处以供管理。'
-        },
-        {
-            // 攻克 5：截图2 的软链接超长警告
-            // 魔法解析：them 和 Changing 之间可能有 ${...} 条件表达式（团队管理员控制标记）
-            regex: /Use\s+with\s+caution\.\s*Skip\s+symlinks\s+during\s+\.cursorignore\s+file\s+discovery\.\s*Only\s+enable\s+if\s+your\s+repository\s+has\s+many\s+symlinks\s+and\s+all\s+\.cursorignore\s+files\s+are\s+reachable\s+without\s+them(?:\$\{[^}]*\}[^C]*)?\.\s*Changing\s+this\s+setting\s+will\s+require\s+a\s+restart\s+of\s+Cursor\./gi,
-            zh: '请谨慎使用。在查找 .cursorignore 文件时跳过符号链接。仅当代码库包含大量符号链接且均可直接访问时才启用。更改此设置需重启 Cursor。'
-        },
-        {
-            // 攻克 6a：label:`Submit with ${Fs?"⌘ + ":"Ctrl + "}Enter`
-            regex: /Submit\s+with\s+(\$\{[^}]+\}|\\u2318\s*\+\s*|⌘\s*\+\s*|Ctrl\s*\+\s*)Enter/gi,
-            zh: '使用 $1Enter 提交'
-        },
-        {
-            // 攻克 6b：description:`When enabled, ${Fs?"⌘ + ":"Ctrl + "}Enter submits chat and Enter inserts a newline`
-            regex: /When\s+enabled,\s+(\$\{[^}]+\}|\\u2318\s*\+\s*|⌘\s*\+\s*|Ctrl\s*\+\s*)Enter\s+submits\s+chat\s+and\s+Enter\s+inserts\s+a\s+newline/gi,
-            zh: '启用后，$1Enter 提交聊天，Enter 插入换行'
-        },
-        {
-            // 攻克 7：Apply .cursorignore files to all subdirectories...
-            regex: /Apply\s+(.{0,10}?)\.cursorignore(.{0,10}?)\s+files\s+to\s+all\s+subdirectories(?:\$\{[^}]*\}[^C]*)?\.\s*Changing\s+this\s+setting\s+will\s+require\s+a\s+restart\s+of\s+Cursor\./gi,
-            zh: '将 $1.cursorignore$2 文件应用于所有子目录。更改此设置需重启 Cursor。'
-        },
-        {
-            // 攻克 10：Automatically import necessary modules for ${r}
-            // 实际文件中是模板字符串，TypeScript/C++ 通过变量 ${r} 注入
-            regex: /Automatically\s+import\s+necessary\s+modules\s+for\s+(\$\{[^}]+\}|TypeScript|C\+\+)/gi,
-            zh: '自动为 $1 导入必要的模块'
-        },
-        {
-            // 攻克 10.5：Accept the next word of a suggestion via ${...}
-            // 实际文件中快捷键是通过 keybindingService 动态获取的变量
-            regex: /Accept\s+the\s+next\s+word\s+of\s+a\s+suggestion\s+via\s+(\$\{[^}]+\}|Ctrl\+RightArrow)/gi,
-            zh: '使用 $1 接受建议的下一个词'
-        },
-        {
-            // 攻克 11：Embed codebase for improved contextual understanding and knowledge...
-            regex: /Embed\s+codebase\s+for\s+improved\s+contextual\s+understanding\s+and\s+knowledge\.\s*Embeddings\s+and\s+metadata\s+are\s+stored\s+in\s+the\s+([^,]{1,50}?),\s*but\s+all\s+code\s+is\s+stored\s+locally\./gi,
-            zh: '嵌入代码库以提升上下文理解和知识运用。嵌入向量和元数据存储在$1中，但所有代码均存储在本地。'
-        },
-        {
-            // 攻克 13：Files to exclude from indexing in addition to .gitignore.
-            regex: /Files\s+to\s+exclude\s+from\s+indexing\s+in\s+addition\s+to\s+([\s\S]{0,10}?)\.gitignore([\s\S]{0,10}?)\./gi,
-            zh: '除 $1.gitignore$2 外要从索引中排除的额外文件。'
-        },
-        {
-            // 攻克 14：Add documentation to use as context...
-            regex: /Add\s+documentation\s+to\s+use\s+as\s+context\.\s*You\s+can\s+also\s+use\s+([\s\S]{0,20}?)@Add([\s\S]{0,20}?)\s+in\s+Chat\s+or\s+while\s+editing\s+to\s+add\s+a\s+doc\./gi,
-            zh: '添加文档以用作上下文。您也可以在聊天或编辑框中使用 $1@Add$2 来添加文档。'
-        },
-        {
-            // 攻克 15：You're over your current usage limit...
-            regex: /You(?:'|\\'|\\u2019|’|&#39;)re\s+over\s+your\s+current\s+usage\s+limit\s+and\s+your\s+requests\s+are\s+being\s+processed\s+with\s+(.{1,20}?)\s+in\s+the\s+slow\s+queue\./gi,
-            zh: '您已超出当前使用额度，您的请求正在慢速队列中由 $1 处理。'
-        },
-        {
-            // 攻克 16：Automatically parse links when pasted into Quick Edit (${Fs?"⌘":"Ctrl+"}K) input
-            // 实际文件中快捷键部分是三元表达式动态生成
-            regex: /Automatically\s+parse\s+links\s+when\s+pasted\s+into\s+Quick\s+Edit\s+\((\$\{[^}]+\}|Ctrl\+)K\)\s+input/gi,
-            zh: '粘贴到快速编辑 ($1K) 输入框时自动解析链接'
-        },
-        {
-            // 攻克 17：Automatically jump to the next diff when accepting changes with ${Fs?"⌘":"Ctrl+"}Y
-            regex: /Automatically\s+jump\s+to\s+the\s+next\s+diff\s+when\s+accepting\s+changes\s+with\s+(\$\{[^}]+\}|Ctrl\+)Y/gi,
-            zh: '使用 $1Y 接受更改时自动跳转到下一个差异'
-        },
-        {
-            // 攻克 18：Show a hint for ${Fs?"⌘":"Ctrl+"}K in the Terminal
-            regex: /Show\s+a\s+hint\s+for\s+(\$\{[^}]+\}|Ctrl\+)K\s+in\s+the\s+Terminal/gi,
-            zh: '在终端中显示 $1K 提示'
-        },
-        {
-            // 攻克 19：Preview Box for Terminal ${Fs?"⌘":"Ctrl+"}K
-            regex: /Preview\s+Box\s+for\s+Terminal\s+(\$\{[^}]+\}|Ctrl\+)K/gi,
-            zh: '终端 $1K 的预览框'
-        },
-        {
-            // 攻克 20：Automatically index any new folders with fewer than 250,000 files
-            // 实际代码是一个数组：["Automatically index any new folders with fewer than"," ",Ui(()=>...)," ","files"]
-            regex: /\[\s*"Automatically\s+index\s+any\s+new\s+folders\s+with\s+fewer\s+than"\s*,\s*" "\s*,\s*(.+?)\s*,\s*" "\s*,\s*"files"\s*\]/gi,
-            zh: '["自动索引少于", " ", $1, " ", "个文件的新文件夹"]'
-        },
-        {
-            // 攻克 21：Automatically index repositories to speed up Grep searches. All data is stored locally.
-            regex: /"Automatically\s+index\s+repositories\s+to\s+speed\s+up\s+Grep\s+searches\.\s+All\s+data\s+is\s+stored\s+locally\."/gi,
-            zh: '"自动索引代码库以加速 Grep 搜索。所有数据均存储在本地。"'
-        },
-        {
-            // 用量页重置日期中的动态天数：`${st} (${Bt} days)`。
-            // 只替换带两个模板变量的日期片段，避免误伤普通英文文档或代码标识里的 days。
-            regex: /`\$\{([^}]+)\}\s+\(\$\{([^}]+)\}\s+days\)`/g,
-            zh: '`${$1} (${$2} 天)`'
-        },
-        {
-            // 用量页“包含在当前套餐中”：`Included in ${planName}`。
-            regex: /`Included\s+in\s+\$\{([^}]+)\}`/g,
-            zh: '`包含在 ${$1} 中`'
-        },
-        {
-            // 设置页搜索框占位：`Search settings ${...}`，变量名在 desktop/glass 中会随版本变化。
-            regex: /Search\s+settings\s+\$\{([^}]+)\}/g,
-            zh: '搜索设置 ${$1}'
-        },
-        {
-            // 另一套用量图组件会把套餐名拼成：`Included in ${planName.trim()} Plan`。
-            regex: /`Included\s+in\s+\$\{([^}]+)\}\s+Plan`/g,
-            zh: '`包含在 ${$1} 套餐中`'
-        },
-        {
-            // MCP 服务器状态文案由 fx1() 动态拼接，例如 “2 tools enabled”。
-            regex: /e\.push\(`\$\{n\.enabledToolCount\}\s+tools`\),\(n\.promptCount\?\?0\)>0&&e\.push\(`\$\{n\.promptCount\}\s+prompts`\),\(n\.resourceCount\?\?0\)>0&&e\.push\(`\$\{n\.resourceCount\}\s+resources`\),e\.length>0\?`\$\{e\.join\(", "\)\}\s+enabled`:"No tools, prompts, or resources"/g,
-            zh: 'e.push(`${n.enabledToolCount} 个工具`),(n.promptCount??0)>0&&e.push(`${n.promptCount} 个提示`),(n.resourceCount??0)>0&&e.push(`${n.resourceCount} 个资源`),e.length>0?`${e.join("，")}已启用`:"没有工具、提示或资源"'
-        },
-        {
-            // Agent 运行轨迹：Thought for 1s / Thought for 2s。
-            regex: /Thought\s+for\s+(\d+(?:\.\d+)?)ms/gi,
-            zh: '思考了 $1 毫秒'
-        },
-        {
-            regex: /Thought\s+for\s+(\d+(?:\.\d+)?)s/gi,
-            zh: '思考了 $1 秒'
-        },
-        {
-            regex: /Thought\s+for\s+(\d+(?:\.\d+)?)m/gi,
-            zh: '思考了 $1 分钟'
-        },
-        {
-            // 模板形式：`Thought for ${duration}` 或 `Thought for ${seconds}s`。
-            regex: /`Thought\s+for\s+\$\{([^}]+)\}ms`/g,
-            zh: '`思考了 ${$1} 毫秒`'
-        },
-        {
-            regex: /`Thought\s+for\s+\$\{([^}]+)\}s`/g,
-            zh: '`思考了 ${$1} 秒`'
-        },
-        {
-            regex: /`Thought\s+for\s+\$\{([^}]+)\}m`/g,
-            zh: '`思考了 ${$1} 分钟`'
-        },
-        {
-            regex: /`Thought\s+for\s+\$\{([^}]+)\}`/g,
-            zh: '`思考了 ${$1}`'
-        },
-        {
-            // Agent 运行轨迹：Ran ${toolName}。
-            regex: /`Ran\s+\$\{([^}]+)\}`/g,
-            zh: '`已运行 ${$1}`'
-        },
-        {
-            // Agent 运行轨迹：普通字符串形式，如 "Ran Check recent git history"。
-            // 只处理引号内以 Ran 开头的 UI 文案，避免误伤代码标识。
-            regex: /(["'`])Ran\s+/g,
-            zh: '$1已运行：'
-        },
-        {
-            // 认证错误卡片：Copy Request (${requestId})。
-            regex: /`Copy\s+Request\s+\(\$\{([^}]+)\}\)`/g,
-            zh: '`复制请求 (${$1})`'
-        },
-        {
-            // 插件安装人数：Used by 1 teammate / Used by 2 teammates。
-            regex: /`Used\s+by\s+\$\{([^}]+)\}\s+\$\{([^}]+)\===1\?"teammate":"teammates"\}`/g,
-            zh: '`${$1} 位成员使用`'
-        },
-        {
-            // 插件列表与提示输入里的搜索结果分组。
-            regex: /Gdf\(t,a,d,"Results",c\)/g,
-            zh: 'Gdf(t,a,d,"结果",c)'
-        },
-        {
-            regex: /\{id:"search-results",title:"Results",items:t\}/g,
-            zh: '{id:"search-results",title:"结果",items:t}'
-        },
-        {
-            regex: /\[\{title:"Results",items:m\}\]/g,
-            zh: '[{title:"结果",items:m}]'
-        }
-    ];
 
     trickyReplacements.forEach(({ regex, zh }) => {
         const before = jsContent;
@@ -1489,10 +3430,6 @@ function translate(paths) {
         ['`Ask questions without making changes...`', '`提问但不修改...`'],
         ['title:"Ask questions without making changes..."', 'title:"提问但不修改..."'],
         ['children:"Ask questions without making changes..."', 'children:"提问但不修改..."'],
-        ['label:"Ask"', 'label:"对话"'],
-        ['title:"Ask"', 'title:"对话"'],
-        ['children:"Ask"', 'children:"对话"'],
-        ['"aria-label":"Ask"', '"aria-label":"对话"'],
         ['label:"Local"', 'label:"本地"'],
         ['title:"Local"', 'title:"本地"'],
         ['children:"Local"', 'children:"本地"'],
@@ -1610,10 +3547,10 @@ function translate(paths) {
         ['<span class=layout-picker-segmented__label>Agent</span>', '<span class=layout-picker-segmented__label>智能体</span>'],
         ['<span class=layout-picker-segmented__label>Editor</span>', '<span class=layout-picker-segmented__label>编辑器</span>'],
         ['{id:"agent",label:"Agent"},{id:"editor",label:"Editor"}', '{id:"agent",label:"智能体"},{id:"editor",label:"编辑器"}'],
-        ['label:"Open Agents Window on startup"', 'label:"启动时打开智能体窗口"'],
-        ['description:"When launching Cursor, open Agents Window by default"', 'description:"启动 Cursor 时默认打开智能体窗口"'],
-        ['label:"Open Agents Window on Startup"', 'label:"启动时打开智能体窗口"'],
-        ['description:"Open the Agents Window by default when Cursor launches"', 'description:"Cursor 启动时默认打开智能体窗口"'],
+        ['label:"Open Agents Window on startup"', 'label:"启动时打开 Agents Window"'],
+        ['description:"When launching Cursor, open Agents Window by default"', 'description:"启动 Cursor 时默认打开 Agents Window"'],
+        ['label:"Open Agents Window on Startup"', 'label:"启动时打开 Agents Window"'],
+        ['description:"Open the Agents Window by default when Cursor launches"', 'description:"Cursor 启动时默认打开 Agents Window"'],
         ['label:"Code Block Word Wrap"', 'label:"代码块自动换行"'],
         ['description:"Wrap long lines in Agent conversation code blocks"', 'description:"在智能体对话代码块中自动换行长行"'],
         ['label:"Voice Submit Keywords"', 'label:"语音提交关键词"'],
@@ -1651,13 +3588,31 @@ function translate(paths) {
         ['n.server.enabled?i()&&!s()?"Connecting...":s()&&J?.phase==="needsAuth"?"正在等待回调...":J?.phase==="checking"?s()?"正在交换令牌...":"Checking server status":J?.phase==="needsAuth"?"Needs authentication":J?.phase==="error"?d():"Connected":"Disabled"', 'n.server.enabled?i()&&!s()?"正在连接...":s()&&J?.phase==="needsAuth"?"正在等待回调...":J?.phase==="checking"?s()?"正在交换令牌...":"正在检查服务器状态":J?.phase==="needsAuth"?"需要身份验证":J?.phase==="error"?d():"已连接":"已禁用"'],
         ['name:"Agent",actionId:"composerMode.agent"', 'name:"智能体",actionId:"composerMode.agent"'],
         ['name:"Triage",actionId:"composerMode.triage"', 'name:"分诊",actionId:"composerMode.triage"'],
-        ['name:"Plan",actionId:"composerMode.plan"', 'name:"计划",actionId:"composerMode.plan"'],
         ['name:"Spec",actionId:"composerMode.spec"', 'name:"规格",actionId:"composerMode.spec"'],
-        ['name:"Debug",actionId:"composerMode.debug"', 'name:"调试",actionId:"composerMode.debug"'],
-        ['name:"Multitask",actionId:"composerMode.multitask"', 'name:"多任务",actionId:"composerMode.multitask"'],
-        ['name:"Ask",actionId:"composerMode.chat"', 'name:"对话",actionId:"composerMode.chat"'],
         ['name:"Project",actionId:"composerMode.project"', 'name:"项目",actionId:"composerMode.project"'],
         ['<span>On-Demand Usage', '<span>按需用量'],
+        ['"undo","Undo"', '"undo","撤销"'],
+        ['"redo","Redo"', '"redo","重做"'],
+        ['"cut","Cut"', '"cut","剪切"'],
+        ['"copy","Copy"', '"copy","复制"'],
+        ['"paste","Paste"', '"paste","粘贴"'],
+        ['"selectAll","Select All"', '"selectAll","全选"'],
+        // ── Agents 操作按钮动态文本（Undo/Copy 三元表达式，非 label 属性形式）──
+        ['?"Undo Cell":"Undo"', '?"撤销单元格":"撤销"'],
+        ['?"Undo Apply":"Undo"', '?"撤销应用":"撤销"'],
+        ['?"Undo":"Undo All"', '?"撤销":"全部撤销"'],
+        ['?"Undo All":"Undo"', '?"全部撤销":"撤销"'],
+        ['?"Undo":"Accept"', '?"撤销":"接受"'],
+        ['?"Copy Message":"Copy"', '?"复制消息":"复制"'],
+        ['?"Copied":"Copy"', '?"已复制":"复制"'],
+        ['reject:"Undo"', 'reject:"撤销"'],
+        ['??"Undo"', '??"撤销"'],
+        ['return"Undo All"', 'return"全部撤销"'],
+        ['"glass.agentMetadataTooltip.copy","Copy"', '"glass.agentMetadataTooltip.copy","复制"'],
+        ['"glassFileTreeCopyOp","Copy"', '"glassFileTreeCopyOp","复制"'],
+        ['"glassFileTreeMove","Move"', '"glassFileTreeMove","移动"'],
+        ['marketplace:"Marketplace"', 'marketplace:"插件市场"'],
+        ['?"自定义":"Marketplace"', '?"自定义":"插件市场"'],
         ['% Auto used', '% 自动用量'],
         ['% Auto and', '% 自动用量，'],
         ['% API used', '% API 用量'],
@@ -1740,7 +3695,7 @@ function translate(paths) {
         ['name:"New Agent",get icon(){return ie(NTe,{name:"agent"', 'name:"新建智能体",get icon(){return ie(NTe,{name:"agent"'],
         ['name:"Automations",get icon(){return ie(NTe,{name:"robot"', 'name:"自动化",get icon(){return ie(NTe,{name:"robot"'],
         ['name:"Customize",get icon(){return ie(NTe,{name:"extensions"', 'name:"插件市场",get icon(){return ie(NTe,{name:"extensions"'],
-        ['children:"Open Agents Window"', 'children:"打开智能体窗口"'],
+        ['children:"Open Agents Window"', 'children:"打开 Agents Window"'],
         ['label:"Fork"', 'label:"分叉"'],
         ['label:"Copy"', 'label:"复制"'],
         ['label:"Share"', 'label:"分享"'],
@@ -1761,19 +3716,19 @@ function translate(paths) {
         ['children:"Pin"', 'children:"固定"'],
         ['children:"Rename"', 'children:"重命名"'],
         ['children:"Archive"', 'children:"归档"'],
-        ['title:Je(4823,"New Agents Window")', 'title:Je(4823,"新建智能体窗口")'],
-        ['title:Je(4824,"Developer: New Additional Agents Window")', 'title:Je(4824,"开发者：新建额外智能体窗口")'],
+        ['title:Je(4823,"New Agents Window")', 'title:Je(4823,"新建 Agents Window")'],
+        ['title:Je(4824,"Developer: New Additional Agents Window")', 'title:Je(4824,"开发者：新建额外 Agents Window")'],
         ['title:Je(4825,"Switch to {0}",xNc)', 'title:Je(4825,"切换到 {0}",xNc)'],
         ['title:Je(4826,"Open or Focus {0}",xNc)', 'title:Je(4826,"打开或聚焦 {0}",xNc)'],
         ['title:Je(4827,"Open or Focus Editor Window")', 'title:Je(4827,"打开或聚焦编辑器窗口")'],
-        ['title:Je(4829,"Open Glass and Change to Multitask")', 'title:Je(4829,"打开智能体窗口并切换到多任务")'],
-        ['xNc="Agents Window"', 'xNc="智能体窗口"'],
+        ['title:Je(4829,"Open Glass and Change to Multitask")', 'title:Je(4829,"打开 Agents Window 并切换到多任务")'],
+        ['xNc="Agents Window"', 'xNc="Agents Window"'],
         ['title:{...Je(3659,"New Empty Editor Window")', 'title:{...Je(3659,"新建空编辑器窗口")'],
-        ['description:"New Agents Window (Glass)"', 'description:"新建智能体窗口"'],
-        ['description:"Switch to Agents Window (Glass)"', 'description:"切换到智能体窗口"'],
-        ['description:"Open or Focus Agents Window (Glass)"', 'description:"打开或聚焦智能体窗口"'],
-        ['description:"Open or focus the editor (IDE) window from the Agents window."', 'description:"从智能体窗口打开或聚焦编辑器（IDE）窗口。"'],
-        ['description:"Opens or focuses the Glass window, then selects Multitask mode there."', 'description:"打开或聚焦智能体窗口，并在其中选择多任务模式。"'],
+        ['description:"New Agents Window (Glass)"', 'description:"新建 Agents Window"'],
+        ['description:"Switch to Agents Window (Glass)"', 'description:"切换到 Agents Window"'],
+        ['description:"Open or Focus Agents Window (Glass)"', 'description:"打开或聚焦 Agents Window"'],
+        ['description:"Open or focus the editor (IDE) window from the Agents window."', 'description:"从 Agents Window 打开或聚焦编辑器（IDE）窗口。"'],
+        ['description:"Opens or focuses the Glass window, then selects Multitask mode there."', 'description:"打开或聚焦 Agents Window，并在其中选择多任务模式。"'],
         ['"Plan, search, build anything"', '"规划、搜索、构建任何内容"'],
         ["'Plan, search, build anything'", "'规划、搜索、构建任何内容'"],
         ['`Plan, search, build anything`', '`规划、搜索、构建任何内容`'],
@@ -1866,12 +3821,6 @@ function translate(paths) {
         ["'Plan New Idea'", "'规划新想法'"],
         ['`Plan New Idea`', '`规划新想法`'],
         ['label:"Run in Cloud"', 'label:"在云端运行"'],
-        ['label:"Multitask"', 'label:"多任务"'],
-        ['title:"Multitask"', 'title:"多任务"'],
-        ['children:"Multitask"', 'children:"多任务"'],
-        ['"Multitask"', '"多任务"'],
-        ["'Multitask'", "'多任务'"],
-        ['`Multitask`', '`多任务`'],
         ['"Parallelize Build with Multitask Mode."', '"使用多任务模式并行构建。"'],
         ['"Coordinate parallel tasks..."', '"协调并行任务..."'],
         ['hint:"\\u21E7Tab"', 'hint:"\\u21E7Tab"'],
@@ -1965,16 +3914,870 @@ function translate(paths) {
         ['loadingAction:i?.loadingAction??"Exploring"', 'loadingAction:i?.loadingAction??"正在探索"'],
         ['completedAction:i?.completedAction??"Explored"', 'completedAction:i?.completedAction??"已探索"'],
         ['`${e} file${e===1?"":"s"}`', '`${e} 个文件`'],
+
+        // HTML 包裹导致词典无法直接命中的词条。
+        ['"<div>Web Fetch Tool"', '"<div>网络抓取工具"'],
+        ['"<div><span>Task Models"', '"<div><span>任务模型"'],
+        ['automations:"Automations"', 'automations:"自动化"'],
+        ['themeLabel:"Light"', 'themeLabel:"浅色"'],
+        ['themeLabel:"Dark"', 'themeLabel:"深色"'],
+        ['themeLabel:"High Contrast"', 'themeLabel:"高对比度"'],
+        ['<span>On-Demand Usage', '<span>按需用量'],
+        ['"undo","Undo"', '"undo","撤销"'],
+        ['"redo","Redo"', '"redo","重做"'],
+        ['"cut","Cut"', '"cut","剪切"'],
+        ['"copy","Copy"', '"copy","复制"'],
+        ['"paste","Paste"', '"paste","粘贴"'],
+        ['"selectAll","Select All"', '"selectAll","全选"'],
+        ['marketplace:"Marketplace"', 'marketplace:"插件市场"'],
+        ['?"自定义":"Marketplace"', '?"自定义":"插件市场"'],
+        ['rootLabel:"Marketplace"', 'rootLabel:"插件市场"'],
+        ['[" ","Marketplace"]', '[" ","插件市场"]'],
+        ['all:"All"', 'all:"全部"'],
+        ['return"All"', 'return"全部"'],
+
+        // ── 用户反馈的未翻译词条：正则无法覆盖的上下文 ──
+        // Learn more 出现在 HTML 标签内（非引号包裹），safeMegaRegex 无法匹配
+        ['>Learn more\'', '>了解更多\''],
+        ['>Learn more"', '>了解更多"'],
+        ['>Learn more<', '>了解更多<'],
+        // "New" 作为独立 UI 文案（不加入 riskyShortWords 因为会误伤 trimNew 等代码）
+        ['label:"New"', 'label:"新建"'],
+        ['title:"New"', 'title:"新建"'],
+        ['placeholder:"New"', 'placeholder:"新建"'],
+        ['name:"New"', 'name:"新建"'],
+        ['>"New"', '>"新建"'],
+        // New Worktree 各上下文（safeGlobalDict 已有，但裸文本形式需要额外处理）
+        ['children:"New Worktree"', 'children:"新建工作树"'],
+        ['label:"New Worktree"', 'label:"新建工作树"'],
+        ['title:"New Worktree"', 'title:"新建工作树"'],
+        // Documentation 在 UI 属性中（safeGlobalDict 已有引号形式，这里补充属性上下文）
+        ['children:"Documentation"', 'children:"文档"'],
+        ['label:"Documentation"', 'label:"文档"'],
+        ['title:"Documentation"', 'title:"文档"'],
+        // Connected 在 UI 属性中（riskyShortWords 已有，补充特定上下文）
+        ['children:"Connected"', 'children:"已连接"'],
+        ['label:"Connected"', 'label:"已连接"'],
+        ['title:"Connected"', 'title:"已连接"'],
+        ['>"Connected"', '>"已连接"'],
+        // Installed 在 UI 属性中
+        ['children:"Installed"', 'children:"已安装"'],
+        ['label:"Installed"', 'label:"已安装"'],
+        ['title:"Installed"', 'title:"已安装"'],
+        ['>"Installed"', '>"已安装"'],
+        // Image 在 UI 属性中
+        ['children:"Image"', 'children:"图片"'],
+        ['label:"Image"', 'label:"图片"'],
+        ['title:"Image"', 'title:"图片"'],
+        // Cloud 在 UI 属性中
+        ['children:"Cloud"', 'children:"云端"'],
+        ['label:"Cloud"', 'label:"云端"'],
+        ['title:"Cloud"', 'title:"云端"'],
+        ['>"Cloud"', '>"云端"'],
+        // Recents 在 UI 属性中
+        ['children:"Recents"', 'children:"最近"'],
+        ['label:"Recents"', 'label:"最近"'],
+        ['title:"Recents"', 'title:"最近"'],
+        ['>"Recents"', '>"最近"'],
+        // Run on / This PC 组合
+        ['children:"Run on"', 'children:"运行于"'],
+        ['label:"Run on"', 'label:"运行于"'],
+        ['children:"This PC"', 'children:"此电脑"'],
+        ['label:"This PC"', 'label:"此电脑"'],
+        ['"Run on This PC"', '"在此电脑上运行"'],
+        ['"Run on Cloud"', '"在云端运行"'],
+        // + Add 按钮
+        ['children:"+ Add"', 'children:"+ 添加"'],
+        ['label:"+ Add"', 'label:"+ 添加"'],
+        ['>"+ Add"', '>"+ 添加"'],
+        // User Config
+        ['children:"User Config"', 'children:"用户配置"'],
+        ['label:"User Config"', 'label:"用户配置"'],
+        ['title:"User Config"', 'title:"用户配置"'],
+        // From Marketplace / From Local Repo（safeGlobalDict 已有，补充 children 上下文确保命中）
+        ['children:"From Marketplace"', 'children:"从插件市场"'],
+        ['children:"From Local Repo"', 'children:"从本地仓库"'],
+        // Give Feedback... 带省略号
+        ['"Give Feedback..."', '"提供反馈..."'],
+        ['children:"Give Feedback..."', 'children:"提供反馈..."'],
+        ['label:"Give Feedback..."', 'label:"提供反馈..."'],
+        // 模板字符串中的动态 tooltip（safeMegaRegex 无法匹配反引号）
+        ['`Toggle Agents Side Bar (${', '`切换智能体侧边栏 (${'],
+        ['`Toggle Agents (${', '`切换智能体 (${'],
+        ['`Toggle Primary Side Bar (${', '`切换主侧边栏 (${'],
+        ['`Show Agents Side Bar (${', '`显示智能体侧边栏 (${'],
+        // title 属性直接赋值（非 Te()/ft() 包裹）
+        ['title:"Show Terminal"', 'title:"显示终端"'],
+        ['title:"Toggle Developer Tools"', 'title:"切换开发者工具"'],
+        ['title:"Open Process Explorer"', 'title:"打开进程浏览器"'],
+        ['title:"Report Issue"', 'title:"报告问题"'],
+        // LABEL 直接赋值（Help菜单中的 Report Issue）
+        ['.LABEL="Report Issue"', '.LABEL="报告问题"'],
+        // ── 字体大小选项（Small/Default/Large/超大）──
+        ['case .85:return"Small";case 1:return"Default";case 1.15:return"Large";case 1.3:return"超大"', 'case .85:return"小";case 1:return"默认";case 1.15:return"大";case 1.3:return"超大"'],
+        // ── Show/Hide 切换按钮（title getter 三元表达式）──
+        ['?"Hide":"Show"', '?"隐藏":"显示"'],
+        // ── Import 按钮（Importing... 状态）──
+        ['?"Importing\u2026":"Import"', '?"正在导入…":"导入"'],
+        ['?"Importing...":"Import"', '?"正在导入...":"导入"'],
+        // ── claude-code-import-indicator 状态标签 ──
+        ['case"claude-code-import-indicator":return"Import"', 'case"claude-code-import-indicator":return"导入"'],
+        // ── 模型列表刷新按钮（Refreshing.../Refresh model list 三元）──
+        ['?"Refreshing...":"Refresh model list"', '?"正在刷新...":"刷新模型列表"'],
+        // ── 模型选择器 Results/Suggested 标题（minified 变量名 ft）──
+        ['title:ft?"Results":"Suggested"', 'title:ft?"结果":"推荐"'],
+        // ── 模型选择器搜索框 placeholder ──
+        ['placeholder:"Add or search model"', 'placeholder:"添加或搜索模型"'],
+        // ── 更新渠道名称：switch case 返回值 ──
+        ['case"prerelease":return"Early Access"', 'case"prerelease":return"抢先体验"'],
+        ['case"dev":return"Nightly"', 'case"dev":return"每夜构建"'],
+        ['case"dogfood":return"Dogfood"', 'case"dogfood":return"内部测试"'],
+        ['case"candidate":return"Candidate"', 'case"candidate":return"候选版"'],
+        // ── 版本号解析中的渠道名 ──
+        ['case"9":return"Nightly"', 'case"9":return"每夜构建"'],
+        // ── 更新渠道名称：选项列表 label ──
+        ['label:"Dogfood",id:"dogfood"', 'label:"内部测试",id:"dogfood"'],
+        ['label:"Candidate",id:"candidate"', 'label:"候选版",id:"candidate"'],
+        // ── 命令面板/Agent 菜单 Suggested 分区标题 ──
+        ['heading:"Suggested"', 'heading:"推荐"'],
+
+        // ── 套餐与用量页：% used 标签（HTML 内联）──
+        ['>% used<', '>已用 %<'],
+        ['text-xs text-[var(--cursor-text-secondary)] ml-auto">% used', 'text-xs text-[var(--cursor-text-secondary)] ml-auto">已用 %'],
+        ['font-medium text-[var(--cursor-text-secondary)]">% used', 'font-medium text-[var(--cursor-text-secondary)]">已用 %'],
+        // ── 套餐与用量页：Adjust Plan 按钮 ──
+        ['title:"Adjust Plan"', 'title:"调整套餐"'],
+        // ── glass.js 远程窗口 SSH 命令 ──
+        ['title:"Open SSH Configuration File"', 'title:"打开 SSH 配置文件"'],
+        ['title:"Open Folder in Container"', 'title:"在容器中打开文件夹"'],
+        ['title:"Attach to Running Container"', 'title:"附加到正在运行的容器"'],
+        ['title:"Connect to Host..."', 'title:"连接到主机..."'],
+        ['title:"Connect Current Window to Host..."', 'title:"将当前窗口连接到主机..."'],
+        ['title:"Connect to Host in New Window"', 'title:"在新窗口中连接到主机"'],
+        ['title:"Connect to Host in Current Window"', 'title:"在当前窗口中连接到主机"'],
+        ['title:"Connect to WSL"', 'title:"连接到 WSL"'],
+        ['title:"Connect to WSL using Distro..."', 'title:"使用指定发行版连接到 WSL..."'],
+        ['title:"Connect to WSL in New Window"', 'title:"在新窗口中连接到 WSL"'],
+        ['title:"Connect to WSL using Distro in New Window..."', 'title:"在新窗口中使用指定发行版连接到 WSL..."'],
+        ['title:"Open Folder in WSL"', 'title:"在 WSL 中打开文件夹"'],
+        ['title:"Show Dev Containers Log"', 'title:"显示 Dev Containers 日志"'],
+        ['title:"Attach to Running Kubernetes Container..."', 'title:"附加到正在运行的 Kubernetes 容器..."'],
+        ['title:"Open Container Configuration File"', 'title:"打开容器配置文件"'],
+        ['label:"Dev Containers"', 'label:"开发容器"'],
+        ['glassCategory:"Workspace"', 'glassCategory:"工作区"'],
+        // ── 远程窗口入口（Clone/Connect）──
+        ['title:"Clone Repository"', 'title:"克隆仓库"'],
+        ['"aria-label":"Clone Repository"', '"aria-label":"克隆仓库"'],
+        ['children:"Connect SSH"', 'children:"连接 SSH"'],
+        ['children:"Connect WSL"', 'children:"连接 WSL"'],
+        // ── primaryButton 中的 Import 按钮（导入设置/插件对话框）──
+        ['primaryButton:{id:"import",label:"Import"}', 'primaryButton:{id:"import",label:"导入"}'],
+        ['primaryButton:{label:"Import",id:"import"}', 'primaryButton:{label:"导入",id:"import"}'],
+        ['label:"Import without extensions"', 'label:"导入（不含扩展）"'],
+        ['label:"Cancel",id:"cancel"', 'label:"取消",id:"cancel"'],
+        // ── Cursor Tab 通知/状态栏悬浮框 ──
+        ['n.textContent="Model"', 'n.textContent="模型"'],
+        ['o.textContent=n?"Unsnooze":"Snooze"', 'o.textContent=n?"取消暂停":"暂停"'],
+        ['Sqn="auto (default)"', 'Sqn="自动（默认）"'],
+        ['"Disable globally"', '"全局禁用"'],
+        ['"No commit has been scored yet"', '"暂无已评分的提交"'],
+        ['"$(git-commit) No commit scored"', '"$(git-commit) 无提交评分"'],
+        ['"Select Cursor Tab snooze duration"', '"选择 Cursor Tab 暂停时长"'],
+        ['"Temporarily disable Cursor Tab suggestions for a specified duration. You can unsnooze at any time."', '"临时禁用 Cursor Tab 建议一段指定时间，可随时取消暂停。"'],
+        ['.LABEL="Snooze Cursor Tab"', '.LABEL="暂停 Cursor Tab"'],
+        ['.LABEL="Unsnooze Cursor Tab"', '.LABEL="取消暂停 Cursor Tab"'],
+        // ── 快速打开命令元数据 ──
+        ['description:"Quick access"', 'description:"快速访问"'],
+        // ── Agents 面板：分组/排序/筛选标签（main.js 中同样出现）──
+        ['label:"Grouping"', 'label:"分组"'],
+        ['children:"Grouping"', 'children:"分组"'],
+        ['label:"Ordering"', 'label:"排序"'],
+        ['children:"Ordering"', 'children:"排序"'],
+        ['title:"Filters"', 'title:"筛选器"'],
+        ['value:"repository",label:"Repository"', 'value:"repository",label:"仓库"'],
+        ['value:"workspace",label:"Workspace"', 'value:"workspace",label:"工作区"'],
+        ['value:"time",label:"Updated"', 'value:"time",label:"更新时间"'],
+        ['value:"status",label:"Status"', 'value:"status",label:"状态"'],
+        ['value:"environment",label:"Environment"', 'value:"environment",label:"环境"'],
+        ['value:"updated",label:"Updated"', 'value:"updated",label:"更新时间"'],
+        ['value:"created",label:"Created"', 'value:"created",label:"创建时间"'],
+        ['value:"needs_attention",label:"Needs Attention"', 'value:"needs_attention",label:"需要关注"'],
+        ['value:"unread_only",label:"Unread"', 'value:"unread_only",label:"未读"'],
+        ['value:"running",label:"Working"', 'value:"running",label:"进行中"'],
+        ['value:"draft",label:"Draft"', 'value:"draft",label:"草稿"'],
+        ['value:"done",label:"Done"', 'value:"done",label:"已完成"'],
+        ['value:"git:draft",label:"PR Draft"', 'value:"git:draft",label:"PR 草稿"'],
+        ['value:"git:open",label:"PR Open"', 'value:"git:open",label:"PR 开放"'],
+        ['value:"git:merged",label:"PR Merged"', 'value:"git:merged",label:"PR 已合并"'],
+        ['value:"git:closed",label:"PR Closed"', 'value:"git:closed",label:"PR 已关闭"'],
+        ['value:"git:none",label:"No PR"', 'value:"git:none",label:"无 PR"'],
+        ['label:"Any time"', 'label:"任意时间"'],
+        ['label:"Past day"', 'label:"过去一天"'],
+        ['label:"Past week"', 'label:"过去一周"'],
+        ['label:"Past month"', 'label:"过去一个月"'],
+        ['value:"branch",label:"Branch"', 'value:"branch",label:"分支"'],
+        ['value:"timestamp",label:"Updated"', 'value:"timestamp",label:"更新时间"'],
+        ['value:"source",label:"Source"', 'value:"source",label:"来源"'],
+        ['value:"cloud",label:"Cloud"', 'value:"cloud",label:"云端"'],
+        ['value:"local",label:"Local"', 'value:"local",label:"本地"'],
+        ['label:"Group by Workspace"', 'label:"按工作区分组"'],
+        ['label:"Group by Repository"', 'label:"按仓库分组"'],
+        ['label:"Group by Updated"', 'label:"按更新时间分组"'],
+        ['label:"Group by Status"', 'label:"按状态分组"'],
+        ['label:"Group by Environment"', 'label:"按环境分组"'],
+        ['children:"Machine"', 'children:"机器"'],
+        ['"collapse-all","Collapse All"', '"collapse-all","全部折叠"'],
+        ['children:"Mark All as Read"', 'children:"全部标记为已读"'],
+        // ── Changes 视图 ──
+        ['lastTurn:"Last Turn",uncommitted:"Uncommitted",allChanges:"All",unstaged:"Unstaged",staged:"Staged",branch:"Branch"',
+         'lastTurn:"最近一轮",uncommitted:"未提交",allChanges:"全部",unstaged:"未暂存",staged:"已暂存",branch:"分支"'],
+        ['?"Branch Commits"', '?"分支提交"'],
+        ['?"All Changes"', '?"所有更改"'],
+        ['"Unstage All"', '"全部取消暂存"'],
+        ['"Stage All Remaining Changes"', '"暂存所有剩余更改"'],
+        ['"Stage All"', '"全部暂存"'],
+        ['"Stage Remaining Changes"', '"暂存剩余更改"'],
+        ['"Unstage File"', '"取消暂存文件"'],
+        ['"Stage File"', '"暂存文件"'],
+        ['children:"Find in Changes"', 'children:"在更改中查找"'],
+        ['children:"Refresh Changes"', 'children:"刷新更改"'],
+        ['content:"Discard All Changes"', 'content:"放弃所有更改"'],
+        ['{value:"unified",label:"Unified"}', '{value:"unified",label:"统一视图"}'],
+        ['{value:"split",label:"Split"}', '{value:"split",label:"拆分视图"}'],
+        ['children:"Ignore Whitespace"', 'children:"忽略空白字符"'],
+        ['children:"Word Wrap"', 'children:"自动换行"'],
+        ['children:"Line Numbers"', 'children:"行号"'],
+        ['children:"Auto Save"', 'children:"自动保存"'],
+        ['children:"Format on Save"', 'children:"保存时格式化"'],
+        // ── 全屏/终端/URL/书签 ──
+        ['?"Exit Full Screen":"Enter Full Screen"', '?"退出全屏":"进入全屏"'],
+        ['?"Hide Terminal List":"Show Terminal List"', '?"隐藏终端列表":"显示终端列表"'],
+        ['"aria-label":"Search or enter URL"', '"aria-label":"搜索或输入 URL"'],
+        ['children:"Show Bookmark Bar"', 'children:"显示书签栏"'],
+        // ── Canvas ──
+        ['"Create a Canvas from chat"', '"从聊天创建画布"'],
+        ['?"Hide Canvas List":"Show Canvas List"', '?"隐藏画布列表":"显示画布列表"'],
+        // ── 文件操作 ──
+        ['"Open a file to get started"', '"打开一个文件即可开始"'],
+        ['label:"New File"', 'label:"新建文件"'],
+        ['children:"No workspace folder open"', 'children:"没有打开的工作区文件夹"'],
+        ['children:"Save File"', 'children:"保存文件"'],
+        ['label:"Discard Changes"', 'label:"放弃更改"'],
+        ['title:"Search Files"', 'title:"搜索文件"'],
+        ['title:"Browse Files"', 'title:"浏览文件"'],
+        ['.LABEL="New Tab"', '.LABEL="新建标签页"'],
+        // ── 模式（Plan/Debug/Multitask/Ask 保留英文，仅翻译 Agent Mode）──
+        ['title:"Agent Mode"', 'title:"智能体模式"'],
+        ['title:"Toggle Git Blame"', 'title:"切换 Git Blame"'],
+        // ── 命令面板 ──
+        ['label:"Open Customize"', 'label:"打开自定义"'],
+        ['label:"Open Skills"', 'label:"打开技能"'],
+        ['label:"Open Subagents"', 'label:"打开子智能体"'],
+        ['label:"Open Commands"', 'label:"打开命令"'],
+        ['title:"Switch Theme"', 'title:"切换主题"'],
+        ['title:"Switch to Cursor Light"', 'title:"切换到 Cursor 浅色"'],
+        ['title:"Switch to Cursor Dark"', 'title:"切换到 Cursor 深色"'],
+        ['title:"Switch to Cursor High Contrast"', 'title:"切换到 Cursor 高对比度"'],
+        ['"Reset In-App Ad Views"', '"重置应用内广告视图"'],
+        ['title:"Developer: Open Logs Folder"', 'title:"开发者：打开日志文件夹"'],
+        ['title:"About Cursor"', 'title:"关于 Cursor"'],
+        // ── 集成来源标签 ──
+        ['desktop:"Desktop",sand:"Sand",web:"Web",mobile:"Mobile"', 'desktop:"桌面",sand:"沙盒",web:"网页",mobile:"移动端"'],
+        ['scm:"Source Control"', 'scm:"源代码管理"'],
+        ['setup:"Setup"', 'setup:"设置"'],
+        ['automations:"Automations"', 'automations:"自动化"'],
+        ['qabot_frontend:"Frontend QA"', 'qabot_frontend:"前端 QA"'],
+        ['local:"Local",internal:"Subagent"', 'local:"本地",internal:"子智能体"'],
+        ['text:"Desktop",title:"Open Desktop"', 'text:"桌面",title:"打开桌面"'],
+        ['void 0?"Automations"', 'void 0?"自动化"'],
+        // ── Canvas 空状态描述 ──
+        ['"glass.canvasActivationEmptyState.descriptionPrefix","Type"', '"glass.canvasActivationEmptyState.descriptionPrefix","输入"'],
+        ['"glass.canvasActivationEmptyState.descriptionSuffix","to create or open a Canvas."', '"glass.canvasActivationEmptyState.descriptionSuffix","来创建或打开画布。"'],
+        // ── Open Customize 标题 ──
+        ['title:"Open Customize"', 'title:"打开自定义"'],
+        // ── Appearance 标题 ──
+        ['title:"Appearance"', 'title:"外观"'],
+        // ── Diff 标签页操作 ──
+        ['action:"Create Branch"', 'action:"创建分支"'],
+        ['action:"Commit"', 'action:"提交"'],
+        ['action:"Push"', 'action:"推送"'],
+        ['children:"Commit"', 'children:"提交"'],
+        ['children:"Push"', 'children:"推送"'],
+        // ── Debug 模式描述 ──
+        ['description:"Systematically diagnose and fix bugs using runtime traces"', 'description:"使用运行时跟踪系统性地诊断和修复 Bug"'],
+        // ── 日期分组 ──
+        ['key:"today",label:"Today"', 'key:"today",label:"今天"'],
+        ['key:"yesterday",label:"Yesterday"', 'key:"yesterday",label:"昨天"'],
+        ['key:"last_7_days",label:"Last 7 Days"', 'key:"last_7_days",label:"过去 7 天"'],
+        ['key:"last_30_days",label:"Last 30 Days"', 'key:"last_30_days",label:"过去 30 天"'],
+        ['key:"older",label:"Older"', 'key:"older",label:"更早"'],
+        ['["Today","Yesterday","This week","Older"]', '["今天","昨天","本周","更早"]'],
+        ['?"Today":', '?"今天":'],
+        ['?"Yesterday":', '?"昨天":'],
+        ['?"This week":"Older"', '?"本周":"更早"'],
+        ['"Previous 7 days"', '"过去 7 天"'],
+        // ── "Changes" 标签 ──
+        ['label:"Changes"', 'label:"更改"'],
+        ['?"Change":"Changes"', '?"处更改":"处更改"'],
+        // ── Canvas / Marketplace ──
+        ['children:"Create new canvas"', 'children:"创建新画布"'],
+        ['children:"Create New"', 'children:"新建"'],
+        ['description:"Set up a team marketplace"', 'description:"设置团队市场"'],
+        ['description:"Add a marketplace from a repository"', 'description:"从仓库添加市场"'],
+        ['description:"Add a marketplace from your local computer"', 'description:"从本地计算机添加市场"'],
+        ['children:"Import from Github"', 'children:"从 Github 导入"'],
+        ['children:"Import from Disk"', 'children:"从磁盘导入"'],
+        // ── 面板标签 ──
+        ['children:"Actions"', 'children:"操作"'],
+        ['label:"On"', 'label:"开"'],
+        ['label:"Off"', 'label:"关"'],
+        ['open_browser:"Open Browser"', 'open_browser:"打开浏览器"'],
+        // ── 按钮/标签 ──
+        ['title:"Previous",shortcut:', 'title:"上一个",shortcut:'],
+        ['title:"Build"', 'title:"构建"'],
+        ['title:"Open",type:"tertiary"', 'title:"打开",type:"tertiary"'],
+        ['children:"Proceed"', 'children:"继续"'],
+        ['label:"Proceed"', 'label:"继续"'],
+        ['label:"Discard Changes"', 'label:"放弃更改"'],
+        ['label:"Review Changes"', 'label:"审查更改"'],
+        // ── 共享 UI 文案（title/label/children 三类）──
+        ['title:"Close Settings"', 'title:"关闭设置"'],
+        ['title:"Open Settings"', 'title:"打开设置"'],
+        ['title:"Open Composer Settings"', 'title:"打开编写器设置"'],
+        ['title:"Agent Settings"', 'title:"智能体设置"'],
+        ['title:"Open Documentation"', 'title:"打开文档"'],
+        ['title:"Open Source Control"', 'title:"打开源代码管理"'],
+        ['title:"Open Usage Based Pricing"', 'title:"打开基于用量的定价"'],
+        ['title:"Open Hooks"', 'title:"打开钩子"'],
+        ['title:"Open Rules"', 'title:"打开规则"'],
+        ['title:"Open Rule"', 'title:"打开规则"'],
+        ['title:"Open Plugins"', 'title:"打开插件"'],
+        ['title:"Open MCPs"', 'title:"打开 MCP"'],
+        ['title:"Open Skills"', 'title:"打开技能"'],
+        ['title:"Open Automations"', 'title:"打开自动化"'],
+        ['title:"Open Build Menu"', 'title:"打开构建菜单"'],
+        ['title:"Open Canvas"', 'title:"打开画布"'],
+        ['title:"Open Gallery"', 'title:"打开画廊"'],
+        ['title:"Open PR"', 'title:"打开 PR"'],
+        ['title:"Open Plan"', 'title:"打开计划"'],
+        ['title:"Open File"', 'title:"打开文件"'],
+        ['title:"Open Link"', 'title:"打开链接"'],
+        ['title:"About Cursor"', 'title:"关于 Cursor"'],
+        ['title:"Access Settings"', 'title:"访问设置"'],
+        ['title:"Agent Layout"', 'title:"智能体布局"'],
+        ['title:"Agent Window"', 'title:"智能体窗口"'],
+        ['title:"Agent Stores"', 'title:"智能体商店"'],
+        ['title:"Agent Instructions"', 'title:"智能体指令"'],
+        ['title:"Add Doc"', 'title:"添加文档"'],
+        ['title:"Add MCP"', 'title:"添加 MCP"'],
+        ['title:"Add Models"', 'title:"添加模型"'],
+        ['title:"Add Skills"', 'title:"添加技能"'],
+        ['title:"Add Folder"', 'title:"添加文件夹"'],
+        ['title:"Add Link"', 'title:"添加链接"'],
+        ['title:"Add Marketplace"', 'title:"添加市场"'],
+        ['title:"Add to Chat"', 'title:"添加到聊天"'],
+        ['title:"Add to Team"', 'title:"添加到团队"'],
+        ['title:"Adjust Plan"', 'title:"调整套餐"'],
+        ['title:"Archive All"', 'title:"全部归档"'],
+        ['title:"Archive Prior Chats"', 'title:"归档之前的聊天"'],
+        ['title:"Ask Agent"', 'title:"询问智能体"'],
+        ['title:"Accept All"', 'title:"全部接受"'],
+        ['title:"Accept Edits"', 'title:"接受编辑"'],
+        ['title:"Apply Changes"', 'title:"应用更改"'],
+        ['title:"Apply Manually"', 'title:"手动应用"'],
+        ['title:"Abort Chat"', 'title:"中止聊天"'],
+        ['title:"Browse Files"', 'title:"浏览文件"'],
+        ['title:"Build Locally"', 'title:"本地构建"'],
+        ['title:"Build in Cloud"', 'title:"在云端构建"'],
+        ['title:"Build Plan"', 'title:"构建计划"'],
+        ['title:"Discard Changes"', 'title:"放弃更改"'],
+        ['title:"Discard All Changes"', 'title:"放弃所有更改"'],
+        ['title:"Reject All Edits"', 'title:"拒绝所有编辑"'],
+        ['title:"Undo Edits"', 'title:"撤销编辑"'],
+        ['title:"Undo All"', 'title:"全部撤销"'],
+        ['title:"Rename Chat"', 'title:"重命名聊天"'],
+        ['title:"Reset All"', 'title:"全部重置"'],
+        ['title:"Reset Position"', 'title:"重置位置"'],
+        ['title:"Reset zoom"', 'title:"重置缩放"'],
+        ['title:"Restore defaults"', 'title:"恢复默认值"'],
+        ['title:"Run Now"', 'title:"立即运行"'],
+        ['title:"Run Task"', 'title:"运行任务"'],
+        ['title:"Run in Background"', 'title:"在后台运行"'],
+        ['title:"Reopen PR"', 'title:"重新打开 PR"'],
+        ['title:"Reopen conversation"', 'title:"重新打开对话"'],
+        ['title:"Review Again"', 'title:"再次审查"'],
+        ['title:"Review Code with Bugbot"', 'title:"用 Bugbot 审查代码"'],
+        ['title:"Review Next File"', 'title:"审查下一个文件"'],
+        ['title:"Review Plan"', 'title:"审查计划"'],
+        ['title:"Review changes"', 'title:"审查更改"'],
+        ['title:"Save Automation"', 'title:"保存自动化"'],
+        ['title:"Save Image As..."', 'title:"另存图片为..."'],
+        ['title:"Search Agents"', 'title:"搜索智能体"'],
+        ['title:"Search Cursor Settings"', 'title:"搜索 Cursor 设置"'],
+        ['title:"Search Extensions"', 'title:"搜索扩展"'],
+        ['title:"Select Backend"', 'title:"选择后端"'],
+        ['title:"Select Environment"', 'title:"选择环境"'],
+        ['title:"Select Workspace"', 'title:"选择工作区"'],
+        ['title:"Select Multiple"', 'title:"多选"'],
+        ['title:"Send to Chat"', 'title:"发送到聊天"'],
+        ['title:"Send to Cloud"', 'title:"发送到云端"'],
+        ['title:"Send invite"', 'title:"发送邀请"'],
+        ['title:"Share Transcript"', 'title:"分享记录"'],
+        ['title:"Sign In"', 'title:"登录"'],
+        ['title:"Sign Up"', 'title:"注册"'],
+        ['title:"Skip For Now"', 'title:"暂时跳过"'],
+        ['title:"Start New Chat"', 'title:"开始新聊天"'],
+        ['title:"Stash Changes"', 'title:"暂存更改"'],
+        ['title:"Suggest Changes"', 'title:"建议更改"'],
+        ['title:"Switch mode"', 'title:"切换模式"'],
+        ['title:"Take Control"', 'title:"接管控制"'],
+        ['title:"Try Again"', 'title:"重试"'],
+        ['title:"Try Cloud Agent"', 'title:"试试云智能体"'],
+        ['title:"Trust & Continue"', 'title:"信任并继续"'],
+        ['title:"Unfold All"', 'title:"全部展开"'],
+        ['title:"Unlink PR"', 'title:"取消关联 PR"'],
+        ['title:"Update Cursor"', 'title:"更新 Cursor"'],
+        ['title:"Upgrade to Pro"', 'title:"升级到 Pro"'],
+        ['title:"Upgrade to Pro+"', 'title:"升级到 Pro+"'],
+        ['title:"Upgrade to Ultra"', 'title:"升级到 Ultra"'],
+        ['title:"View Agent"', 'title:"查看智能体"'],
+        ['title:"View All Changes"', 'title:"查看所有更改"'],
+        ['title:"View Changes"', 'title:"查看更改"'],
+        ['title:"View PR"', 'title:"查看 PR"'],
+        ['title:"View Source"', 'title:"查看源代码"'],
+        ['title:"View changelog"', 'title:"查看更新日志"'],
+        ['title:"View on Web"', 'title:"在网页中查看"'],
+        ['title:"View docs"', 'title:"查看文档"'],
+        ['title:"Show History"', 'title:"显示历史记录"'],
+        ['title:"Show Less"', 'title:"显示更少"'],
+        ['title:"Show More"', 'title:"显示更多"'],
+        ['title:"Show Chat"', 'title:"显示聊天"'],
+        ['title:"Show Changes"', 'title:"显示更改"'],
+        ['title:"Show Output"', 'title:"显示输出"'],
+        ['title:"Show Options"', 'title:"显示选项"'],
+        ['title:"Shut down"', 'title:"关闭"'],
+        ['title:"Pause Indexing"', 'title:"暂停索引"'],
+        ['title:"Replace all"', 'title:"全部替换"'],
+        ['title:"Preserve Case"', 'title:"保留大小写"'],
+        ['title:"Use Regular Expression"', 'title:"使用正则表达式"'],
+        ['title:"Use Cursor Browser"', 'title:"使用 Cursor 浏览器"'],
+        ['title:"Use External Browser"', 'title:"使用外部浏览器"'],
+        ['title:"Use in IDE"', 'title:"在 IDE 中使用"'],
+        ['title:"Use in Agents Window"', 'title:"在智能体窗口中使用"'],
+        ['title:"Pin / Unpin Agent"', 'title:"固定/取消固定智能体"'],
+        ['title:"Pin to workspace"', 'title:"固定到工作区"'],
+        ['title:"Recent commits"', 'title:"最近提交"'],
+        ['title:"Recently changed"', 'title:"最近更改"'],
+        ['title:"Your Tasks"', 'title:"你的任务"'],
+        ['title:"Your branches"', 'title:"你的分支"'],
+        ['title:"Other Agents"', 'title:"其他智能体"'],
+        ['title:"Other Marketplaces"', 'title:"其他市场"'],
+        ['title:"Available Marketplaces"', 'title:"可用市场"'],
+        ['title:"All Plugins"', 'title:"所有插件"'],
+        ['title:"All Members"', 'title:"所有成员"'],
+        ['title:"All Tasks"', 'title:"所有任务"'],
+        ['title:"Team agents"', 'title:"团队智能体"'],
+        ['title:"Team Default"', 'title:"团队默认"'],
+        ['title:"Personal Usage"', 'title:"个人用量"'],
+        ['title:"Usage Remaining"', 'title:"剩余用量"'],
+        ['title:"Quick Question"', 'title:"快速提问"'],
+        ['title:"Side Chat"', 'title:"侧边聊天"'],
+        ['title:"Past Chat"', 'title:"历史聊天"'],
+        ['title:"Previous Agent"', 'title:"上一个智能体"'],
+        ['title:"Self-Driving Mode"', 'title:"自动驾驶模式"'],
+        ['title:"Self-Driving PRs"', 'title:"自动驾驶 PR"'],
+        ['title:"Self-driving Settings"', 'title:"自动驾驶设置"'],
+        ['title:"Remote Control"', 'title:"远程控制"'],
+        ['title:"Remote Host"', 'title:"远程主机"'],
+        ['title:"Background agent"', 'title:"后台智能体"'],
+        ['title:"Browser Menu"', 'title:"浏览器菜单"'],
+        ['title:"Browser Tab"', 'title:"浏览器标签页"'],
+        ['title:"Browser Tools"', 'title:"浏览器工具"'],
+        ['title:"Source Action..."', 'title:"源代码操作..."'],
+        ['title:"Ordered list"', 'title:"有序列表"'],
+        ['title:"Bullet list"', 'title:"无序列表"'],
+        ['title:"Server Status"', 'title:"服务器状态"'],
+        ['title:"Operation Complete"', 'title:"操作完成"'],
+        ['title:"Pending approval"', 'title:"待批准"'],
+        ['title:"Action Needed"', 'title:"需要操作"'],
+        ['title:"Review required"', 'title:"需要审查"'],
+        ['title:"Sign-in restricted"', 'title:"登录受限"'],
+        ['title:"Payment failed"', 'title:"付款失败"'],
+        ['title:"Plan ending soon"', 'title:"套餐即将到期"'],
+        ['title:"Update Required"', 'title:"需要更新"'],
+        ['title:"Restart to Update"', 'title:"重启以更新"'],
+        ['title:"Refer friends, earn usage credits"', 'title:"推荐好友，赚取用量额度"'],
+        ['title:"Referral link"', 'title:"推荐链接"'],
+        ['title:"Public Profile"', 'title:"公开资料"'],
+        ['title:"Profile Image"', 'title:"头像"'],
+        ['title:"API Key"', 'title:"API 密钥"'],
+        ['title:"Base URL"', 'title:"基础 URL"'],
+        ['title:"Slack Channel"', 'title:"Slack 频道"'],
+        ['title:"Slack Token"', 'title:"Slack 令牌"'],
+        ['title:"Anthropic API Key"', 'title:"Anthropic API 密钥"'],
+        ['title:"Access Key ID"', 'title:"访问密钥 ID"'],
+        ['title:"Active Connections"', 'title:"活动连接"'],
+        ['title:"Scheduled Tasks"', 'title:"计划任务"'],
+        ['title:"Binary file not shown"', 'title:"二进制文件未显示"'],
+        ['title:"Only whitespace changes"', 'title:"仅有空白字符更改"'],
+        ['title:"Squash & Merge"', 'title:"压缩并合并"'],
+        ['title:"Rebase Merge"', 'title:"变基合并"'],
+        ['title:"Stash Changes"', 'title:"暂存更改"'],
+        ['title:"Search web"', 'title:"搜索网页"'],
+        ['title:"Search with Google"', 'title:"用 Google 搜索"'],
+        ['title:"Type to search actions"', 'title:"输入以搜索操作"'],
+        ['title:"Report Bug"', 'title:"报告 Bug"'],
+        ['title:"Report Good"', 'title:"报告良好"'],
+        ['title:"Report Bad"', 'title:"报告问题"'],
+        ['title:"Thumbs Up"', 'title:"点赞"'],
+        ['title:"Thumbs Down"', 'title:"踩"'],
+        ['title:"See Details"', 'title:"查看详情"'],
+        ['title:"Reveal in File Explorer"', 'title:"在文件资源管理器中显示"'],
+        ['title:"Select All in Diff"', 'title:"在差异中全选"'],
+        ['title:"Select All in File"', 'title:"在文件中全选"'],
+        ['title:"Select to End"', 'title:"选择到末尾"'],
+        ['title:"Screen recording"', 'title:"屏幕录制"'],
+        ['title:"Verified by Cursor"', 'title:"Cursor 已验证"'],
+        ['title:"Teach Cursor New Skills"', 'title:"教 Cursor 新技能"'],
+        ['title:"Automate with Hooks"', 'title:"用钩子自动化"'],
+        ['title:"Scan and Triage Security Vulnerabilities"', 'title:"扫描和分类安全漏洞"'],
+        ['title:"PR Routing & Approval"', 'title:"PR 路由与批准"'],
+        ['title:"Score Commit for AI Content"', 'title:"为 AI 内容评分提交"'],
+        // ── label 共享 ──
+        ['label:"Close Settings"', 'label:"关闭设置"'],
+        ['label:"Open Settings"', 'label:"打开设置"'],
+        ['label:"Agent Mode"', 'label:"智能体模式"'],
+        ['label:"Review Mode"', 'label:"审查模式"'],
+        ['label:"Background Mode"', 'label:"后台模式"'],
+        ['label:"Actions Palette"', 'label:"操作面板"'],
+        ['label:"Personal Usage"', 'label:"个人用量"'],
+        ['label:"Usage Remaining"', 'label:"剩余用量"'],
+        ['label:"Quick Question"', 'label:"快速提问"'],
+        ['label:"Side Chat"', 'label:"侧边聊天"'],
+        ['label:"Other Agents"', 'label:"其他智能体"'],
+        ['label:"All Tasks"', 'label:"所有任务"'],
+        ['label:"Your Tasks"', 'label:"你的任务"'],
+        ['label:"Team agents"', 'label:"团队智能体"'],
+        ['label:"Available Marketplaces"', 'label:"可用市场"'],
+        ['label:"Other Marketplaces"', 'label:"其他市场"'],
+        ['label:"All Plugins"', 'label:"所有插件"'],
+        ['label:"All Members"', 'label:"所有成员"'],
+        ['label:"Recent commits"', 'label:"最近提交"'],
+        ['label:"Recently changed"', 'label:"最近更改"'],
+        ['label:"Your branches"', 'label:"你的分支"'],
+        ['label:"Team Default"', 'label:"团队默认"'],
+        ['label:"Remote Control"', 'label:"远程控制"'],
+        ['label:"Remote Host"', 'label:"远程主机"'],
+        ['label:"Browser Tab"', 'label:"浏览器标签页"'],
+        ['label:"Browser Tools"', 'label:"浏览器工具"'],
+        ['label:"Browser Menu"', 'label:"浏览器菜单"'],
+        ['label:"Pending approval"', 'label:"待批准"'],
+        ['label:"Action Needed"', 'label:"需要操作"'],
+        ['label:"Review required"', 'label:"需要审查"'],
+        ['label:"Sign In"', 'label:"登录"'],
+        ['label:"Sign Up"', 'label:"注册"'],
+        ['label:"Skip For Now"', 'label:"暂时跳过"'],
+        ['label:"Trust & Continue"', 'label:"信任并继续"'],
+        ['label:"Try Again"', 'label:"重试"'],
+        ['label:"Try Cloud Agent"', 'label:"试试云智能体"'],
+        ['label:"Upgrade to Pro"', 'label:"升级到 Pro"'],
+        ['label:"Upgrade to Pro+"', 'label:"升级到 Pro+"'],
+        ['label:"Upgrade to Ultra"', 'label:"升级到 Ultra"'],
+        ['label:"Refer friends, earn usage credits"', 'label:"推荐好友，赚取用量额度"'],
+        ['label:"Referral link"', 'label:"推荐链接"'],
+        ['label:"Public Profile"', 'label:"公开资料"'],
+        ['label:"Profile Image"', 'label:"头像"'],
+        ['label:"API Key"', 'label:"API 密钥"'],
+        ['label:"Base URL"', 'label:"基础 URL"'],
+        ['label:"Slack Channel"', 'label:"Slack 频道"'],
+        ['label:"Slack Token"', 'label:"Slack 令牌"'],
+        ['label:"Anthropic API Key"', 'label:"Anthropic API 密钥"'],
+        ['label:"Access Key ID"', 'label:"访问密钥 ID"'],
+        ['label:"Active Connections"', 'label:"活动连接"'],
+        ['label:"Scheduled Tasks"', 'label:"计划任务"'],
+        ['label:"Server Status"', 'label:"服务器状态"'],
+        ['label:"Operation Complete"', 'label:"操作完成"'],
+        ['label:"Binary file not shown"', 'label:"二进制文件未显示"'],
+        ['label:"Only whitespace changes"', 'label:"仅有空白字符更改"'],
+        ['label:"Squash & Merge"', 'label:"压缩并合并"'],
+        ['label:"Rebase Merge"', 'label:"变基合并"'],
+        ['label:"Stash Changes"', 'label:"暂存更改"'],
+        ['label:"Replace all"', 'label:"全部替换"'],
+        ['label:"Preserve Case"', 'label:"保留大小写"'],
+        ['label:"Use Regular Expression"', 'label:"使用正则表达式"'],
+        ['label:"Ordered list"', 'label:"有序列表"'],
+        ['label:"Bullet list"', 'label:"无序列表"'],
+        ['label:"Select Multiple"', 'label:"多选"'],
+        ['label:"Select Workspace"', 'label:"选择工作区"'],
+        ['label:"Select Environment"', 'label:"选择环境"'],
+        ['label:"Select Backend"', 'label:"选择后端"'],
+        ['label:"Send to Chat"', 'label:"发送到聊天"'],
+        ['label:"Send to Cloud"', 'label:"发送到云端"'],
+        ['label:"Send invite"', 'label:"发送邀请"'],
+        ['label:"Share Transcript"', 'label:"分享记录"'],
+        ['label:"Pin / Unpin Agent"', 'label:"固定/取消固定智能体"'],
+        ['label:"Pin to workspace"', 'label:"固定到工作区"'],
+        ['label:"Previous Agent"', 'label:"上一个智能体"'],
+        ['label:"Add Doc"', 'label:"添加文档"'],
+        ['label:"Add MCP"', 'label:"添加 MCP"'],
+        ['label:"Add Models"', 'label:"添加模型"'],
+        ['label:"Add Skills"', 'label:"添加技能"'],
+        ['label:"Add Folder"', 'label:"添加文件夹"'],
+        ['label:"Add Link"', 'label:"添加链接"'],
+        ['label:"Add Marketplace"', 'label:"添加市场"'],
+        ['label:"Add to Chat"', 'label:"添加到聊天"'],
+        ['label:"Add to Team"', 'label:"添加到团队"'],
+        ['label:"Open Documentation"', 'label:"打开文档"'],
+        ['label:"Open Source Control"', 'label:"打开源代码管理"'],
+        ['label:"Open Plugins"', 'label:"打开插件"'],
+        ['label:"Open MCPs"', 'label:"打开 MCP"'],
+        ['label:"Open Skills"', 'label:"打开技能"'],
+        ['label:"Open Hooks"', 'label:"打开钩子"'],
+        ['label:"Open Rules"', 'label:"打开规则"'],
+        ['label:"Open Automations"', 'label:"打开自动化"'],
+        ['label:"Open Build Menu"', 'label:"打开构建菜单"'],
+        ['label:"Open Canvas"', 'label:"打开画布"'],
+        ['label:"Open Gallery"', 'label:"打开画廊"'],
+        ['label:"About Cursor"', 'label:"关于 Cursor"'],
+        ['label:"Access Settings"', 'label:"访问设置"'],
+        ['label:"Agent Settings"', 'label:"智能体设置"'],
+        ['label:"Agent Layout"', 'label:"智能体布局"'],
+        ['label:"Agent Window"', 'label:"智能体窗口"'],
+        ['label:"Agent Instructions"', 'label:"智能体指令"'],
+        ['label:"Agent Stores"', 'label:"智能体商店"'],
+        ['label:"Discard Changes"', 'label:"放弃更改"'],
+        ['label:"Discard All Changes"', 'label:"放弃所有更改"'],
+        ['label:"Reject All Edits"', 'label:"拒绝所有编辑"'],
+        ['label:"Accept All"', 'label:"全部接受"'],
+        ['label:"Accept Edits"', 'label:"接受编辑"'],
+        ['label:"Undo Edits"', 'label:"撤销编辑"'],
+        ['label:"Undo All"', 'label:"全部撤销"'],
+        ['label:"Apply Changes"', 'label:"应用更改"'],
+        ['label:"Apply Manually"', 'label:"手动应用"'],
+        ['label:"Rename Chat"', 'label:"重命名聊天"'],
+        ['label:"Remove folder"', 'label:"移除文件夹"'],
+        ['label:"Remove model"', 'label:"移除模型"'],
+        ['label:"Reset All"', 'label:"全部重置"'],
+        ['label:"Reset Position"', 'label:"重置位置"'],
+        ['label:"Reset zoom"', 'label:"重置缩放"'],
+        ['label:"Restore defaults"', 'label:"恢复默认值"'],
+        ['label:"View Agent"', 'label:"查看智能体"'],
+        ['label:"View Changes"', 'label:"查看更改"'],
+        ['label:"View All Changes"', 'label:"查看所有更改"'],
+        ['label:"View PR"', 'label:"查看 PR"'],
+        ['label:"View Source"', 'label:"查看源代码"'],
+        ['label:"View changelog"', 'label:"查看更新日志"'],
+        ['label:"View on Web"', 'label:"在网页中查看"'],
+        ['label:"View docs"', 'label:"查看文档"'],
+        ['label:"Show History"', 'label:"显示历史记录"'],
+        ['label:"Show Less"', 'label:"显示更少"'],
+        ['label:"Show More"', 'label:"显示更多"'],
+        ['label:"Show Chat"', 'label:"显示聊天"'],
+        ['label:"Show Changes"', 'label:"显示更改"'],
+        ['label:"Show files"', 'label:"显示文件"'],
+        ['label:"Show Output"', 'label:"显示输出"'],
+        ['label:"Show Options"', 'label:"显示选项"'],
+        ['label:"Shut down"', 'label:"关闭"'],
+        ['label:"Take Control"', 'label:"接管控制"'],
+        ['label:"Switch mode"', 'label:"切换模式"'],
+        ['label:"Use Cursor Browser"', 'label:"使用 Cursor 浏览器"'],
+        ['label:"Use External Browser"', 'label:"使用外部浏览器"'],
+        ['label:"Use in IDE"', 'label:"在 IDE 中使用"'],
+        ['label:"Use in Agents Window"', 'label:"在智能体窗口中使用"'],
+        ['label:"Screen recording"', 'label:"屏幕录制"'],
+        ['label:"Search web"', 'label:"搜索网页"'],
+        ['label:"Search with Google"', 'label:"用 Google 搜索"'],
+        ['label:"Type to search actions"', 'label:"输入以搜索操作"'],
+        ['label:"Report Bug"', 'label:"报告 Bug"'],
+        ['label:"Thumbs Up"', 'label:"点赞"'],
+        ['label:"Thumbs Down"', 'label:"踩"'],
+        ['label:"See Details"', 'label:"查看详情"'],
+        ['label:"Reveal in File Explorer"', 'label:"在文件资源管理器中显示"'],
+        ['label:"Select All in Diff"', 'label:"在差异中全选"'],
+        ['label:"Select All in File"', 'label:"在文件中全选"'],
+        ['label:"Source Action..."', 'label:"源代码操作..."'],
+        ['label:"Self-Driving PRs"', 'label:"自动驾驶 PR"'],
+        ['label:"Self-driving Settings"', 'label:"自动驾驶设置"'],
+        ['label:"Branch Changes"', 'label:"分支更改"'],
+        ['label:"Branch Pull Requests"', 'label:"分支拉取请求"'],
+        ['label:"Branch Prefix"', 'label:"分支前缀"'],
+        ['label:"PR Routing & Approval"', 'label:"PR 路由与批准"'],
+        ['label:"Automate with Hooks"', 'label:"用钩子自动化"'],
+        ['label:"Teach Cursor New Skills"', 'label:"教 Cursor 新技能"'],
+        ['label:"Verified by Cursor"', 'label:"Cursor 已验证"'],
+        ['label:"The best way to code with AI"', 'label:"使用 AI 编程的最佳方式"'],
+        ['label:"Ship better code, faster"', 'label:"更快地交付更好的代码"'],
+        ['label:"What should we build?"', 'label:"我们要构建什么？"'],
+        ['label:"Save Image As..."', 'label:"另存图片为..."'],
+        ['label:"Run command"', 'label:"运行命令"'],
+        ['label:"Run in"', 'label:"运行于"'],
+        ['label:"This workspace"', 'label:"此工作区"'],
+        ['label:"Add an agent to get started"', 'label:"添加智能体即可开始"'],
+        ['label:"Add a to-do to get started"', 'label:"添加待办事项即可开始"'],
+        // ── children 共享 ──
+        ['children:"Close Settings"', 'children:"关闭设置"'],
+        ['children:"Open Settings"', 'children:"打开设置"'],
+        ['children:"Agent Mode"', 'children:"智能体模式"'],
+        ['children:"Review Mode"', 'children:"审查模式"'],
+        ['children:"Background Mode"', 'children:"后台模式"'],
+        ['children:"Accept All"', 'children:"全部接受"'],
+        ['children:"Accept Edits"', 'children:"接受编辑"'],
+        ['children:"Reject All Edits"', 'children:"拒绝所有编辑"'],
+        ['children:"Undo Edits"', 'children:"撤销编辑"'],
+        ['children:"Undo All"', 'children:"全部撤销"'],
+        ['children:"Apply Changes"', 'children:"应用更改"'],
+        ['children:"Apply Manually"', 'children:"手动应用"'],
+        ['children:"Discard Changes"', 'children:"放弃更改"'],
+        ['children:"Discard All Changes"', 'children:"放弃所有更改"'],
+        ['children:"Rename Chat"', 'children:"重命名聊天"'],
+        ['children:"Reset All"', 'children:"全部重置"'],
+        ['children:"Restore defaults"', 'children:"恢复默认值"'],
+        ['children:"View Agent"', 'children:"查看智能体"'],
+        ['children:"View Changes"', 'children:"查看更改"'],
+        ['children:"View All Changes"', 'children:"查看所有更改"'],
+        ['children:"View PR"', 'children:"查看 PR"'],
+        ['children:"View Source"', 'children:"查看源代码"'],
+        ['children:"View changelog"', 'children:"查看更新日志"'],
+        ['children:"View on Web"', 'children:"在网页中查看"'],
+        ['children:"View docs"', 'children:"查看文档"'],
+        ['children:"Show History"', 'children:"显示历史记录"'],
+        ['children:"Show Less"', 'children:"显示更少"'],
+        ['children:"Show More"', 'children:"显示更多"'],
+        ['children:"Show Chat"', 'children:"显示聊天"'],
+        ['children:"Show Changes"', 'children:"显示更改"'],
+        ['children:"Show files"', 'children:"显示文件"'],
+        ['children:"Show Output"', 'children:"显示输出"'],
+        ['children:"Show Options"', 'children:"显示选项"'],
+        ['children:"Shut down"', 'children:"关闭"'],
+        ['children:"Take Control"', 'children:"接管控制"'],
+        ['children:"Switch mode"', 'children:"切换模式"'],
+        ['children:"Sign In"', 'children:"登录"'],
+        ['children:"Sign Up"', 'children:"注册"'],
+        ['children:"Skip For Now"', 'children:"暂时跳过"'],
+        ['children:"Trust & Continue"', 'children:"信任并继续"'],
+        ['children:"Try Again"', 'children:"重试"'],
+        ['children:"Try Cloud Agent"', 'children:"试试云智能体"'],
+        ['children:"Upgrade to Pro"', 'children:"升级到 Pro"'],
+        ['children:"Upgrade to Pro+"', 'children:"升级到 Pro+"'],
+        ['children:"Upgrade to Ultra"', 'children:"升级到 Ultra"'],
+        ['children:"Refer friends, earn usage credits"', 'children:"推荐好友，赚取用量额度"'],
+        ['children:"Pin / Unpin Agent"', 'children:"固定/取消固定智能体"'],
+        ['children:"Pin to workspace"', 'children:"固定到工作区"'],
+        ['children:"Run Now"', 'children:"立即运行"'],
+        ['children:"Run Task"', 'children:"运行任务"'],
+        ['children:"Run in Background"', 'children:"在后台运行"'],
+        ['children:"Run command"', 'children:"运行命令"'],
+        ['children:"Stash Changes"', 'children:"暂存更改"'],
+        ['children:"Squash & Merge"', 'children:"压缩并合并"'],
+        ['children:"Rebase Merge"', 'children:"变基合并"'],
+        ['children:"Replace all"', 'children:"全部替换"'],
+        ['children:"Preserve Case"', 'children:"保留大小写"'],
+        ['children:"Use Regular Expression"', 'children:"使用正则表达式"'],
+        ['children:"Use Cursor Browser"', 'children:"使用 Cursor 浏览器"'],
+        ['children:"Use External Browser"', 'children:"使用外部浏览器"'],
+        ['children:"Use in IDE"', 'children:"在 IDE 中使用"'],
+        ['children:"Use in Agents Window"', 'children:"在智能体窗口中使用"'],
+        ['children:"Ordered list"', 'children:"有序列表"'],
+        ['children:"Bullet list"', 'children:"无序列表"'],
+        ['children:"Select Multiple"', 'children:"多选"'],
+        ['children:"Select Workspace"', 'children:"选择工作区"'],
+        ['children:"Select Environment"', 'children:"选择环境"'],
+        ['children:"Select Backend"', 'children:"选择后端"'],
+        ['children:"Send to Chat"', 'children:"发送到聊天"'],
+        ['children:"Send to Cloud"', 'children:"发送到云端"'],
+        ['children:"Send invite"', 'children:"发送邀请"'],
+        ['children:"Share Transcript"', 'children:"分享记录"'],
+        ['children:"About Cursor"', 'children:"关于 Cursor"'],
+        ['children:"Access Settings"', 'children:"访问设置"'],
+        ['children:"Add Doc"', 'children:"添加文档"'],
+        ['children:"Add MCP"', 'children:"添加 MCP"'],
+        ['children:"Add Models"', 'children:"添加模型"'],
+        ['children:"Add Skills"', 'children:"添加技能"'],
+        ['children:"Add Folder"', 'children:"添加文件夹"'],
+        ['children:"Add Link"', 'children:"添加链接"'],
+        ['children:"Add Marketplace"', 'children:"添加市场"'],
+        ['children:"Add to Chat"', 'children:"添加到聊天"'],
+        ['children:"Add to Team"', 'children:"添加到团队"'],
+        ['children:"Open Settings"', 'children:"打开设置"'],
+        ['children:"Open Source Control"', 'children:"打开源代码管理"'],
+        ['children:"Open Plugins"', 'children:"打开插件"'],
+        ['children:"Open MCPs"', 'children:"打开 MCP"'],
+        ['children:"Open Skills"', 'children:"打开技能"'],
+        ['children:"Open Hooks"', 'children:"打开钩子"'],
+        ['children:"Open Rules"', 'children:"打开规则"'],
+        ['children:"Open Automations"', 'children:"打开自动化"'],
+        ['children:"Open Build Menu"', 'children:"打开构建菜单"'],
+        ['children:"Open Canvas"', 'children:"打开画布"'],
+        ['children:"Open Gallery"', 'children:"打开画廊"'],
+        ['children:"Open Documentation"', 'children:"打开文档"'],
+        ['children:"Open File"', 'children:"打开文件"'],
+        ['children:"Open PR"', 'children:"打开 PR"'],
+        ['children:"Open Plan"', 'children:"打开计划"'],
+        ['children:"Source Action..."', 'children:"源代码操作..."'],
+        ['children:"Save Image As..."', 'children:"另存图片为..."'],
+        ['children:"Browse Files"', 'children:"浏览文件"'],
+        ['children:"Build Locally"', 'children:"本地构建"'],
+        ['children:"Build in Cloud"', 'children:"在云端构建"'],
+        ['children:"Search Agents"', 'children:"搜索智能体"'],
+        ['children:"Search Cursor Settings"', 'children:"搜索 Cursor 设置"'],
+        ['children:"Search Extensions"', 'children:"搜索扩展"'],
+        ['children:"Search web"', 'children:"搜索网页"'],
+        ['children:"Type to search actions"', 'children:"输入以搜索操作"'],
+        ['children:"Report Bug"', 'children:"报告 Bug"'],
+        ['children:"Thumbs Up"', 'children:"点赞"'],
+        ['children:"Thumbs Down"', 'children:"踩"'],
+        ['children:"See Details"', 'children:"查看详情"'],
+        ['children:"Reveal in File Explorer"', 'children:"在文件资源管理器中显示"'],
+        ['children:"Select All in Diff"', 'children:"在差异中全选"'],
+        ['children:"Select All in File"', 'children:"在文件中全选"'],
+        ['children:"Select to End"', 'children:"选择到末尾"'],
+        ['children:"Reset zoom"', 'children:"重置缩放"'],
+        ['children:"Pending approval"', 'children:"待批准"'],
+        ['children:"Action Needed"', 'children:"需要操作"'],
+        ['children:"Review required"', 'children:"需要审查"'],
+        ['children:"Operation Complete"', 'children:"操作完成"'],
+        ['children:"Binary file not shown"', 'children:"二进制文件未显示"'],
+        ['children:"Only whitespace changes"', 'children:"仅有空白字符更改"'],
+        ['children:"This workspace"', 'children:"此工作区"'],
+        ['children:"Verified by Cursor"', 'children:"Cursor 已验证"'],
+        ['children:"Teach Cursor New Skills"', 'children:"教 Cursor 新技能"'],
+        ['children:"Automate with Hooks"', 'children:"用钩子自动化"'],
+        ['children:"Scan and Triage Security Vulnerabilities"', 'children:"扫描和分类安全漏洞"'],
+        ['children:"PR Routing & Approval"', 'children:"PR 路由与批准"'],
+        ['children:"Save Automation"', 'children:"保存自动化"'],
+        ['children:"Run in"', 'children:"运行于"'],
+        ['children:"Screen recording"', 'children:"屏幕录制"'],
+        ['children:"Pause Indexing"', 'children:"暂停索引"'],
+        ['children:"Pause goal"', 'children:"暂停目标"'],
+        ['children:"Resume goal"', 'children:"恢复目标"'],
+        // ── 开发者/调试命令（main.js 的 original: 和 title: 形式）──
+        ['original:"Start Extension Host CPU Profiler"', 'original:"启动扩展宿主 CPU 分析器"'],
+        ['original:"Start Extension Host Heap Allocation Profiler"', 'original:"启动扩展宿主堆分配分析器"'],
+        ['original:"Delete Old Chats..."', 'original:"删除旧聊天..."'],
+        ['value:"Delete Old Chats..."', 'value:"删除旧聊天..."'],
+        ['children:"Workspace Diagnostics"', 'children:"工作区诊断"'],
     ];
 
-    scopedReplacements.forEach(([en, zh]) => {
-        const result = replaceStringWithCount(jsContent, en, zh);
-        jsContent = result.content;
-        changes.record('界面片段', en, zh, result.count);
-        if (result.count > 0) {
-            progress.update('替换界面片段', formatReplacementDetail(en, zh, result.count));
-        }
+    // 合并大正则：单次扫描替代逐条替换（~1803条 → 1次扫描）
+    const scopedLookup = new Map(scopedReplacements.filter(([en]) => en));
+    const scopedMegaRegex = new RegExp(
+        scopedReplacements
+            .filter(([en]) => en)
+            .sort((a, b) => b[0].length - a[0].length)
+            .map(([en]) => escapeRegExp(en))
+            .join('|'),
+        'g'
+    );
+
+    let scopedCount = 0;
+    jsContent = jsContent.replace(scopedMegaRegex, (match) => {
+        scopedCount++;
+        return scopedLookup.get(match);
     });
+    if (scopedCount > 0) {
+        progress.update('替换界面片段', `${scopedCount} 处`);
+        changes.record('界面片段', '<合并大正则>', '<中文>', scopedCount);
+    }
     progress.step('界面片段处理完成');
 
     const worktreeCountResult = replaceRegexWithCount(
@@ -1984,33 +4787,9 @@ function translate(paths) {
     );
     jsContent = worktreeCountResult.content;
     changes.record('动态模板', '`${d.length} worktree${d.length===1?"":"s"}`', '`${d.length} 个工作树`', worktreeCountResult.count);
-    // jsContent = jsContent.split('"Reset \\"Don\'t Ask Again\\" Dialogs"').join('"重置\\"不再询问\\"弹窗"');
-    // jsContent = jsContent.split("'Reset \"Don\\'t Ask Again\" Dialogs'").join("'重置\"不再询问\"弹窗'");
-    // jsContent = jsContent.split('label:\'Reset "Don\\u2019t Ask Again" Dialogs\'').join('label:\'重置“不再询问”弹窗\'');
-    // jsContent = jsContent.split('description:"See warnings and tips that you\\u2019ve hidden"').join('description:"查看您已隐藏的警告和提示"');
-    // jsContent = jsContent.split('title:"No Hidden Dialogs Yet"').join('title:"暂无隐藏的弹窗"');
-    // jsContent = jsContent.split('description:\'You haven\\u2019t marked any dialogs as "Don\\u2019t ask again". Any hidden dialogs will appear here to manage.\'').join('description:\'您尚未将任何弹窗标记为“不再询问”。任何隐藏的弹窗都将显示在此处以供管理。\'');
-
     // 6. 危险短词：精准 UI 属性替换（跳过键盘扫描表等键位元数据）
     progress.update('处理短词', '仅替换可见 UI 属性，跳过键盘扫描表');
-    for (const { en, zh, propRegex, jsxRegex, htmlRegex } of riskyRegexes) {
-        const guard = (group, regex, build) => {
-            let count = 0;
-            jsContent = jsContent.replace(regex, (...args) => {
-                const offset = args[args.length - 2];
-                if (isProtectedKeybindingContext(jsContent, offset, en)) return args[0];
-                count++;
-                return build(...args);
-            });
-            changes.record(group, en, zh, count);
-            if (count > 0) {
-                progress.update('替换短词', formatReplacementDetail(en, zh, count));
-            }
-        };
-        guard('UI 属性短词', propRegex, (_, p1, p2) => `${p1}: ${p2}${zh}${p2}`);
-        guard('JSX 文本短词', jsxRegex, (_, p1, p2) => `${p1}, ${p2}${zh}${p2}`);
-        guard('HTML 文本短词', htmlRegex, () => `>${zh}<`);
-    }
+    jsContent = applyRiskyShortWords(jsContent, changes, progress);
     progress.step('短词处理完成');
 
     progress.finish('核心代码处理完成');
@@ -2049,8 +4828,25 @@ function translate(paths) {
 
     translateNlsMessagesFile(nlsMessagesPath);
 
+    // 8.5 主进程托盘菜单
+    translateMainJsFile(mainProcessJsPath);
+
     // 9. Mac Gatekeeper 修复
     fixMacGatekeeper(appPath);
+
+    // 10. 用户扩展（远程 SSH/WSL/容器命令面板）
+    try {
+        translateUserExtensions();
+    } catch (e) {
+        console.log(`  ⚠️  用户扩展汉化跳过: ${e.message}`);
+    }
+
+    // 11. 用户存储（state.vscdb 中的 modes4 描述，需 Cursor 已关闭）
+    try {
+        translateUserStorage(appPath);
+    } catch (e) {
+        console.log(`  ⚠️  用户存储汉化跳过: ${e.message}`);
+    }
 
     console.log('\n🎉 汉化完成！请重启 Cursor 查看中文设置页。');
 }
@@ -2061,16 +4857,23 @@ function translate(paths) {
  * @param {{ mainJsPath: string, glassJsPath?: string, nlsMessagesPath?: string, htmlPath: string, productJsonPath: string }} paths
  */
 function restore(paths) {
-    const { mainJsPath, glassJsPath, nlsMessagesPath, htmlPath, productJsonPath } = paths;
+    const { mainJsPath, glassJsPath, nlsMessagesPath, htmlPath, productJsonPath, mainProcessJsPath } = paths;
 
     console.log('');
     let restored = 0;
-    for (const filePath of [htmlPath, mainJsPath, glassJsPath, nlsMessagesPath, productJsonPath].filter(Boolean)) {
+    for (const filePath of [htmlPath, mainJsPath, glassJsPath, nlsMessagesPath, mainProcessJsPath, productJsonPath].filter(Boolean)) {
         if (restoreFromBackup(filePath)) {
             console.log(`  ✅ 已还原: ${path.basename(filePath)}`);
             restored++;
         }
     }
+
+    // 还原用户扩展
+    const extRestored = restoreUserExtensions();
+    restored += extRestored;
+
+    // 还原用户存储（state.vscdb）
+    restoreUserStorage();
 
     if (restored > 0) {
         console.log('\n🎉 已恢复英文原版！请重启 Cursor 生效。');
