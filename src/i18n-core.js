@@ -3966,6 +3966,8 @@ function translate(paths) {
 
     // 5.1 设置侧边栏映射与部分编译模板片段
     const scopedReplacements = [
+        // ── 2026-08-08: Agents Window 插值参数（desk 的 Jwn 变量）──
+        ['Jwn="Agents Window"', 'Jwn="智能体窗口"'],
         // ── 2026-08-08 未翻译清单：高频词条（desk 存在的形式）──
         ['?"View PR":"Create PR"', '?"查看 PR":"创建 PR"'],
         ['label:"Create PR",tooltip:"Create a new pull request"', 'label:"创建 PR",tooltip:"创建新的拉取请求"'],
