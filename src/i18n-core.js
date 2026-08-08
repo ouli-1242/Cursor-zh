@@ -788,6 +788,11 @@ const auxiliaryInterfaceReplacements = [
     // ── 审查/保留更改按钮 ──
     ['Keep all changes', '保留所有更改'],
     ['Review Next File', '审查下一个文件'],
+    // ── 审查界面按钮：Stop/Review/Accept/Reject ──
+    ['"Stop"', '"停止"'],
+    ['"Review"', '"审查"'],
+    ['"Accept"', '"接受"'],
+    ['"Reject"', '"拒绝"'],
     // ── 用户反馈的未翻译词条：Glass/Agents 窗口专用 ──
     // "New" 作为独立 UI 文案（不加入 riskyShortWords 因为会误伤 trimNew 等代码）
     ['children:"New"', 'children:"新建"'],
@@ -3331,6 +3336,11 @@ function translate(paths) {
         // ── 审查/保留更改按钮 ──
         ['Keep all changes', '保留所有更改'],
         ['Review Next File', '审查下一个文件'],
+        // ── 审查界面按钮：Stop/Review/Accept/Reject ──
+        ['"Stop"', '"停止"'],
+        ['"Review"', '"审查"'],
+        ['"Accept"', '"接受"'],
+        ['"Reject"', '"拒绝"'],
         ['general:"General"', 'general:"通用"'],
         ['profile:"Profile"', 'profile:"个人资料"'],
         ['appearance:"Appearance"', 'appearance:"外观"'],
