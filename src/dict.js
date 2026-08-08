@@ -916,6 +916,8 @@ const safeGlobalDict = {
     "Recommended": "官方推荐",
     "Render Whitespace": "渲染空白字符",
     "Open in Browser": "在浏览器中打开",
+    "Preview": "预览",
+    "Show Preview": "显示预览",
     "Switch to Agents Window": "切换到智能体窗口",
     "Switch to Agents Window (Glass)": "切换到智能体窗口 (Glass)",
     "Open or Focus Agents Window": "打开或聚焦智能体窗口",
