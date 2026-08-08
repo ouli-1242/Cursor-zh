@@ -463,6 +463,8 @@ function fixMacGatekeeper(appPath) {
 // Glass / Agent 独立 bundle 中常见的新版 UI 片段。
 // 这些替换只在附加 JS 文件里执行，避免为了新窗口文案扩大 desktop 主文件的短词替换面。
 const auxiliaryInterfaceReplacements = [
+        // ── 2026-08-08: glass 顶部标签栏 Browser → 浏览器 ──
+    ['defaultLabel:"Browser"', 'defaultLabel:"浏览器"'],
         // ── 2026-08-08 用户反馈(第二轮): Close/Dictate/Today/Bookmark/Canvas/WSL标签 ──
     ['"Taking longer than expected\\u2026"', '"超出预期时间\\u2026"'],
     ['"Close Window"', '"关闭窗口"'],
@@ -3581,6 +3583,16 @@ function translateNlsMessagesFile(filePath) {
             return next;
         }
 
+        // 半翻译残留清理：官方语言包已部分翻译（含中文）但保留 Agents Window 英文的词条
+        // （如 "新建 Agents Window"），统一补全为"智能体窗口"（吞掉前后空格）。
+        // 纯英文词条由词典完整翻译，不在此处理，避免中英混杂。
+        if (/[一-鿿]/.test(value) && value.includes('Agents Window') && !value.includes('智能体窗口')) {
+            const next = value.replace(/ ?Agents Window ?/g, '智能体窗口');
+            changes.record('原生提示半译清理', value, next, 1);
+            progress.update('清理半翻译残留', formatReplacementDetail(value, next, 1));
+            return next;
+        }
+
         return value;
     });
 
@@ -3629,6 +3641,11 @@ function translateClpLanguagePacks() {
             const nlsPath = path.join(dir, entry.name, 'nls.messages.json');
             if (!fs.existsSync(nlsPath)) continue;
             visited++;
+            // 备份原始语言包缓存（首次），供恢复英文时还原
+            const backupPath = nlsPath + '.backup';
+            if (!fs.existsSync(backupPath)) {
+                fs.copyFileSync(nlsPath, backupPath);
+            }
             console.log(`\n⚙️  正在处理语言包缓存: ${path.relative(clpRoot, nlsPath)}`);
             translateNlsMessagesFile(nlsPath);
         }
@@ -3638,6 +3655,40 @@ function translateClpLanguagePacks() {
         console.log('\nℹ️  语言包缓存中未找到 nls.messages.json，已跳过。');
     }
     return { processed: visited > 0 };
+}
+
+/**
+ * 还原 clp 语言包缓存：从 .backup 恢复 nls.messages.json 并删除备份。
+ * 反方向递归遍历，避免备份文件被误当作普通文件处理。
+ * @returns {number} 还原数量
+ */
+function restoreClpLanguagePacks() {
+    const home = os.homedir();
+    const clpRoot = path.join(home, 'AppData', 'Roaming', 'Cursor', 'clp');
+    if (!fs.existsSync(clpRoot)) return 0;
+
+    let restored = 0;
+    const walk = (dir) => {
+        for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+            const p = path.join(dir, e.name);
+            if (e.isDirectory()) {
+                walk(p);
+            } else if (e.name === 'nls.messages.json.backup') {
+                const target = p.slice(0, -'.backup'.length);
+                try {
+                    fs.copyFileSync(p, target);
+                    const rel = path.relative(clpRoot, target);
+                    console.log(`  ✅ 已还原 clp 语言包缓存: ${rel}`);
+                    fs.unlinkSync(p);
+                    restored++;
+                } catch (err) {
+                    console.log(`  ⚠️  还原 clp 缓存失败 ${p}: ${err.message}`);
+                }
+            }
+        }
+    };
+    walk(clpRoot);
+    return restored;
 }
 
 // ═══════════════════════════════════════════════
@@ -6323,6 +6374,10 @@ function restore(paths) {
 
     // 还原用户存储（state.vscdb，字段级：仅改汉化字段，对话不受影响）
     restoreUserStorage(paths.appPath);
+
+    // 还原 clp 语言包缓存（官方 zh-hans 包补译过的 nls.messages.json）
+    const clpRestored = restoreClpLanguagePacks();
+    restored += clpRestored;
 
     if (restored > 0) {
         console.log('\n🎉 已恢复英文原版！请重启 Cursor 生效。');

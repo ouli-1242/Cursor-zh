@@ -913,6 +913,7 @@ const safeGlobalDict = {
     "Developer: New Additional Agents Window": "开发者：新建额外智能体窗口",
     "Switch to {0}": "切换到{0}",
     "Open or Focus {0}": "打开或聚焦{0}",
+    "Recommended": "官方推荐",
     "Switch to Agents Window": "切换到智能体窗口",
     "Switch to Agents Window (Glass)": "切换到智能体窗口 (Glass)",
     "Open or Focus Agents Window": "打开或聚焦智能体窗口",
@@ -1337,6 +1338,9 @@ const safeGlobalDict = {
     // ── nls 原生菜单缺失词条（带 visibility 后缀的完整形式）──
     "Show Agents Side Bar": "显示 Agents 侧边栏",
     "Agents Window Button": "智能体窗口按钮",
+    "Agents Window 按钮": "智能体窗口按钮",
+    "Toggle visibility of the Agents Window button in the title bar": "切换标题栏中智能体窗口按钮的可见性",
+    "Controls whether the Agents Window button in the title bar is shown.": "控制是否在标题栏中显示智能体窗口按钮。",
     "Open Agents Window": "打开智能体窗口",
     "Toggle Agents Side Bar visibility": "切换 Agents 侧边栏可见性",
     "Toggle Agents visibility": "切换 Agents 可见性",
