@@ -465,6 +465,10 @@ function fixMacGatekeeper(appPath) {
 const auxiliaryInterfaceReplacements = [
         // ── 2026-08-08: glass 顶部标签栏 Browser → 浏览器 ──
     ['defaultLabel:"Browser"', 'defaultLabel:"浏览器"'],
+        // ── 2026-08-08: 选中代码工具栏/右键菜单/关闭面板 ──
+    ['_createButton(this._buttonContainer,k5e,"Quick Edit")', '_createButton(this._buttonContainer,k5e,"快速编辑")'],
+    ['{value:"Create Rule",original:"Create Rule"}', '{value:"创建规则",original:"创建规则"}'],
+    ['label:"Close Panel"', 'label:"关闭面板"'],
         // ── 2026-08-08 用户反馈(第二轮): Close/Dictate/Today/Bookmark/Canvas/WSL标签 ──
     ['"Taking longer than expected\\u2026"', '"超出预期时间\\u2026"'],
     ['"Close Window"', '"关闭窗口"'],
@@ -4019,6 +4023,9 @@ function translate(paths) {
     const scopedReplacements = [
         // ── 2026-08-08: Agents Window 插值参数（desk 的 Jwn 变量）──
         ['Jwn="Agents Window"', 'Jwn="智能体窗口"'],
+        // ── 2026-08-08: 选中代码工具栏/右键菜单（desk 形式）──
+        ['_createButton(this._buttonContainer,GCe,"Quick Edit")', '_createButton(this._buttonContainer,GCe,"快速编辑")'],
+        ['{value:"Create Rule",original:"Create Rule"}', '{value:"创建规则",original:"创建规则"}'],
         // ── 2026-08-08 未翻译清单：高频词条（desk 存在的形式）──
         ['?"View PR":"Create PR"', '?"查看 PR":"创建 PR"'],
         ['label:"Create PR",tooltip:"Create a new pull request"', 'label:"创建 PR",tooltip:"创建新的拉取请求"'],
