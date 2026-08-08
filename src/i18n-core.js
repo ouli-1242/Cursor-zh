@@ -793,6 +793,9 @@ const auxiliaryInterfaceReplacements = [
     ['"Review"', '"审查"'],
     ['"Accept"', '"接受"'],
     ['"Reject"', '"拒绝"'],
+    // ── AI 统计面板：Repo/Branch 前缀 ──
+    ['Repo: ', '仓库：'],
+    ['Branch: ', '分支：'],
     // ── 用户反馈的未翻译词条：Glass/Agents 窗口专用 ──
     // "New" 作为独立 UI 文案（不加入 riskyShortWords 因为会误伤 trimNew 等代码）
     ['children:"New"', 'children:"新建"'],
@@ -3341,6 +3344,9 @@ function translate(paths) {
         ['"Review"', '"审查"'],
         ['"Accept"', '"接受"'],
         ['"Reject"', '"拒绝"'],
+        // ── AI 统计面板：Repo/Branch 前缀 ──
+        ['Repo: ', '仓库：'],
+        ['Branch: ', '分支：'],
         ['general:"General"', 'general:"通用"'],
         ['profile:"Profile"', 'profile:"个人资料"'],
         ['appearance:"Appearance"', 'appearance:"外观"'],
