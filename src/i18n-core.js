@@ -806,6 +806,12 @@ const auxiliaryInterfaceReplacements = [
     ['More search options', '更多搜索选项'],
     ['Match Case', '匹配大小写'],
     ['Match Whole Word', '匹配整个单词'],
+    // ── 审查操作 / AI 统计行 ──
+    ['Accept all changes', '接受所有更改'],
+    ['Keep All', '保留全部'],
+    ['} added, ${', '} 新增, ${'],
+    ['} deleted`', '} 删除`'],
+    ['} deleted)', '} 删除)'],
     // ── 用户反馈的未翻译词条：Glass/Agents 窗口专用 ──
     // "New" 作为独立 UI 文案（不加入 riskyShortWords 因为会误伤 trimNew 等代码）
     ['children:"New"', 'children:"新建"'],
@@ -3367,6 +3373,12 @@ function translate(paths) {
         ['More search options', '更多搜索选项'],
         ['Match Case', '匹配大小写'],
         ['Match Whole Word', '匹配整个单词'],
+        // ── 审查操作 / AI 统计行 ──
+        ['Accept all changes', '接受所有更改'],
+        ['Keep All', '保留全部'],
+        ['} added, ${', '} 新增, ${'],
+        ['} deleted`', '} 删除`'],
+        ['} deleted)', '} 删除)'],
         ['general:"General"', 'general:"通用"'],
         ['profile:"Profile"', 'profile:"个人资料"'],
         ['appearance:"Appearance"', 'appearance:"外观"'],
