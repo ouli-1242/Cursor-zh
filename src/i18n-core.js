@@ -469,6 +469,9 @@ const auxiliaryInterfaceReplacements = [
     ['_createButton(this._buttonContainer,k5e,"Quick Edit")', '_createButton(this._buttonContainer,k5e,"快速编辑")'],
     ['{value:"Create Rule",original:"Create Rule"}', '{value:"创建规则",original:"创建规则"}'],
     ['label:"Close Panel"', 'label:"关闭面板"'],
+        // ── 2026-08-08: 选中目标复制操作（Copy 短词，仅精确替换 UI fallback）──
+    ['label:s?"复制消息":"Copy"', 'label:s?"复制消息":"复制"'],
+    ['E("copyPath","Copy Path")', 'E("copyPath","复制路径")'],
         // ── 2026-08-08: markdown 编辑工具栏 ──
     ['label:"Bold"', 'label:"加粗"'],
     ['label:"Italic"', 'label:"斜体"'],
@@ -4039,6 +4042,8 @@ function translate(paths) {
         // ── 2026-08-08: 选中代码工具栏/右键菜单（desk 形式）──
         ['_createButton(this._buttonContainer,GCe,"Quick Edit")', '_createButton(this._buttonContainer,GCe,"快速编辑")'],
         ['{value:"Create Rule",original:"Create Rule"}', '{value:"创建规则",original:"创建规则"}'],
+        // ── 2026-08-08: 选中目标复制操作（desk 形式）──
+        ['label:s?"复制消息":"Copy"', 'label:s?"复制消息":"复制"'],
         // ── 2026-08-08: markdown 编辑工具栏（desk 形式）──
         ['label:"Bold"', 'label:"加粗"'],
         ['label:"Italic"', 'label:"斜体"'],
