@@ -463,8 +463,32 @@ function fixMacGatekeeper(appPath) {
 // Glass / Agent 独立 bundle 中常见的新版 UI 片段。
 // 这些替换只在附加 JS 文件里执行，避免为了新窗口文案扩大 desktop 主文件的短词替换面。
 const auxiliaryInterfaceReplacements = [
-    // ── 2026-08-08 未翻译清单：中频词条（裸引号统一翻译） ──
+        // ── 2026-08-08 用户反馈(第二轮): Close/Dictate/Today/Bookmark/Canvas/WSL标签 ──
+    ['"Taking longer than expected\\u2026"', '"超出预期时间\\u2026"'],
+    ['"Close Window"', '"关闭窗口"'],
+    ['"&&Close Window"', '"&&关闭窗口"'],
+    ['"Clos&&e Window"', '"关闭&&窗口"'],
+    ['title:"Dictate"', 'title:"听写"'],
+    ['`Today ${s}`', '`今天 ${s}`'],
+    ['"Bookmark This Page"', '"收藏此页"'],
+    ['"Remove Bookmark"', '"移除收藏"'],
+    ['"Open Canvas"', '"打开画布"'],
+    ['"Open visible inline canvas preview"', '"打开可见的内联画布预览"'],
+    ['"Sharing canvas…"', '"正在共享画布…"'],
+    ['"Sharing canvas timed out. Try again."', '"共享画布超时。请重试。"'],
+    ['"Canvas link copied to clipboard."', '"画布链接已复制到剪贴板。"'],
+    ['"Canvas shared. Copy the link from the share menu if needed."', '"画布已共享。如需链接，请从共享菜单中复制。"'],
+    ['"Canvas synced."', '"画布已同步。"'],
+    ['label:"Host"', 'label:"主机"'],
+    ['label:"Distro"', 'label:"发行版"'],
+    ['label:"Connect"', 'label:"连接"'],
+    ['label:"Folder"', 'label:"文件夹"'],
+
+// ── 2026-08-08 未翻译清单：中频词条（裸引号统一翻译） ──
     ["\"Back to automations\"", "\"返回自动化\""],
+    // ── 2026-08-08 用户反馈(第三轮): Agents Window 统一翻译 ──
+    ['"Agents Window"', '"智能体窗口"'],
+    ['Agents Window', '智能体窗口'],
     ["\"Connect GitHub to Cursor\"", "\"将 GitHub 连接到 Cursor\""],
     ["\"Untitled Plan\"", "\"未命名计划\""],
     ["\"Always Run\"", "\"始终运行\""],
@@ -589,7 +613,19 @@ const auxiliaryInterfaceReplacements = [
     ["\"Upgrade to run Cloud Agents\"", "\"升级以使用云智能体\""],
     ["\"Cannot resume: chat not found\"", "\"无法恢复：未找到对话\""],
     ["\"Cannot resume: composer not loaded\"", "\"无法恢复：对话尚未加载\""],
-    ["\"Cannot resume: workspace not available\"", "\"无法恢复：工作区不可用\""],
+    ["\"Cannot resume: workspace not available\"", "\"无法恢复：工作区不可用\""],    // ── 2026-08-08 未翻译清单：模拟数据——Example agent task
+    ["name:\"Example agent task\"", "name:\"示例智能体任务\""],
+    // ── 2026-08-08 用户反馈： context used / Tools / Other
+    ["} context used`", "} 上下文使用率`"],
+    ["\" context used\"", "\" 上下文使用率\""],
+    [" context used\",", " 上下文使用率\","],
+    ["label:\"Tools\",currentLabel", "label:\"工具\",currentLabel"],
+    ["children:\"Tools\"})]}", "children:\"工具\"})]}"],
+    ["children:\"Tools\"}),la", "children:\"工具\"}),la"],
+    ["children:\"Tools\"}),Sv", "children:\"工具\"}),Sv"],
+    ["sectionTitle:\"Tools\",leadingIcon", "sectionTitle:\"工具\",leadingIcon"],
+    ["\"Other\",\"Bulk Edit\"", "\"其他\",\"Bulk Edit\""],
+
     // ── 2026-08-08 未翻译清单：高频词条 ──
     ['?"View PR":"Create PR"', '?"查看 PR":"创建 PR"'],
     ['label:"Create PR",tooltip:"Create a new pull request"', 'label:"创建 PR",tooltip:"创建新的拉取请求"'],
@@ -2855,6 +2891,83 @@ const auxiliaryInterfaceReplacements = [
     ["collapseAll: 'Collapse All'", "collapseAll: '全部折叠'"],
     // ── 用户反馈缺失：Docs（docs:"Docs" 对象映射值）──
     ['docs:"Docs",contact:"Contact"', 'docs:"文档",contact:"联系"'],
+    // ── 2026-08-08 第四轮截图：搜索框 / 侧边栏 / 时间戳 / 工作区名 ──
+    ['placeholder:"Open any file, URL, ..."', 'placeholder:"打开任意文件、URL..."'],
+    ['placeholder="Search for files..."', 'placeholder="搜索文件..."'],
+    ['children:"Open Tabs"', 'children:"打开的标签页"'],
+    ['nowLabel:"Just now"', 'nowLabel:"刚刚"'],
+    ['if(n<60)return"Just now"', 'if(n<60)return"刚刚"'],
+    ['if(a<60)return"just now"', 'if(a<60)return"刚刚"'],
+    ['"Just now"', '"刚刚"'],
+    ['"just now"', '"刚刚"'],
+    ['"Workspace name is empty after sanitization"', '"工作区名称在清理后为空"'],
+    ['"aria-label":"Workspace name"', '"aria-label":"工作区名称"'],
+    ['?d:"Workspace name",', '?d:"工作区名称",'],
+    // ── 2026-08-08 第四轮截图：New / Add 按钮文案 ──
+    [',"New"]', ',"新建"]'],
+    ['void 0:"New",', 'void 0:"新建",'],
+    ['tone:"added"},"New");', 'tone:"added"},"新增");'],
+    ['n===void 0?"Add":n', 'n===void 0?"添加":n'],
+    ['?"Adding...":"Add"', '?"正在添加...":"添加"'],
+    ['addLabel:"Add"', 'addLabel:"添加"'],
+    ['?"Added":"Add"', '?"已添加":"添加"'],
+    ['children:"Add"', 'children:"添加"'],
+    // ── 2026-08-08 第四轮截图：Canvas 各类上下文 ──
+    ['label:"Canvas",description:"Produces canvases"', 'label:"画布",description:"生成画布"'],
+    ['displayName:"Canvas"', 'displayName:"画布"'],
+    ['this.canvasPath):"Canvas"', 'this.canvasPath):"画布"'],
+    ['"canvas-mention-card":return"Canvas"', '"canvas-mention-card":return"画布"'],
+    ['mgt(t):"Canvas",', 'mgt(t):"画布",'],
+    ['aLt(e):"Canvas",', 'aLt(e):"画布",'],
+    // ── 2026-08-08 第四轮截图：自动化状态 / 错误弹窗 ──
+    ['loadingAction:"Running"', 'loadingAction:"运行中"'],
+    ['failure:"Failing",running:"Running"', 'failure:"失败",running:"运行中"'],
+    ['?"Server Error":"Failing"', '?"服务器错误":"失败"'],
+    // ── 2026-08-08 第四轮截图：AI 代码追踪统计 - Tab 系列 ──
+    ['"AI 代码追踪统计 - Tab"', '"AI 代码追踪统计 - 补全"'],
+    ['Tab 统计：', '补全统计：'],
+    ['Tab AI 统计', '补全 AI 统计'],
+    ['Total Lines: ', '总行数: '],
+    ['AI-Generated Lines: ', 'AI 生成行数: '],
+    ['AI-Generated: ', 'AI 生成: '],
+    ['- Tab: ', '- 补全: '],
+    // ── 2026-08-08 第四轮补充：Canvas 标签页/画布面板 + MCP Add/Connect ──
+    ['children:M==="rendered"?"Canvas":"Source"', 'children:M==="rendered"?"画布":"源"'],
+    ['case an.Canvas:return"Canvas"', 'case an.Canvas:return"画布"'],
+    ['"glass.agentPanel.canvasPreview.label","Canvas"', '"glass.agentPanel.canvasPreview.label","画布"'],
+    ['defaultLabel:"Canvas",', 'defaultLabel:"画布",'],
+    ['t.showAsButton?"Keybind":"Add"', 't.showAsButton?"快捷键":"添加"'],
+    ['this.findMCPServerAuthUrl(t)?"Connect":"Add"', 'this.findMCPServerAuthUrl(t)?"连接":"添加"'],
+    ['E("glass.agentPanel.openCanvas","Canvas")', 'E("glass.agentPanel.openCanvas","画布")'],
+    ['?mgt(n):"Canvas";', '?mgt(n):"画布";'],
+    ['createAriaLabel:"Canvas",', 'createAriaLabel:"画布",'],
+    ['hintText:"Add"', 'hintText:"添加"'],
+    ['{id:"canvas",label:"Canvas",icon:"brush"', '{id:"canvas",label:"画布",icon:"brush"'],
+    // ── 2026-08-08 第五轮：New/Fork 菜单项 + Reset this pane 说明 ──
+    ['name:"new",description:"Reset this pane to a new agent"', 'name:"新建",description:"将此面板重置为新的智能体"'],
+    ['name:"fork",description:"复制此对话"', 'name:"复制",description:"复制此对话"'],
+    ['tooltip:"Reset this pane to a new agent. In a tileset, replaces the current tile with a blank draft instead of leaving the tileset."', 'tooltip:"将此面板重置为新的智能体。在图块集中，将当前图块替换为空白草稿，而不是离开图块集。"'],
+    // ── 2026-08-08 第六轮：浏览器导航 / 书签 / 证书 UI ──
+    ['title="Navigate back"', 'title="后退"'],
+    ['title="Navigate forward"', 'title="前进"'],
+    ['?"Remove bookmark":"Bookmark this page"', '?"移除书签":"收藏此页"'],
+    ['"bookmark.rename","Rename Bookmark"', '"bookmark.rename","重命名书签"'],
+    ['"bookmark.remove","Remove Bookmark"', '"bookmark.remove","移除书签"'],
+    ['prompt:"Enter new bookmark name"', 'prompt:"输入新的书签名称"'],
+    ['"Bookmark name cannot be empty"', '"书签名称不能为空"'],
+    ['browser-cert-reject">Reject</button>', 'browser-cert-reject">拒绝</button>'],
+['<span>Recording ', '<span>正在录制 '],
+        // ── 2026-08-08 第七轮：Reload 按钮 + Close 菜单项(desk 结构形式)──
+        ['"spin":void 0,"aria-hidden":!0}),"Reload"]', '"spin":void 0,"aria-hidden":!0}),"重新加载"]'],
+        ['"aria-label":"Forward",disabled', '"aria-label":"前进",disabled'],
+        ['title:"Forward"', 'title:"前进"'],
+        ['title:"Reload"', 'title:"重新加载"'],
+        ['"aria-label":"Reload",disabled', '"aria-label":"重新加载",disabled'],
+        ['children:"Close"', 'children:"关闭"'],
+        ['title:"Close"', 'title:"关闭"'],
+        ['label:"Close"', 'label:"关闭"'],
+        ['tooltip:"Close"', 'tooltip:"关闭"'],
+        ['"aria-label":"Close"', '"aria-label":"关闭"'],
 ];
 
 // 合并大正则：单次扫描替代逐条替换（~1675条 → 1次扫描）
@@ -3487,6 +3600,44 @@ function translateNlsMessagesFile(filePath) {
     console.log('✅ nls.messages.json 汉化完成！');
 
     return { processed: true };
+}
+
+/**
+ * 汉化语言包缓存（clp 目录下的 nls.messages.json）。
+ * 当用户已安装官方 zh-hans 语言包时，Cursor 的实际界面文案来自
+ * %APPDATA%\Cursor\clp\<hash>.<locale>\<commit>\nls.messages.json，
+ * 而非 out/nls.messages.json（后者仅兜底）。官方包未翻译的
+ * Cursor 新词条（浏览器右键菜单等）需在此缓存中补翻。
+ */
+function translateClpLanguagePacks() {
+    const home = os.homedir();
+    const clpRoot = path.join(home, 'AppData', 'Roaming', 'Cursor', 'clp');
+    if (!fs.existsSync(clpRoot)) {
+        console.log('\nℹ️  未找到语言包缓存目录（clp），已跳过。');
+        return { processed: false };
+    }
+
+    let visited = 0;
+    const dirs = fs.readdirSync(clpRoot, { withFileTypes: true })
+        .filter(d => d.isDirectory() && /zh-cn|zh-hans|zh/i.test(d.name))
+        .map(d => path.join(clpRoot, d.name));
+
+    for (const dir of dirs) {
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+            if (!entry.isDirectory()) continue;
+            const nlsPath = path.join(dir, entry.name, 'nls.messages.json');
+            if (!fs.existsSync(nlsPath)) continue;
+            visited++;
+            console.log(`\n⚙️  正在处理语言包缓存: ${path.relative(clpRoot, nlsPath)}`);
+            translateNlsMessagesFile(nlsPath);
+        }
+    }
+
+    if (visited === 0) {
+        console.log('\nℹ️  语言包缓存中未找到 nls.messages.json，已跳过。');
+    }
+    return { processed: visited > 0 };
 }
 
 // ═══════════════════════════════════════════════
@@ -4971,7 +5122,28 @@ function translate(paths) {
         ['"aria-label":"Search"', '"aria-label":"搜索"'],
         ['label:"Automations"', 'label:"自动化"'],
         ['title:"Automations"', 'title:"自动化"'],
-        ['children:"Automations"', 'children:"自动化"'],
+['children:"Automations"', 'children:"自动化"'],
+        // ── 2026-08-08 第六轮：浏览器导航 / 书签 / 证书 UI（desk 专属形式）──
+        ['title="Navigate back"', 'title="后退"'],
+        ['title="Navigate forward"', 'title="前进"'],
+        ['?"Remove bookmark":"Bookmark this page"', '?"移除书签":"收藏此页"'],
+        ['"bookmark.rename","Rename Bookmark"', '"bookmark.rename","重命名书签"'],
+        ['"bookmark.remove","Remove Bookmark"', '"bookmark.remove","移除书签"'],
+        ['prompt:"Enter new bookmark name"', 'prompt:"输入新的书签名称"'],
+        ['"Bookmark name cannot be empty"', '"书签名称不能为空"'],
+        ['browser-cert-reject">Reject</button>', 'browser-cert-reject">拒绝</button>'],
+['<span>Recording ', '<span>正在录制 '],
+    // ── 2026-08-08 第七轮：浏览器 Forward/Reload 按钮 + Close 菜单项(结构形式)──
+    ['"aria-label":"Forward",disabled', '"aria-label":"前进",disabled'],
+    ['title:"Forward"', 'title:"前进"'],
+    ['"spin":void 0,"aria-hidden":!0}),"Reload"]', '"spin":void 0,"aria-hidden":!0}),"重新加载"]'],
+    ['title:"Reload"', 'title:"重新加载"'],
+    ['"aria-label":"Reload",disabled', '"aria-label":"重新加载",disabled'],
+    ['children:"Close"', 'children:"关闭"'],
+    ['title:"Close"', 'title:"关闭"'],
+    ['label:"Close"', 'label:"关闭"'],
+    ['tooltip:"Close"', 'tooltip:"关闭"'],
+    ['"aria-label":"Close"', '"aria-label":"关闭"'],
         ['rootLabel:s,rootHref:o,onRootClick:a,LinkComponent:l}=n;let c;e[0]!==i?(c=i===void 0?[]:i,e[0]=i,e[1]=c):c=e[1];const d=c,m=s===void 0?"Automations"', 'rootLabel:s,rootHref:o,onRootClick:a,LinkComponent:l}=n;let c;e[0]!==i?(c=i===void 0?[]:i,e[0]=i,e[1]=c):c=e[1];const d=c,m=s===void 0?"自动化"'],
         ['label:"Marketplace"', 'label:"插件市场"'],
         ['title:"Marketplace"', 'title:"插件市场"'],
@@ -6084,7 +6256,10 @@ function translate(paths) {
 
     translateNlsMessagesFile(nlsMessagesPath);
 
-    // 8.5 主进程托盘菜单
+    // 8.5 语言包缓存（官方 zh-hans 语言包的实际生效文案）
+    translateClpLanguagePacks();
+
+    // 8.6 主进程托盘菜单
     translateMainJsFile(mainProcessJsPath);
 
     // 9. Mac Gatekeeper 修复
