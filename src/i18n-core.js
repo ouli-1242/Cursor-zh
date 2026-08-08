@@ -469,6 +469,19 @@ const auxiliaryInterfaceReplacements = [
     ['_createButton(this._buttonContainer,k5e,"Quick Edit")', '_createButton(this._buttonContainer,k5e,"快速编辑")'],
     ['{value:"Create Rule",original:"Create Rule"}', '{value:"创建规则",original:"创建规则"}'],
     ['label:"Close Panel"', 'label:"关闭面板"'],
+        // ── 2026-08-08: markdown 编辑工具栏 ──
+    ['label:"Bold"', 'label:"加粗"'],
+    ['label:"Italic"', 'label:"斜体"'],
+    ['label:"Underline"', 'label:"下划线"'],
+    ['label:"Strikethrough"', 'label:"删除线"'],
+    ['label:"Link"', 'label:"链接"'],
+    ['label:"Blockquote"', 'label:"引用块"'],
+    ['label:"Inline code"', 'label:"行内代码"'],
+    ['label:"Code block"', 'label:"代码块"'],
+        // ── 2026-08-08: 左侧栏右键/窗口操作 ──
+    ['title:"Add Directory to Cursor Chat"', 'title:"将目录添加到 Cursor 聊天"'],
+    ['title:"Add Directory to New Cursor Chat"', 'title:"将目录添加到新的 Cursor 聊天"'],
+    ['title:"Move into New Window"', 'title:"移动到新窗口"'],
         // ── 2026-08-08 用户反馈(第二轮): Close/Dictate/Today/Bookmark/Canvas/WSL标签 ──
     ['"Taking longer than expected\\u2026"', '"超出预期时间\\u2026"'],
     ['"Close Window"', '"关闭窗口"'],
@@ -4026,6 +4039,19 @@ function translate(paths) {
         // ── 2026-08-08: 选中代码工具栏/右键菜单（desk 形式）──
         ['_createButton(this._buttonContainer,GCe,"Quick Edit")', '_createButton(this._buttonContainer,GCe,"快速编辑")'],
         ['{value:"Create Rule",original:"Create Rule"}', '{value:"创建规则",original:"创建规则"}'],
+        // ── 2026-08-08: markdown 编辑工具栏（desk 形式）──
+        ['label:"Bold"', 'label:"加粗"'],
+        ['label:"Italic"', 'label:"斜体"'],
+        ['label:"Underline"', 'label:"下划线"'],
+        ['label:"Strikethrough"', 'label:"删除线"'],
+        ['label:"Link"', 'label:"链接"'],
+        ['label:"Blockquote"', 'label:"引用块"'],
+        ['label:"Inline code"', 'label:"行内代码"'],
+        ['label:"Code block"', 'label:"代码块"'],
+        // ── 2026-08-08: 左侧栏右键/窗口操作（desk 形式）──
+        ['title:"Add Directory to Cursor Chat"', 'title:"将目录添加到 Cursor 聊天"'],
+        ['title:"Add Directory to New Cursor Chat"', 'title:"将目录添加到新的 Cursor 聊天"'],
+        ['title:"Move into New Window"', 'title:"移动到新窗口"'],
         // ── 2026-08-08 未翻译清单：高频词条（desk 存在的形式）──
         ['?"View PR":"Create PR"', '?"查看 PR":"创建 PR"'],
         ['label:"Create PR",tooltip:"Create a new pull request"', 'label:"创建 PR",tooltip:"创建新的拉取请求"'],

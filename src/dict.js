@@ -915,6 +915,7 @@ const safeGlobalDict = {
     "Open or Focus {0}": "打开或聚焦{0}",
     "Recommended": "官方推荐",
     "Render Whitespace": "渲染空白字符",
+    "Open in Browser": "在浏览器中打开",
     "Switch to Agents Window": "切换到智能体窗口",
     "Switch to Agents Window (Glass)": "切换到智能体窗口 (Glass)",
     "Open or Focus Agents Window": "打开或聚焦智能体窗口",
