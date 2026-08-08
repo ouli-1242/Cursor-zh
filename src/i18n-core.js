@@ -799,6 +799,13 @@ const auxiliaryInterfaceReplacements = [
     // ── 附加文件命令 ──
     ['"Add Files to New Chat"', '"添加文件到新聊天"'],
     ['"Add Files to Chat"', '"添加文件到聊天"'],
+    // ── 文件上下文菜单 / 搜索面板 ──
+    ['Reveal in File Explorer', '在文件资源管理器中显示'],
+    ['Copy Remote URL', '复制远程 URL'],
+    ['Diff View', '差异视图'],
+    ['More search options', '更多搜索选项'],
+    ['Match Case', '匹配大小写'],
+    ['Match Whole Word', '匹配整个单词'],
     // ── 用户反馈的未翻译词条：Glass/Agents 窗口专用 ──
     // "New" 作为独立 UI 文案（不加入 riskyShortWords 因为会误伤 trimNew 等代码）
     ['children:"New"', 'children:"新建"'],
@@ -3353,6 +3360,13 @@ function translate(paths) {
         // ── 附加文件命令 ──
         ['"Add Files to New Chat"', '"添加文件到新聊天"'],
         ['"Add Files to Chat"', '"添加文件到聊天"'],
+        // ── 文件上下文菜单 / 搜索面板 ──
+        ['Reveal in File Explorer', '在文件资源管理器中显示'],
+        ['Copy Remote URL', '复制远程 URL'],
+        ['Diff View', '差异视图'],
+        ['More search options', '更多搜索选项'],
+        ['Match Case', '匹配大小写'],
+        ['Match Whole Word', '匹配整个单词'],
         ['general:"General"', 'general:"通用"'],
         ['profile:"Profile"', 'profile:"个人资料"'],
         ['appearance:"Appearance"', 'appearance:"外观"'],
