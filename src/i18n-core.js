@@ -889,6 +889,11 @@ const auxiliaryInterfaceReplacements = [
     ['Disable Inline Diffs', '禁用内联差异'],
     ['Enable auto-keep to have changes be updated automatically', '启用自动保留，使更改自动更新'],
     ['Enable auto-keep', '启用自动保留'],
+    // ── 工作耗时 / 跳过状态 ──
+    ['Worked for ', '工作了 '],
+    ['action:"Skipped"', 'action:"已跳过"'],
+    ['children:"Skipped"', 'children:"已跳过"'],
+    ['?"Skipped"', '?"已跳过"'],
     ['loading:"Running"', 'loading:"运行中"'],
     ['completed:"Ran"', 'completed:"已运行"'],
     ['loading:"Reading"', 'loading:"正在读取"'],
@@ -3625,6 +3630,11 @@ function translate(paths) {
         ['Disable Inline Diffs', '禁用内联差异'],
         ['Enable auto-keep to have changes be updated automatically', '启用自动保留，使更改自动更新'],
         ['Enable auto-keep', '启用自动保留'],
+        // ── 工作耗时 / 跳过状态 ──
+        ['Worked for ', '工作了 '],
+        ['action:"Skipped"', 'action:"已跳过"'],
+        ['children:"Skipped"', 'children:"已跳过"'],
+        ['?"Skipped"', '?"已跳过"'],
         ['loading:"Running"', 'loading:"运行中"'],
         ['completed:"Ran"', 'completed:"已运行"'],
         ['loading:"Reading"', 'loading:"正在读取"'],
