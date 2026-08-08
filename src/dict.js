@@ -1320,7 +1320,6 @@ const safeGlobalDict = {
     "Disable": "禁用",
     "Systematically diagnose and fix bugs using runtime traces": "使用运行时跟踪系统性地诊断和修复 Bug",
     "Automatically import necessary modules for TypeScript": "自动为 TypeScript 导入必要模块",
-    "Thinking intensity": "思考强度",
     "Refresh model list": "刷新模型列表",
     "Add or search model": "添加或搜索模型",
     "Generate an implementation plan": "生成实施计划",
