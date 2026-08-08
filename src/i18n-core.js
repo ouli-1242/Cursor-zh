@@ -870,9 +870,13 @@ const auxiliaryInterfaceReplacements = [
     ['label:"Resume"', 'label:"继续"'],
     ['Summarizing chat context', '正在总结对话上下文'],
     // ── AI 操作动词状态（Thought/Thinking/Explored/Waited/Listed/Grepped/Editor）──
-    ['"Thought"', '"思考了"'],
+    ['"Thought"', '"思考"'],
     ['"briefly"', '"片刻"'],
     [' ago', ' 之前'],
+    // ── 补充状态动词（completedAction/loadingAction/Worked）──
+    ['"Ran"', '"已运行"'],
+    ['"Exploring"', '"正在探索"'],
+    ['"Worked"', '"已工作"'],
     ['"Thinking"', '"思考中"'],
     ['"Editor"', '"编辑器"'],
     ['"Explored"', '"已探索"'],
@@ -3612,9 +3616,13 @@ function translate(paths) {
         ['label:"Resume"', 'label:"继续"'],
         ['Summarizing chat context', '正在总结对话上下文'],
         // ── AI 操作动词状态 ──
-        ['"Thought"', '"思考了"'],
+        ['"Thought"', '"思考"'],
         ['"briefly"', '"片刻"'],
         [' ago', ' 之前'],
+        // ── 补充状态动词（completedAction/loadingAction/Worked）──
+        ['"Ran"', '"已运行"'],
+        ['"Exploring"', '"正在探索"'],
+        ['"Worked"', '"已工作"'],
         ['"Thinking"', '"思考中"'],
         ['"Editor"', '"编辑器"'],
         ['"Explored"', '"已探索"'],
