@@ -833,6 +833,10 @@ const auxiliaryInterfaceReplacements = [
     ['No MCP Tools', '没有 MCP 工具'],
     ['Add a custom MCP tool here or configure project-specific tools in', '在此添加自定义 MCP 工具，或在项目专用工具中配置'],
     ['Add Custom MCP', '添加自定义 MCP'],
+    // ── 文件上下文菜单 ──
+    ['Open in Browser', '在浏览器中打开'],
+    ['Add File to Cursor Chat', '添加文件到 Cursor 聊天'],
+    ['Add File to New Cursor Chat', '添加文件到新 Cursor 聊天'],
     // ── 用户反馈的未翻译词条：Glass/Agents 窗口专用 ──
     // "New" 作为独立 UI 文案（不加入 riskyShortWords 因为会误伤 trimNew 等代码）
     ['children:"New"', 'children:"新建"'],
@@ -3421,6 +3425,10 @@ function translate(paths) {
         ['No MCP Tools', '没有 MCP 工具'],
         ['Add a custom MCP tool here or configure project-specific tools in', '在此添加自定义 MCP 工具，或在项目专用工具中配置'],
         ['Add Custom MCP', '添加自定义 MCP'],
+        // ── 文件上下文菜单 ──
+        ['Open in Browser', '在浏览器中打开'],
+        ['Add File to Cursor Chat', '添加文件到 Cursor 聊天'],
+        ['Add File to New Cursor Chat', '添加文件到新 Cursor 聊天'],
         ['general:"General"', 'general:"通用"'],
         ['profile:"Profile"', 'profile:"个人资料"'],
         ['appearance:"Appearance"', 'appearance:"外观"'],
