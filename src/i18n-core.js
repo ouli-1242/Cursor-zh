@@ -841,6 +841,11 @@ const auxiliaryInterfaceReplacements = [
     ['Workspace Name', '工作区名称'],
     ['"AI Code Tracking Stats - Agent"', '"AI 代码追踪统计 - 智能体"'],
     ['"AI Code Tracking Stats - Tab"', '"AI 代码追踪统计 - Tab"'],
+    // ── 更多操作 / 视图 / 关于窗口 ──
+    ['More actions', '更多操作'],
+    ['Render Whitespace', '显示空白'],
+    ['Check for updates', '检查更新'],
+    ['Copy version info', '复制版本信息'],
     // ── 用户反馈的未翻译词条：Glass/Agents 窗口专用 ──
     // "New" 作为独立 UI 文案（不加入 riskyShortWords 因为会误伤 trimNew 等代码）
     ['children:"New"', 'children:"新建"'],
@@ -3436,6 +3441,11 @@ function translate(paths) {
         // ── 状态栏/命令面板 ──
         ['"AI Code Tracking Stats - Agent"', '"AI 代码追踪统计 - 智能体"'],
         ['"AI Code Tracking Stats - Tab"', '"AI 代码追踪统计 - Tab"'],
+        // ── 更多操作 / 视图 / 关于窗口 ──
+        ['More actions', '更多操作'],
+        ['Render Whitespace', '显示空白'],
+        ['Check for updates', '检查更新'],
+        ['Copy version info', '复制版本信息'],
         ['general:"General"', 'general:"通用"'],
         ['profile:"Profile"', 'profile:"个人资料"'],
         ['appearance:"Appearance"', 'appearance:"外观"'],
