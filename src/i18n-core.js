@@ -3862,23 +3862,39 @@ function translateUserStorage(appPath) {
 }
 
 /**
- * 还原 state.vscdb（删除 modes4 翻译）
+ * 还原 state.vscdb（字段级还原 modes4/参数定义，对话数据不受影响）
+ * @param {string} appPath Cursor app 路径（加载 @vscode/sqlite3 需要）
  */
-function restoreUserStorage() {
+function restoreUserStorage(appPath) {
     const storageScript = path.join(__dirname, 'storage.js');
     if (!fs.existsSync(storageScript)) {
         return;
     }
 
-    // 还原不需要 node 版本匹配（仅文件复制），直接用 storage.js 的 restoreModes
-    try {
-        const { restoreModes } = require('./storage');
-        if (restoreModes()) {
-            console.log('  ✅ 已还原: state.vscdb');
+    // 还原为字段级（仅改 applicationUser 内汉化字段），需 Cursor 内置 node 加载 @vscode/sqlite3
+    if (appPath) {
+        const { spawnSync } = require('child_process');
+        const nodeCandidates = process.platform === 'win32'
+            ? [path.join(appPath, 'resources', 'helpers', 'node.exe')]
+            : process.platform === 'darwin'
+                ? [path.join(appPath, '..', 'Frameworks', 'Cursor Helper.app', 'Contents', 'MacOS', 'Cursor Helper')]
+                : [];
+        const nodeExe = nodeCandidates.find(p => fs.existsSync(p));
+        if (nodeExe) {
+            const result = spawnSync(nodeExe, [storageScript, '--action=restore', `--app-path=${appPath}`], {
+                encoding: 'utf8',
+                stdio: ['ignore', 'inherit', 'inherit'],
+                timeout: 30000
+            });
+            if (result.error) {
+                console.log('  ⚠️  用户存储还原执行失败:', result.error.message);
+            } else if (result.status !== 0) {
+                console.log('  ⚠️  用户存储还原异常退出（非致命）。');
+            }
+            return;
         }
-    } catch (e) {
-        // 忽略
     }
+    console.log('  ℹ️  未找到 Cursor 内置 node，跳过用户存储还原（字段级还原需加载 @vscode/sqlite3）。');
 }
 
 
@@ -6288,7 +6304,7 @@ function translate(paths) {
  * @param {{ mainJsPath: string, glassJsPath?: string, nlsMessagesPath?: string, htmlPath: string, productJsonPath: string }} paths
  */
 function restore(paths) {
-    const { mainJsPath, glassJsPath, nlsMessagesPath, htmlPath, productJsonPath, mainProcessJsPath } = paths;
+    const { mainJsPath, glassJsPath, nlsMessagesPath, htmlPath, productJsonPath, mainProcessJsPath, appPath } = paths;
 
     console.log('');
     let restored = 0;
@@ -6303,8 +6319,8 @@ function restore(paths) {
     const extRestored = restoreUserExtensions();
     restored += extRestored;
 
-    // 还原用户存储（state.vscdb）
-    restoreUserStorage();
+    // 还原用户存储（state.vscdb，字段级：仅改汉化字段，对话不受影响）
+    restoreUserStorage(paths.appPath);
 
     if (restored > 0) {
         console.log('\n🎉 已恢复英文原版！请重启 Cursor 生效。');

@@ -11,7 +11,8 @@
  *
  * 命令行用法：
  *   node storage.js --action=translate --app-path=<Cursor app 路径>
- *   node storage.js --action=restore
+ *   node storage.js --action=restore --app-path=<Cursor app 路径>
+ *   （可选 --db-path=<state.vscdb 路径> 覆盖默认数据库路径，用于测试/诊断）
  */
 
 const fs = require('fs');
@@ -52,7 +53,8 @@ const BACKUP_SUFFIX = '.zh-backup';
 // 路径解析
 // ─────────────────────────────────────────────
 
-function getDbPath() {
+function getDbPath(dbPathOverride) {
+    if (dbPathOverride) return dbPathOverride;
     const home = os.homedir();
     if (process.platform === 'win32') {
         return path.join(home, 'AppData', 'Roaming', 'Cursor', 'User', 'globalStorage', 'state.vscdb');
@@ -89,8 +91,8 @@ function isCursorRunning() {
 // 核心汉化逻辑
 // ─────────────────────────────────────────────
 
-function translateModes(appPath) {
-    const dbPath = getDbPath();
+function translateModes(appPath, dbPathOverride) {
+    const dbPath = getDbPath(dbPathOverride);
     if (!fs.existsSync(dbPath)) {
         console.log('  ℹ️  state.vscdb 不存在，跳过用户存储汉化。');
         return;
@@ -212,27 +214,172 @@ function translateModes(appPath) {
 }
 
 // ─────────────────────────────────────────────
+// SQLite 单键 JSON 读写（Promise 化）
+// ─────────────────────────────────────────────
+
+function dbGetValue(sqlite3, dbPath, mode, key) {
+    return new Promise((resolve, reject) => {
+        const db = new sqlite3.Database(dbPath, mode, (err) => {
+            if (err) { reject(err); return; }
+            db.get("SELECT value FROM ItemTable WHERE key = ?", [key], (err, row) => {
+                db.close();
+                if (err) { reject(err); return; }
+                if (!row) { resolve(null); return; }
+                const content = Buffer.isBuffer(row.value) ? row.value.toString('utf8') : String(row.value);
+                let data;
+                try { data = JSON.parse(content); } catch (e) { reject(e); return; }
+                resolve(data);
+            });
+        });
+    });
+}
+
+function dbUpdateValue(sqlite3, dbPath, key, value) {
+    return new Promise((resolve, reject) => {
+        const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE, (err) => {
+            if (err) { reject(err); return; }
+            db.run("UPDATE ItemTable SET value = ? WHERE key = ?", [value, key], (err) => {
+                db.close();
+                if (err) reject(err); else resolve();
+            });
+        });
+    });
+}
+
+// ─────────────────────────────────────────────
 // 还原
 // ─────────────────────────────────────────────
 
-function restoreModes() {
-    const dbPath = getDbPath();
+/**
+ * 字段级还原：从首次备份（.zh-backup）的 applicationUser 提取英文原文，
+ * 精确改回当前库 applicationUser 内被汉化的 modes4 描述与模型参数定义。
+ * 只写这一个键，对话（cursorDiskKV / composerHeaders）等其余数据零接触。
+ *
+ * 仅在"当前值 === 本工具的中文翻译"时还原，绝不覆盖用户手动修改。
+ *
+ * @param {string} [appPath] Cursor app 路径（加载 @vscode/sqlite3 需要）
+ * @param {string} [dbPathOverride] 覆盖数据库路径（测试/诊断用）
+ * @returns {Promise<boolean>} 是否完成还原
+ */
+function restoreModes(appPath, dbPathOverride) {
+    const dbPath = getDbPath(dbPathOverride);
     const backupPath = dbPath + BACKUP_SUFFIX;
     if (!fs.existsSync(backupPath)) {
-        return false;
+        return Promise.resolve(false);
     }
-    try {
-        if (isCursorRunning()) {
-            console.log('  ⚠️  Cursor 正在运行，无法还原 state.vscdb。');
+    if (isCursorRunning()) {
+        console.log('  ⚠️  Cursor 正在运行，无法还原 state.vscdb。');
+        return Promise.resolve(false);
+    }
+
+    // 字段级还原需要 @vscode/sqlite3 读取备份里的英文原文
+    let sqlite3;
+    if (appPath) {
+        try {
+            sqlite3 = require(path.join(appPath, 'node_modules', '@vscode', 'sqlite3'));
+        } catch (e) { /* 尝试下一步 */ }
+    }
+    if (!sqlite3) {
+        console.log('  ⚠️  无法加载 @vscode/sqlite3，无法进行字段级还原（需 --app-path 指定 Cursor 安装路径）。');
+        console.log('     已跳过还原，未改动数据库（避免整库覆盖丢失近期对话）。');
+        return Promise.resolve(false);
+    }
+
+    const op = async () => {
+        try {
+            // 1. 读备份英文原文
+            const backupData = await dbGetValue(sqlite3, backupPath, sqlite3.OPEN_READONLY, STORAGE_KEY);
+            if (!backupData) {
+                console.log('  ℹ️  备份中无 applicationUser 键，跳过字段级还原。');
+                return false;
+            }
+
+            // 2. 读当前库
+            const currentData = await dbGetValue(sqlite3, dbPath, sqlite3.OPEN_READWRITE, STORAGE_KEY);
+            if (!currentData) {
+                console.log('  ℹ️  当前库无 applicationUser 键，跳过。');
+                return false;
+            }
+
+            // 3. 字段级还原
+            let modeChanged = 0, paramChanged = 0;
+
+            // 3a. 模式描述：备份按 id 索引英文原文
+            const backupModes = new Map();
+            if (backupData.composerState && Array.isArray(backupData.composerState.modes4)) {
+                for (const m of backupData.composerState.modes4) {
+                    if (m && m.id) backupModes.set(m.id, m.description);
+                }
+            }
+            if (currentData.composerState && Array.isArray(currentData.composerState.modes4)) {
+                for (const mode of currentData.composerState.modes4) {
+                    if (!mode || !mode.id) continue;
+                    const en = backupModes.get(mode.id);
+                    const zh = modeDescriptionDict[mode.id];
+                    if (en && zh && mode.description === zh) {
+                        mode.description = en;
+                        modeChanged++;
+                    }
+                }
+            }
+
+            // 3b. 参数定义：备份按 serverModelName + paramId 索引英文原文
+            const backupParams = new Map(); // key = serverModelName + '::' + paramId
+            const backupModels = Array.isArray(backupData.availableDefaultModels2)
+                ? backupData.availableDefaultModels2
+                : (Array.isArray(backupData.availableDefaultModels1) ? backupData.availableDefaultModels1 : []);
+            for (const model of backupModels) {
+                if (!model || !Array.isArray(model.parameterDefinitions)) continue;
+                for (const pd of model.parameterDefinitions) {
+                    if (!pd || !pd.id) continue;
+                    const key = (model.serverModelName || model.name || '') + '::' + pd.id;
+                    backupParams.set(key, { name: pd.name, markdownTooltip: pd.markdownTooltip });
+                }
+            }
+            const modelKey = Array.isArray(currentData.availableDefaultModels2)
+                ? 'availableDefaultModels2'
+                : (Array.isArray(currentData.availableDefaultModels1) ? 'availableDefaultModels1' : null);
+            if (modelKey) {
+                for (const model of currentData[modelKey]) {
+                    if (!model || !Array.isArray(model.parameterDefinitions)) continue;
+                    for (const pd of model.parameterDefinitions) {
+                        if (!pd || !pd.id) continue;
+                        const key = (model.serverModelName || model.name || '') + '::' + pd.id;
+                        const en = backupParams.get(key);
+                        if (!en) continue;
+                        const zhName = parameterDefinitionDict.name && parameterDefinitionDict.name[pd.name];
+                        if (en.name && zhName && pd.name === zhName) {
+                            pd.name = en.name;
+                            paramChanged++;
+                        }
+                        const zhTip = parameterDefinitionDict.markdownTooltip && parameterDefinitionDict.markdownTooltip[pd.markdownTooltip];
+                        if (en.markdownTooltip && zhTip && pd.markdownTooltip === zhTip) {
+                            pd.markdownTooltip = en.markdownTooltip;
+                            paramChanged++;
+                        }
+                    }
+                }
+            }
+
+            if (modeChanged + paramChanged === 0) {
+                console.log('  ℹ️  未发现需还原的汉化字段（已是英文或被手动修改，保持现状）。');
+                return false;
+            }
+
+            // 4. 只更新 applicationUser 一个键，其余数据不动
+            await dbUpdateValue(sqlite3, dbPath, STORAGE_KEY, JSON.stringify(currentData));
+
+            // 5. 还原完成，移除备份（下次汉化会重新备份英文原文）
+            fs.unlinkSync(backupPath);
+            console.log(`  ✅ 已还原 ${modeChanged} 个模式描述 + ${paramChanged} 个参数定义（回到英文），对话数据未受影响。`);
+            return true;
+        } catch (e) {
+            console.log('  ⚠️  还原失败:', e.message);
+            console.log('     数据库未被改动，可重试。');
             return false;
         }
-        fs.copyFileSync(backupPath, dbPath);
-        fs.unlinkSync(backupPath);
-        return true;
-    } catch (e) {
-        console.log('  ⚠️  还原失败:', e.message);
-        return false;
-    }
+    };
+    return op();
 }
 
 // ─────────────────────────────────────────────
@@ -243,27 +390,35 @@ if (require.main === module) {
     const args = process.argv.slice(2);
     const actionArg = args.find(a => a.startsWith('--action='));
     const appPathArg = args.find(a => a.startsWith('--app-path='));
+    const dbPathArg = args.find(a => a.startsWith('--db-path='));
 
     if (!actionArg) {
-        console.error('用法: node storage.js --action=translate|restore [--app-path=<path>]');
+        console.error('用法: node storage.js --action=translate|restore [--app-path=<path>] [--db-path=<path>]');
         process.exit(1);
     }
 
     const action = actionArg.slice('--action='.length);
+    const appPath = appPathArg ? appPathArg.slice('--app-path='.length) : null;
+    const dbPathOverride = dbPathArg ? dbPathArg.slice('--db-path='.length) : null;
 
     if (action === 'translate') {
-        if (!appPathArg) {
+        if (!appPath) {
             console.error('translate 操作需要 --app-path 参数');
             process.exit(1);
         }
-        const appPath = appPathArg.slice('--app-path='.length);
-        translateModes(appPath);
+        translateModes(appPath, dbPathOverride);
     } else if (action === 'restore') {
-        if (restoreModes()) {
-            console.log('  ✅ 已还原 state.vscdb');
-        } else {
-            console.log('  ℹ️  未找到 state.vscdb 备份，无需还原。');
+        if (!appPath) {
+            console.error('restore 操作需要 --app-path 参数（字段级还原需加载 Cursor 内置 @vscode/sqlite3）');
+            process.exit(1);
         }
+        restoreModes(appPath, dbPathOverride).then(ok => {
+            if (ok) {
+                console.log('  ✅ 已还原 state.vscdb');
+            } else {
+                console.log('  ℹ️  未还原（无备份或无需还原）。');
+            }
+        });
     } else {
         console.error('未知操作:', action);
         process.exit(1);
