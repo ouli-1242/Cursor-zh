@@ -829,6 +829,10 @@ const auxiliaryInterfaceReplacements = [
     ['"Disabled"', '"已禁用"'],
     ['"Personal"', '"个人"'],
     ['hintText:"Delete"', 'hintText:"删除"'],
+    // ── MCP 空状态 ──
+    ['No MCP Tools', '没有 MCP 工具'],
+    ['Add a custom MCP tool here or configure project-specific tools in', '在此添加自定义 MCP 工具，或在项目专用工具中配置'],
+    ['Add Custom MCP', '添加自定义 MCP'],
     // ── 用户反馈的未翻译词条：Glass/Agents 窗口专用 ──
     // "New" 作为独立 UI 文案（不加入 riskyShortWords 因为会误伤 trimNew 等代码）
     ['children:"New"', 'children:"新建"'],
@@ -3413,6 +3417,10 @@ function translate(paths) {
         ['"Disabled"', '"已禁用"'],
         ['"Personal"', '"个人"'],
         ['hintText:"Delete"', 'hintText:"删除"'],
+        // ── MCP 空状态 ──
+        ['No MCP Tools', '没有 MCP 工具'],
+        ['Add a custom MCP tool here or configure project-specific tools in', '在此添加自定义 MCP 工具，或在项目专用工具中配置'],
+        ['Add Custom MCP', '添加自定义 MCP'],
         ['general:"General"', 'general:"通用"'],
         ['profile:"Profile"', 'profile:"个人资料"'],
         ['appearance:"Appearance"', 'appearance:"外观"'],
