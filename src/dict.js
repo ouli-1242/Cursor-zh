@@ -11,6 +11,8 @@ const safeGlobalDict = {
     "Configure Keybinding": "配置快捷键",
     "Hide '{0}'": "隐藏'{0}'",
     "Workspace Name": "工作区名称",
+    "Close Window": "关闭窗口",
+    "Zen Mode": "禅定模式",
     "Copy Message": "复制消息",
     "Manage Account": "管理账号",
     "Manage your account and billing": "管理您的账号与账单",
