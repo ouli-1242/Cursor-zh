@@ -885,6 +885,10 @@ const auxiliaryInterfaceReplacements = [
     ['Chat context summarized', '对话上下文已总结'],
     ['Unable to open', '无法打开'],
     ['Read attempted', '已尝试读取'],
+    // ── 内联差异 / 自动保留 ──
+    ['Disable Inline Diffs', '禁用内联差异'],
+    ['Enable auto-keep to have changes be updated automatically', '启用自动保留，使更改自动更新'],
+    ['Enable auto-keep', '启用自动保留'],
     ['loading:"Running"', 'loading:"运行中"'],
     ['completed:"Ran"', 'completed:"已运行"'],
     ['loading:"Reading"', 'loading:"正在读取"'],
@@ -3617,6 +3621,10 @@ function translate(paths) {
         ['Chat context summarized', '对话上下文已总结'],
         ['Unable to open', '无法打开'],
         ['Read attempted', '已尝试读取'],
+        // ── 内联差异 / 自动保留 ──
+        ['Disable Inline Diffs', '禁用内联差异'],
+        ['Enable auto-keep to have changes be updated automatically', '启用自动保留，使更改自动更新'],
+        ['Enable auto-keep', '启用自动保留'],
         ['loading:"Running"', 'loading:"运行中"'],
         ['completed:"Ran"', 'completed:"已运行"'],
         ['loading:"Reading"', 'loading:"正在读取"'],
