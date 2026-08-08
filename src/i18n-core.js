@@ -796,6 +796,9 @@ const auxiliaryInterfaceReplacements = [
     // ── AI 统计面板：Repo/Branch 前缀 ──
     ['Repo: ', '仓库：'],
     ['Branch: ', '分支：'],
+    // ── 附加文件命令 ──
+    ['"Add Files to New Chat"', '"添加文件到新聊天"'],
+    ['"Add Files to Chat"', '"添加文件到聊天"'],
     // ── 用户反馈的未翻译词条：Glass/Agents 窗口专用 ──
     // "New" 作为独立 UI 文案（不加入 riskyShortWords 因为会误伤 trimNew 等代码）
     ['children:"New"', 'children:"新建"'],
@@ -3347,6 +3350,9 @@ function translate(paths) {
         // ── AI 统计面板：Repo/Branch 前缀 ──
         ['Repo: ', '仓库：'],
         ['Branch: ', '分支：'],
+        // ── 附加文件命令 ──
+        ['"Add Files to New Chat"', '"添加文件到新聊天"'],
+        ['"Add Files to Chat"', '"添加文件到聊天"'],
         ['general:"General"', 'general:"通用"'],
         ['profile:"Profile"', 'profile:"个人资料"'],
         ['appearance:"Appearance"', 'appearance:"外观"'],
