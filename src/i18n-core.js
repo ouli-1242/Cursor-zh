@@ -815,6 +815,9 @@ const auxiliaryInterfaceReplacements = [
     // ── 审查界面 Keep / 审查变更 ──
     ['"Keep"', '"保留"'],
     ['Review Changes', '审查更改'],
+    // ── 浏览器连接错误 ──
+    ['"Connection Failed"', '"连接失败"'],
+    ['"Restart Browser"', '"重启浏览器"'],
     // ── 用户反馈的未翻译词条：Glass/Agents 窗口专用 ──
     // "New" 作为独立 UI 文案（不加入 riskyShortWords 因为会误伤 trimNew 等代码）
     ['children:"New"', 'children:"新建"'],
@@ -3385,6 +3388,9 @@ function translate(paths) {
         // ── 审查界面 Keep / 审查变更 ──
         ['"Keep"', '"保留"'],
         ['Review Changes', '审查更改'],
+        // ── 浏览器连接错误 ──
+        ['"Connection Failed"', '"连接失败"'],
+        ['"Restart Browser"', '"重启浏览器"'],
         ['general:"General"', 'general:"通用"'],
         ['profile:"Profile"', 'profile:"个人资料"'],
         ['appearance:"Appearance"', 'appearance:"外观"'],
