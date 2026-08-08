@@ -18,7 +18,7 @@ Cursor-zh 是一个用于汉化 Cursor 编辑器界面的本地工具。它通�
 - **移除 `keys.json`**：将辅助数据合并入 `dict.js`，简化项目结构。
 - **性能优化**：合并大正则 + 预编译 + 预检跳过，短词替换阶段从 37 秒降至 0.27 秒（提速 99%）；界面片段替换从逐条扫描 ~3500 次合并为 2 次大正则扫描，整体汉化耗时从约 40 秒降至 3 秒以内。详见下文[性能优化](#性能优化)。
 - **健壮性增强**：备份文件增加版本检测，Cursor 升级后自动更新备份避免版本降级；写入采用原子复制策略避免数据丢失窗口；附加功能（扩展翻译、存储翻译）失败不中断核心汉化。
-- **用户存储翻译**：通过 SQLite 操作 `state.vscdb`，翻译动态加载的 Agents 模式描述与模型参数定义（`Thinking intensity` → `思考强度` 等）。
+- **用户存储翻译**：通过 SQLite 操作 `state.vscdb`，翻译动态加载的 Agents 模式描述与模型参数定义（`Thinking intensity` → `思考强度` 等）；恢复英文时对该库做**字段级还原**，仅改回汉化字段，对话历史不受影响。
 - **参数名显示层映射**：在模型转换函数注入映射，即使 Cursor 启动后服务端刷新模型配置将数据覆盖回英文，界面仍显示中文，避免"汉化后过一会儿恢复英文"。
 - **用户扩展翻译**：自动翻译远程开发扩展（remote-ssh/remote-wsl/remote-containers）的命令面板文本。
 
@@ -62,7 +62,7 @@ npm start
 运行后按提示选择：
 
 - `一键汉化`：修改 Cursor 资源文件并应用中文。
-- `恢复英文`：从 `.backup` 备份恢复原始文件。
+- `恢复英文`：从 `.backup` 备份恢复原始资源文件；`state.vscdb` 用户存储采用字段级还原，仅把汉化的模式描述/模型参数改回英文，**近期对话和设置不受影响**。
 - `退出`：关闭工具。
 
 也可以通过命令行静默执行，适合脚本或 CI 场景：
@@ -112,7 +112,7 @@ node index.js --action=restore --cursor-path="/Applications/Cursor.app/Contents/
 
 8. 翻译用户扩展。扫描 `~/.cursor/extensions/` 中的远程开发扩展（remote-ssh/remote-wsl/remote-containers），翻译其 `package.json` 中的命令面板标题和分类。失败时跳过，不影响核心汉化。
 
-9. 翻译用户存储。通过 SQLite 操作 `state.vscdb`，翻译 `composerState.modes4` 中动态加载的 Agents 模式描述，以及 `availableDefaultModels2` 中的模型参数定义（如 `Thinking intensity`）。需 Cursor 已完全退出，失败时跳过。
+9. 翻译用户存储。通过 SQLite 操作 `state.vscdb`，翻译 `composerState.modes4` 中动态加载的 Agents 模式描述，以及 `availableDefaultModels2` 中的模型参数定义（如 `Thinking intensity`）。需 Cursor 已完全退出，失败时跳过。恢复英文时对该库做字段级还原，不整体覆盖，对话数据不受影响。
 10. 参数名显示层映射。在模型转换函数（`kR_`/`mSg`）注入参数名映射，保证界面常显中文，抵抗 Cursor 启动时服务端对模型配置的覆盖。
 
 ## 文件说明
@@ -123,7 +123,7 @@ node index.js --action=restore --cursor-path="/Applications/Cursor.app/Contents/
 | `src/platform.js` | 跨平台路径检测、配置保存、权限检查、提权执行 |
 | `src/i18n-core.js` | 核心汉化、备份恢复、校验修复、macOS 签名处理 |
 | `src/dict.js` | 安全词典（`safeGlobalDict`）、原生 NLS 词典（`nativeNlsDict`）、短词词典（`riskyShortWords`） |
-| `src/storage.js` | 用户存储翻译（state.vscdb 中 Agents 模式描述与模型参数定义的 SQLite 操作，含参数定义汉化计数日志） |
+| `src/storage.js` | 用户存储翻译与字段级还原（state.vscdb：Agents 模式描述与模型参数定义的 SQLite 操作；恢复英文时仅还原汉化字段，对话数据不受影响） |
 | `scripts/package-release.js` | 打包脚本，生成压缩包和 SHA-256 校验文件 |
 
 ## 性能优化
@@ -163,6 +163,8 @@ product.json.backup
 ```
 
 恢复英文时会优先使用这些备份文件，还原后自动删除备份和元数据，下次汉化重新创建。
+
+此外，`state.vscdb`（用户存储）首次汉化时会生成 `.zh-backup` 完整备份。恢复英文时**不会整体覆盖数据库**，而是做字段级还原：从 `.zh-backup` 提取英文原文，仅改回被汉化的模式描述与模型参数定义；对话历史（对话正文、对话列表）与其余设置一律不动，因此这段时间新增的对话不会丢失。
 
 ## 权限说明
 
@@ -218,6 +220,8 @@ Cursor 启动时可能从服务端刷新模型配置，覆盖 `state.vscdb` 中�
 ```bash
 node index.js --action=restore --cursor-path="/Applications/Cursor.app/Contents/Resources/app"
 ```
+
+> 恢复英文**不会丢失使用期间的对话历史**：`state.vscdb` 采用字段级还原，仅将汉化的模式描述与模型参数改回英文，其他用户数据（对话正文、对话列表、设置）保持不变。
 
 ## 创建问题与反馈
 
