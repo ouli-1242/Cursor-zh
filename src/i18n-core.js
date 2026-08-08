@@ -785,6 +785,9 @@ const auxiliaryInterfaceReplacements = [
     ['"Terminal"', '"终端"'],
     ['"Preview"', '"预览"'],
     ['label:"Source",ariaLabel:"Source"', 'label:"源码",ariaLabel:"源码"'],
+    // ── 审查/保留更改按钮 ──
+    ['Keep all changes', '保留所有更改'],
+    ['Review Next File', '审查下一个文件'],
     // ── 用户反馈的未翻译词条：Glass/Agents 窗口专用 ──
     // "New" 作为独立 UI 文案（不加入 riskyShortWords 因为会误伤 trimNew 等代码）
     ['children:"New"', 'children:"新建"'],
@@ -3325,6 +3328,9 @@ function translate(paths) {
         ['"Terminal"', '"终端"'],
         ['"Preview"', '"预览"'],
         ['label:"Source",ariaLabel:"Source"', 'label:"源码",ariaLabel:"源码"'],
+        // ── 审查/保留更改按钮 ──
+        ['Keep all changes', '保留所有更改'],
+        ['Review Next File', '审查下一个文件'],
         ['general:"General"', 'general:"通用"'],
         ['profile:"Profile"', 'profile:"个人资料"'],
         ['appearance:"Appearance"', 'appearance:"外观"'],
