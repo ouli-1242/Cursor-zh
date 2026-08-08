@@ -818,6 +818,17 @@ const auxiliaryInterfaceReplacements = [
     // ── 浏览器连接错误 ──
     ['"Connection Failed"', '"连接失败"'],
     ['"Restart Browser"', '"重启浏览器"'],
+    // ── Show N more / MCP 状态 / 私有设置 ──
+    ['Show ${', '显示 ${'],
+    ['} enabled`', '} 已启用`'],
+    ['Add for Myself', '为我添加'],
+    ['Add to Project', '添加到项目'],
+    ['Show Output', '显示输出'],
+    // ── MCP 状态 / 私有 / 个人 / 删除 ──
+    ['"Private"', '"私有"'],
+    ['"Disabled"', '"已禁用"'],
+    ['"Personal"', '"个人"'],
+    ['hintText:"Delete"', 'hintText:"删除"'],
     // ── 用户反馈的未翻译词条：Glass/Agents 窗口专用 ──
     // "New" 作为独立 UI 文案（不加入 riskyShortWords 因为会误伤 trimNew 等代码）
     ['children:"New"', 'children:"新建"'],
@@ -3391,6 +3402,17 @@ function translate(paths) {
         // ── 浏览器连接错误 ──
         ['"Connection Failed"', '"连接失败"'],
         ['"Restart Browser"', '"重启浏览器"'],
+        // ── Show N more / MCP 状态 / 私有设置 ──
+        ['Show ${', '显示 ${'],
+        ['} enabled`', '} 已启用`'],
+        ['Add for Myself', '为我添加'],
+        ['Add to Project', '添加到项目'],
+        ['Show Output', '显示输出'],
+        // ── MCP 状态 / 私有 / 个人 / 删除 ──
+        ['"Private"', '"私有"'],
+        ['"Disabled"', '"已禁用"'],
+        ['"Personal"', '"个人"'],
+        ['hintText:"Delete"', 'hintText:"删除"'],
         ['general:"General"', 'general:"通用"'],
         ['profile:"Profile"', 'profile:"个人资料"'],
         ['appearance:"Appearance"', 'appearance:"外观"'],
