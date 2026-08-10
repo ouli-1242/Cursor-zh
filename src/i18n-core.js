@@ -4599,6 +4599,8 @@ function translate(paths) {
         ['label:"Continue Anyway"', 'label:"仍然继续"'],
         ['label:"Checkout Branch"', 'label:"切换分支"'],
         ['children:"Checkout Branch"', 'children:"切换分支"'],
+        // ── 2026-08-10: desk Git/设置侧栏 "Branches"（aux 已有, scoped 缺）──
+        ['"Branches"', '"分支"'],
         ['title:"Connect your Repos to Cursor"', 'title:"将仓库连接到 Cursor"'],
         ['connectLabel:"Connect Repos"', 'connectLabel:"连接仓库"'],
         ['buttonLabel:"Connect Your Repos"', 'buttonLabel:"连接你的仓库"'],
