@@ -474,6 +474,8 @@ const auxiliaryInterfaceReplacements = [
         // ── 2026-08-08: 选中目标复制操作（Copy 短词，仅精确替换 UI fallback）──
     ['label:s?"复制消息":"Copy"', 'label:s?"复制消息":"复制"'],
     ['E("copyPath","Copy Path")', 'E("copyPath","复制路径")'],
+    // ── 2026-08-10: 右键菜单 Copy Agent ID（仅 glass 有）──
+    ['label:"Copy Agent ID"', 'label:"复制智能体 ID"'],
     // ── 2026-08-10: 3.15 构建 NLS 调用函数为 T（旧版 E），两种都覆盖 ──
     ['T("copyPath","Copy Path")', 'T("copyPath","复制路径")'],
         // ── 2026-08-08: markdown 编辑工具栏 ──
