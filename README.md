@@ -154,6 +154,23 @@ node index.js --action=restore --cursor-path="/Applications/Cursor.app/Contents/
 - **长句优先匹配**：安全长句按长度降序排列构建正则，确保 "Close All" 优先于 "Close" 匹配，既保证正确性又减少后续短词阶段的工作量。
 - **轻量进度条**：TTY 模式下原地刷新进度，非 TTY 模式仅输出阶段完成行，避免日志文件刷出大量重复行。
 
+## 验证工具链（开发）
+
+新增或修改词条后，建议用 `scripts/` 下的验证脚本做回归（它们读取本机已安装的 Cursor bundle，非仓库 fixture）：
+
+| 脚本 | 验证内容 | 说明 |
+| --- | --- | --- |
+| `verify-hf.js` | Glass/Agent 窗口 | 用与管线相同的单次 mega-regex 干跑**全部** `auxiliaryInterfaceReplacements`（约 2500 条），统计命中、残留英文与括号失衡度；3~4s 跑完 |
+| `verify-batch.js` | glass + desktop | 检查近期新增的 aux/scoped 规则在原包中的字面命中率，0 命中表示规则已失效（变量名/形态随 Cursor 版本变化） |
+| `verify-semantics.js` | 对话框语义 | 模拟替换 New User Skill/Subagent 创建对话框，断言中文标题、prompt 变量的正确性、占位符不被中文污染 |
+| `verify-glassos.js` | Glass 原生编辑菜单 | 校验 `glassOsEdit*` 规则在 bundle 中的 E/T 两种形态命中 |
+| `verify-loading.js` / `verify-done.js` / `verify-cycle.js` | 加载状态 / Done / Cycle | 高频状态文本的命中覆盖 |
+| `gen-untranslated-md.js` / `gen-clp-md.js` | 未翻译清单 | 扫描 bundle / clp 语言包缓存中**尚未覆盖**的英文短语，生成 Markdown 报告（建议翻译列留空），供人工补充词典后回填 |
+
+使用方式：`node scripts/verify-hf.js [Cursor 安装根目录]`，默认读 `D:/Program Files/cursor/resources/app`，可传参覆盖。
+
+> ⚠️ 这些脚本读取的是**英文原版** bundle。如果已经执行过汉化，请先"恢复英文"再跑，否则命中数会全部为 0。
+
 ## 配置与备份
 
 工具会在用户目录保存 Cursor 路径配置：
@@ -288,7 +305,7 @@ npm run build:release  # 构建 + 打包发布压缩包和校验文件
 
 ## 贡献
 
-欢迎提交 Issue 和 Pull Request。如果是漏翻或误翻，请附上英文原文和界面截图。参与贡献前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。
+欢迎提交 Issue 和 Pull Request。如果是漏翻或误翻，请附上英文原文和界面截图。
 
 ## 许可证
 
