@@ -1376,7 +1376,7 @@ const safeGlobalDict = {
     // ── 用户反馈第二批未翻译词条 ──
     "Show Terminal": "显示终端",
     "Hide Terminal": "隐藏终端",
-    "Open Process Explorer": "打开进程浏览器",
+    "Open Process Explorer": "打开进程资源管理器",
     "Toggle Agents": "切换智能体",
     "Toggle Agents Side Bar": "切换智能体侧边栏",
     "Show Agents Side Bar": "显示智能体侧边栏",

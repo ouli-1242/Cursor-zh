@@ -6,10 +6,10 @@ const path = require('path');
 // 2. 无残留英文 UI 词条
 //
 // 与旧实现的差异:
-// 旧实现用逐条 split/join 应用规则,受限于性能把 aux 截断在
-// general:"General"(2521 条只测前 333 条)并跳过 'Unknown error' 规则。
-// 现改为与 translateAuxiliaryJsFile 完全相同的单次 mega-regex(lookup 替换),
-// 完整覆盖全部规则,单次扫描 46MB 包 <2s。
+// 旧实现用逐条 split/join,受限于性能把 aux 截断在 general:"General"(只测 333/2521 条)。
+// 现改为与 translateAuxiliaryJsFile 完全相同的单次 mega-regex(lookup 替换)。
+// 残留检查只对"已触发"的规则做单趟正则扫描——未触发的规则本就不匹配当前包,
+// 不算残留;同时避免对 46MB 包做 ~2500 次 includes(O(n×m))。
 const src = fs.readFileSync(path.join(__dirname, '../src/i18n-core.js'), 'utf8');
 
 function extractArray(name) {
@@ -41,21 +41,22 @@ const APP_ROOT = process.argv[2] || 'D:/Program Files/cursor/resources/app';
 const glass = fs.readFileSync(path.join(APP_ROOT, 'out/vs/workbench/workbench.glass.main.js'), 'utf8');
 
 const t0 = Date.now();
-let hits = 0;
+const fired = new Set();
 const out = glass.replace(regex, (match) => {
-  hits++;
+  fired.add(match);
   return lookup.get(match);
 });
-console.log(`规则数: ${valid.length}  命中: ${hits}  用时: ${((Date.now() - t0) / 1000).toFixed(1)}s`);
+console.log(`规则数: ${valid.length}  命中: ${fired.size} 条唯一规则  用时: ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 
-// 词条残留检查。
-// 排除两类伪装者:
-//  - en 含中文的重译规则(如 '"AI 代码追踪统计 - Tab"'→'...补全'),英文全新包上不触发,但会误报
-//  - 命中数为 0 的规则(其 en 未出现在输出里才算"已覆盖";出现在输出里即为真残留)
-const enSet = [...new Set(valid.map(([en]) => en))].filter(en => !hasCJK(en));
-const zeroHit = valid.filter(([en]) => !glass.includes(en)).length;
-const remaining = enSet.filter(en => out.includes(en));
-console.log('残留英文:', remaining.length, '  (0 命中规则:', zeroHit, '条)');
+// 残留检查：只对已触发且 en 不含中文的规则，单趟正则扫描输出
+const firedList = [...fired].filter(en => !hasCJK(en));
+const t1 = Date.now();
+const firedRegex = new RegExp(firedList.map(escapeRegExp).sort((a, b) => b.length - a.length).join('|'), 'g');
+const stillPresent = new Set();
+let m;
+while ((m = firedRegex.exec(out)) !== null) stillPresent.add(m[0]);
+const remaining = firedList.filter(en => stillPresent.has(en));
+console.log(`残留英文: ${remaining.length}  (0 命中规则: ${valid.length - fired.size})  用时: ${((Date.now() - t1) / 1000).toFixed(1)}s`);
 if (remaining.length) console.log(remaining.slice(0, 20));
 
 // 结构性检查:括号相对失衡度在翻译前后必须保持不变。

@@ -55,10 +55,10 @@ const keywords = [
   'Filter By', '{value:"scope"', '{value:"author"', '{value:"name"',
   'Manage in Dashboard', 'Show ${k} more', '["Show ', 'Show ",g," more',
   'moreLabel:"Show more"', 'confirmLabel??', 'cancelLabel??', 'title??"Prompt"',
-  'E(7683,null)', 'Enter Command Name', 'Z==="skill"', 'C==="skill"',
-  'te==="skill"', 'x==="skill"', 'New User ${ne}', 'New User ${Y}', 'New User ${T}',
-  'New User ${x}', 'New User ${oe}', 'New User ${ee}', 'New User ${M}', 'New User ${I}',
-  'Enter a name for the new ${Y}', 'my-custom-${Y}', 'User Rules apply',
+  'E(7683,null)', 'Enter Command Name',
+  // New User Skill/Subagent 对话框与命令创建规则：用通用前缀，变量名无论怎么改都覆盖
+  '==="skill"', 'New User ${', 'Enter a name for the new ${', 'my-custom-${',
+  'User Rules apply',
   'p$m={light:', 'glassOsEdit',
 ];
 

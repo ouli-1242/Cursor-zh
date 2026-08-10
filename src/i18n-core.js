@@ -1097,6 +1097,12 @@ const auxiliaryInterfaceReplacements = [
     ['prompt:`Enter a name for the new ${Y}`', 'prompt:`为新的${ne}输入名称`'],
     ['title:`New User ${T}`', 'title:`新建用户${T}`'],
     ['prompt:`Enter a name for the new ${x}`', 'prompt:`为新的${T}输入名称`'],
+    // ── 2026-08-10: 3.15 构建 glass 变量名重命名（J/Z/Y，等价旧 ne/T/Z===/C===）。
+    // 注意：prompt 的 zh 引用与 EN 相同的变量（${Z}），保证在作用域内——
+    // 旧规则引用标题变量（${ne}/${T}）在变量被改名后可能指向错误标识符。──
+    ['Y==="skill"?"Skill":"Subagent"', 'Y==="skill"?"技能":"子代理"'],
+    ['title:`New User ${J}`', 'title:`新建用户${J}`'],
+    ['prompt:`Enter a name for the new ${Z}`', 'prompt:`为新的${Z}输入名称`'],
     // ── User Rules 提示 ──
     ['prompt:"User Rules apply to all of your chats"', 'prompt:"用户规则适用于你的所有对话"'],
     // ── 主题显示名 ──
@@ -4651,9 +4657,13 @@ function translate(paths) {
         ['te==="skill"?"Skill":"Subagent"', 'te==="skill"?"技能":"子代理"'],
         ['x==="skill"?"Skill":"Subagent"', 'x==="skill"?"技能":"子代理"'],
         ['title:`New User ${oe}`', 'title:`新建用户${oe}`'],
-        ['prompt:`Enter a name for the new ${ee}`', 'prompt:`为新的${oe}输入名称`'],
+        ['prompt:`Enter a name for the new ${ee}`', 'prompt:`为新的${ee}输入名称`'],
         ['title:`New User ${M}`', 'title:`新建用户${M}`'],
         ['prompt:`Enter a name for the new ${I}`', 'prompt:`为新的${M}输入名称`'],
+        // ── 2026-08-10: 3.15 构建 desktop 标题变量改名为 re（prompt 仍用 ee）。
+        // 修复：旧 prompt 规则 zh 引用 ${oe}，但当前构建 oe 是路径拼接函数，
+        // 会渲染成函数字符串；改为引用与 EN 相同的 ${ee} 保证正确且在作用域内。──
+        ['title:`New User ${re}`', 'title:`新建用户${re}`'],
         // ── Git 面板加载状态 ──
         ['"Loading changes..."', '"正在加载更改..."'],
         ['"Loading changes"', '"正在加载更改"'],
