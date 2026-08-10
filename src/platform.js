@@ -414,6 +414,45 @@ function elevateAndRun(action, cursorAppPath) {
     });
 }
 
+/**
+ * 检测 Cursor 进程是否在运行（汉化前应完全退出，否则 state.vscdb 步骤会跳过）
+ */
+function isCursorRunning() {
+    const { execSync } = require('child_process');
+    if (PLATFORM === 'win32') {
+        try {
+            const out = execSync('tasklist /FI "IMAGENAME eq Cursor.exe" /NH', {
+                encoding: 'utf8',
+                stdio: ['pipe', 'pipe', 'ignore'],
+                timeout: 5000,
+            });
+            return /Cursor\.exe/i.test(out);
+        } catch {
+            return false;
+        }
+    }
+    try {
+        execSync('pgrep -x Cursor || pgrep -x cursor', { stdio: 'ignore', timeout: 5000 });
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * 读取 Cursor 版本号（product.json 的 version 字段）
+ * @param {string} appPath Cursor resources/app 目录
+ * @returns {string | null}
+ */
+function readCursorVersion(appPath) {
+    try {
+        const product = JSON.parse(fs.readFileSync(path.join(appPath, 'product.json'), 'utf8'));
+        return typeof product.version === 'string' ? product.version : null;
+    } catch {
+        return null;
+    }
+}
+
 module.exports = {
     PLATFORM,
     CONFIG_FILE,
@@ -428,4 +467,6 @@ module.exports = {
     parseCursorPathArg,
     hasWritePermission,
     elevateAndRun,
+    isCursorRunning,
+    readCursorVersion,
 };
