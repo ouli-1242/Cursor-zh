@@ -1,5 +1,6 @@
 const fs = require('fs');
-const glass = fs.readFileSync('D:/Program Files/cursor/resources/app/out/vs/workbench/workbench.glass.main.js', 'utf8');
+const APP_ROOT = process.argv[2] || 'D:/Program Files/cursor/resources/app';
+const glass = fs.readFileSync(path.join(APP_ROOT, 'out/vs/workbench/workbench.glass.main.js'), 'utf8');
 const targets = [
   ['Local', /(children|label|title|aria-label):"Local"|>Local</g],
   ['Private', /(label|title|aria-label):"Private"|>Private</g],

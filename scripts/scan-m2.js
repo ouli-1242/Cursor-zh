@@ -1,6 +1,6 @@
 const fs = require('fs');
 
-const APP = 'D:/Program Files/cursor/resources/app';
+const APP = process.argv[2] || 'D:/Program Files/cursor/resources/app';
 const terms = [
   'Run in Cloud', 'Log in', 'Log In', 'New Chat', 'Cancel (esc)', 'No (esc)',
   'Team Pool', 'My Machines', 'Create Cloud Automation', 'Delete Task',

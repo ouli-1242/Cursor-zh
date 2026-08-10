@@ -1,7 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 // clp 缓存路径
-const clpRoot = 'C:/Users/ouli/AppData/Roaming/Cursor/clp';
+const { getClpRoot } = require(path.join(__dirname, '..', 'src', 'i18n-core.js'));
+const clpRoot = getClpRoot();
 // 找 zh-cn 目录下的 nls.messages.json
 function findNls() {
   const results = [];

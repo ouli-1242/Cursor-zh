@@ -1,7 +1,9 @@
 // 扫描当前汉化文件中 UI 属性里仍是英文的值（未翻译候选）
 const fs = require('fs');
-const glass = fs.readFileSync('D:/Program Files/cursor/resources/app/out/vs/workbench/workbench.glass.main.js', 'utf8');
-const desk = fs.readFileSync('D:/Program Files/cursor/resources/app/out/vs/workbench/workbench.desktop.main.js', 'utf8');
+const APP_ROOT = process.argv[2] || 'D:/Program Files/cursor/resources/app';
+const WB = path.join(APP_ROOT, 'out/vs/workbench');
+const glass = fs.readFileSync(path.join(WB, 'workbench.glass.main.js'), 'utf8');
+const desk = fs.readFileSync(path.join(WB, 'workbench.desktop.main.js'), 'utf8');
 
 // UI 属性
 const attrs = ['children', 'label', 'title', 'placeholder', 'aria-label', 'tooltip', 'message', 'hintText', 'text', 'description', 'actionTitle', 'primaryLabel'];

@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const appPath = 'D:\\Program Files\\cursor\\resources\\app';
+const appPath = process.argv[2] || 'D:\\Program Files\\cursor\\resources\\app';
 
 // 所有需要诊断的文件
 const filesToCheck = {

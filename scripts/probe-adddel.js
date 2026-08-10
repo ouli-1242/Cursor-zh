@@ -1,5 +1,6 @@
 const fs = require('fs');
-const s = fs.readFileSync('D:/Program Files/cursor/resources/app/out/vs/workbench/workbench.glass.main.js', 'utf8');
+const APP_ROOT = process.argv[2] || 'D:/Program Files/cursor/resources/app';
+const s = fs.readFileSync(path.join(APP_ROOT, 'out/vs/workbench/workbench.glass.main.js'), 'utf8');
 const kws = ['} added', '} deleted', ' added,', 'deleted)', 'added`', 'deleted`', 'tabLinesAdded', 'tabLinesDeleted'];
 for (const kw of kws) {
   let i = s.indexOf(kw), n = 0;

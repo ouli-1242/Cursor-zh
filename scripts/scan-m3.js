@@ -1,6 +1,6 @@
 const fs = require('fs');
 
-const APP = 'D:/Program Files/cursor/resources/app';
+const APP = process.argv[2] || 'D:/Program Files/cursor/resources/app';
 const terms = [
   'Always Run', 'Manage Usage', 'Move to folder', 'Search or enter URL',
   'Invite by email', 'Close Window', 'Open Composer Settings',

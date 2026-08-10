@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 // 备份文件路径
-const cursorPath = 'd:\\Program Files\\cursor\\resources\\app';
+const cursorPath = process.argv[2] || 'd:\\Program Files\\cursor\\resources\\app';
 const backupMain = path.join(cursorPath, 'out', 'vs', 'workbench', 'workbench.desktop.main.js.backup');
 const backupGlass = path.join(cursorPath, 'out', 'vs', 'workbench', 'workbench.glass.main.js.backup');
 

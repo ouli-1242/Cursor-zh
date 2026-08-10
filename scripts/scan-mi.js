@@ -1,6 +1,6 @@
 const fs = require('fs');
 
-const APP = 'D:/Program Files/cursor/resources/app';
+const APP = process.argv[2] || 'D:/Program Files/cursor/resources/app';
 const terms = [
   // 按钮类
   'Fix All', 'Review Again', 'Open settings', 'Install Now', 'Delete chat',
