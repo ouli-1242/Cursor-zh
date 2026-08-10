@@ -467,6 +467,8 @@ const auxiliaryInterfaceReplacements = [
     ['defaultLabel:"Browser"', 'defaultLabel:"浏览器"'],
         // ── 2026-08-08: 选中代码工具栏/右键菜单/关闭面板 ──
     ['_createButton(this._buttonContainer,k5e,"Quick Edit")', '_createButton(this._buttonContainer,k5e,"快速编辑")'],
+    // ── 2026-08-10: 当前 3.15 构建变量为 rBe（旧 k5e 已失效）──
+    ['_createButton(this._buttonContainer,rBe,"Quick Edit")', '_createButton(this._buttonContainer,rBe,"快速编辑")'],
     ['{value:"Create Rule",original:"Create Rule"}', '{value:"创建规则",original:"创建规则"}'],
     ['label:"Close Panel"', 'label:"关闭面板"'],
         // ── 2026-08-08: 选中目标复制操作（Copy 短词，仅精确替换 UI fallback）──
@@ -4547,6 +4549,8 @@ function translate(paths) {
         ['actionTitle:"New Agent"', 'actionTitle:"新建智能体"'],
         // ── 2026-08-08: 选中代码工具栏/右键菜单（desk 形式）──
         ['_createButton(this._buttonContainer,GCe,"Quick Edit")', '_createButton(this._buttonContainer,GCe,"快速编辑")'],
+        // ── 2026-08-10: 当前 3.15 构建变量为 k0e（旧 GCe 已失效）──
+        ['_createButton(this._buttonContainer,k0e,"Quick Edit")', '_createButton(this._buttonContainer,k0e,"快速编辑")'],
         ['{value:"Create Rule",original:"Create Rule"}', '{value:"创建规则",original:"创建规则"}'],
         // ── 2026-08-08: 选中目标复制操作（desk 形式）──
         ['label:s?"复制消息":"Copy"', 'label:s?"复制消息":"复制"'],
