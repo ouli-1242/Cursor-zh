@@ -16,6 +16,8 @@
 
 const chalk = require('chalk');
 const inquirer = require('inquirer');
+const fs = require('fs');
+const path = require('path');
 const {
     resolveCursorPath,
     parseCursorPathArg,
@@ -27,13 +29,27 @@ const {
     saveConfig,
     hasWritePermission,
     elevateAndRun,
+    isCursorRunning,
+    readCursorVersion,
     CONFIG_FILE,
 } = require('./src/platform');
 const { translate, restore } = require('./src/i18n-core');
+const ui = require('./src/ui');
+const { version } = require('./package.json');
 
 // ═══════════════════════════════════════════════
 // 解析命令行参数
 // ═══════════════════════════════════════════════
+
+/** 检测主 JS 是否已汉化（含字面中文；minified 英文包非 ASCII 全为 \\u 转义） */
+function isBundleTranslated(mainJsPath) {
+    try {
+        const content = fs.readFileSync(mainJsPath, 'utf8');
+        return (content.match(/[一-鿿]/g) || []).length > 50;
+    } catch {
+        return false;
+    }
+}
 
 function parseAction() {
     const actionArg = process.argv.find(arg => arg.startsWith('--action='));
@@ -222,20 +238,29 @@ async function runSilent(action) {
 // ═══════════════════════════════════════════════
 
 async function runInteractive() {
-    console.log('');
-    console.log(chalk.cyan.bold('  Cursor-zh'));
-    console.log(chalk.gray('  Cursor 本地汉化工具 · 一键汉化 / 随时还原'));
-    console.log(chalk.gray('  ──────────────────────────────────────'));
-    console.log('');
+    console.log(ui.banner(version));
 
+    // ── 步骤 1: 检测 Cursor 状态 ──
+    console.log(ui.step(1, 3, '检测 Cursor'));
     const paths = await obtainCursorPaths();
     if (!paths) {
         await waitForExit();
         return;
     }
 
-    console.log(chalk.gray(`  📂 Cursor: ${paths.appPath}`));
-    console.log('');
+    const writable = hasWritePermission(paths.mainJsPath);
+    const running = isCursorRunning();
+    const translated = isBundleTranslated(paths.mainJsPath);
+    const ver = readCursorVersion(paths.appPath);
+
+    console.log(ui.fileList([
+        { left: ui.ok('安装路径'), right: paths.appPath },
+        { left: ui.info('版本号'), right: ver ? `Cursor ${ver}` : chalk.gray('未知') },
+        { left: writable ? ui.ok('写入权限') : ui.warn('写入权限'), right: writable ? '可直接修改' : '将请求管理员权限' },
+        { left: running ? ui.warn('运行状态') : ui.info('运行状态'), right: running ? 'Cursor 正在运行，汉化前请先完全退出' : '未运行' },
+        { left: translated ? ui.warn('汉化状态') : ui.info('汉化状态'), right: translated ? '当前已汉化，可恢复英文后重新汉化' : '当前为英文原版' },
+    ]));
+    console.log(ui.divider());
 
     const { action } = await inquirer.prompt([
         {
