@@ -2,7 +2,11 @@
 
 Cursor-zh 是一个 Cursor 编辑器的本地汉化工具：把界面上的英文文案替换成中文，并自动修复文件校验值，避免出现"安装已损坏"提示。支持一键汉化、随时还原。
 
+> ⚡ **性能**：整体汉化仅需 **约 3 秒**（40MB+ 主文件），短词替换阶段 **0.27 秒**。    
+>
 > ⚠️ 本工具不是 Cursor 官方项目，也不修改你的账号、模型、插件、项目代码或云端配置，只处理本机 Cursor 的应用资源文件。
+>
+> Tips：搭配使用：Chinese (Simplified) (简体中文) Language Pack for Visual 
 
 ## 快速开始
 
@@ -30,15 +34,15 @@ node index.js --action=restore --cursor-path="/Applications/Cursor.app/Contents/
 
 ## 它翻译什么
 
-| 范围 | 说明 |
-|---|---|
-| 主窗口 | 菜单、设置页、右键菜单、聊天界面等 |
-| Agent 窗口（Glass）| 新版 Cursor 的独立智能体窗口 |
-| 原生提示 | 系统菜单、加载提示（nls.messages.json）|
-| 托盘菜单 | Electron 主进程的系统托盘 |
-| 用户存储 | 模式描述、模型参数（如 Thinking intensity）|
-| 远程扩展 | remote-ssh / remote-wsl / remote-containers 命令面板 |
-| 语言包缓存 | 官方中文语言包未覆盖的 Cursor 新词条 |
+| 范围                | 说明                                                 |
+| ------------------- | ---------------------------------------------------- |
+| 主窗口              | 菜单、设置页、右键菜单、聊天界面等                   |
+| Agent 窗口（Glass） | 新版 Cursor 的独立智能体窗口                         |
+| 原生提示            | 系统菜单、加载提示（nls.messages.json）              |
+| 托盘菜单            | Electron 主进程的系统托盘                            |
+| 用户存储            | 模式描述、模型参数（如 Thinking intensity）          |
+| 远程扩展            | remote-ssh / remote-wsl / remote-containers 命令面板 |
+| 语言包缓存          | 官方中文语言包未覆盖的 Cursor 新词条                 |
 
 ## 支持平台
 
@@ -59,6 +63,7 @@ Cursor 更新会覆盖修改过的文件，需要重新运行汉化；大版本�
 - 路径配置保存在 `~/.cursor-zh/config.json`
 - 汉化前自动备份原版文件（`.backup` + 版本元数据），Cursor 升级后自动更新备份
 - 恢复英文时优先使用备份文件还原，还原后删除备份
+- 恢复英文后，在此期间的会话信息仍然存在，只回退翻译内容
 
 ## 权限说明
 
@@ -76,28 +81,17 @@ Cursor 更新会覆盖修改过的文件，需要重新运行汉化；大版本�
 
 **macOS 提示无法打开或已损坏？**
 工具会自动清理隔离属性并重新签名。若仍失败，可手动执行：
+
 ```bash
 xattr -cr /Applications/Cursor.app
-codesign --force --deep --sign - /Applications/Cursor.app
+codesign --force --deep --sign - /Applications/Cursor.app    
 ```
-
-**模型参数（如 Thinking intensity）过一会儿恢复英文？**
-工具已注入显示层映射，一般不会再恢复；若出现，重新运行汉化即可。
-
-**如何完全退出 Cursor？**
-右键托盘图标选择"退出"，并在任务管理器中确认 Cursor.exe 已结束。
-
-> 交互界面里也内置了「查看常见问题」菜单，随时可查看。
 
 ## 安全边界
 
 - 使用前先退出 Cursor
 - 保留 `.backup` 文件方便恢复
 - 从可信来源获取工具或自行构建，不要运行来历不明的二进制
-
-## 找回 / 反馈
-
-发现漏翻、误翻或运行失败，欢迎提交 Issue，附上：操作系统、Cursor 版本、报错日志、漏翻界面截图（尽量含英文原文）。不要粘贴账号 Token、API Key 或私有代码。
 
 ## 开发说明（维护者）
 
