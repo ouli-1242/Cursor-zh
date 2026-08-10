@@ -1034,13 +1034,19 @@ const auxiliaryInterfaceReplacements = [
         ['"copy","Copy"', '"copy","复制"'],
         ['"paste","Paste"', '"paste","粘贴"'],
         ['"selectAll","Select All"', '"selectAll","全选"'],
-        // ── Glass 编辑菜单 OS 原生组：title:E({key:"glassOsEditXXX",...},"&&Undo") 查不到 nls 翻译 fallback 英文，转字面量 ──
+        // ── Glass 编辑菜单 OS 原生组：title:E/T({key:"glassOsEditXXX",...},"&&Undo") 查不到 nls 翻译 fallback 英文，转字面量（3.15 构建函数名是 T，旧版是 E，两种都覆盖）──
         ['title:E({key:"glassOsEditUndo",comment:["&& denotes a mnemonic"]},"&&Undo")', 'title:"撤销"'],
         ['title:E({key:"glassOsEditRedo",comment:["&& denotes a mnemonic"]},"&&Redo")', 'title:"重做"'],
         ['title:E({key:"glassOsEditCut",comment:["&& denotes a mnemonic"]},"Cu&&t")', 'title:"剪切"'],
         ['title:E({key:"glassOsEditCopy",comment:["&& denotes a mnemonic"]},"&&Copy")', 'title:"复制"'],
         ['title:E({key:"glassOsEditPaste",comment:["&& denotes a mnemonic"]},"&&Paste")', 'title:"粘贴"'],
         ['title:E({key:"glassOsEditSelectAll",comment:["&& denotes a mnemonic"]},"Select &&All")', 'title:"全选"'],
+        ['title:T({key:"glassOsEditUndo",comment:["&& denotes a mnemonic"]},"&&Undo")', 'title:"撤销"'],
+        ['title:T({key:"glassOsEditRedo",comment:["&& denotes a mnemonic"]},"&&Redo")', 'title:"重做"'],
+        ['title:T({key:"glassOsEditCut",comment:["&& denotes a mnemonic"]},"Cu&&t")', 'title:"剪切"'],
+        ['title:T({key:"glassOsEditCopy",comment:["&& denotes a mnemonic"]},"&&Copy")', 'title:"复制"'],
+        ['title:T({key:"glassOsEditPaste",comment:["&& denotes a mnemonic"]},"&&Paste")', 'title:"粘贴"'],
+        ['title:T({key:"glassOsEditSelectAll",comment:["&& denotes a mnemonic"]},"Select &&All")', 'title:"全选"'],
         // ── Agents 操作按钮动态文本（Undo/Copy 三元表达式，非 label 属性形式）──
         ['?"Undo Cell":"Undo"', '?"撤销单元格":"撤销"'],
         ['?"Undo Apply":"Undo"', '?"撤销应用":"撤销"'],
@@ -1104,10 +1110,13 @@ const auxiliaryInterfaceReplacements = [
     ['"Continue chatting in Cursor"', '"在 Cursor 中继续聊天"'],
     ['"Send follow-up"', '"发送追问"'],
     // ── Cycle 命令（循环切换模型参数，Ctrl+Alt+/；参数名由 vscdb 补丁翻译）──
-    ['title:{value:"Cycle model parameter",original:"Cycle model parameter"}', 'title:{value:"循环切换模型参数",original:"循环切换模型参数"}'],
-    ['title:"Cycle Model Parameter"', 'title:"循环切换模型参数"'],
-    ['label:`Cycle ${EP}`', 'label:`循环切换 ${EP}`'],
-    ['\\xB7 Cycle ${En} (${bi})', '\\xB7 循环切换 ${En} (${bi})'],
+    ['title:{value:"Cycle model parameter",original:"Cycle model parameter"}', 'title:{value:"切换模型参数",original:"切换模型参数"}'],
+    ['title:"Cycle Model Parameter"', 'title:"切换模型参数"'],
+    ['label:`Cycle ${EP}`', 'label:`切换${EP}`'],
+    ['\\xB7 Cycle ${En} (${bi})', '\\xB7 切换${En} (${bi})'],
+    // ── 2026-08-10: 3.15 构建 Cycle 变量名为 x2/oi/Hn（等价旧 EP/En/bi）──
+    ['label:`Cycle ${x2}`', 'label:`切换${x2}`'],
+    ['\\xB7 Cycle ${oi} (${Hn})', '\\xB7 切换${oi} (${Hn})'],
     // ── Done（完成）：按钮/状态/标签 ──
     ['primaryButtonLabel??"Done"', 'primaryButtonLabel??"完成"'],
     ['`Done \\u2022 ${s}`', '`完成 \\u2022 ${s}`'],
@@ -1121,6 +1130,8 @@ const auxiliaryInterfaceReplacements = [
     ['`Show ${s} more recent ${s===1?"agent":"agents"}`', '`显示 ${s} 个更多最近智能体`'],
     // ── Thinking intensity 持久翻译：kR_ 注入参数名映射（服务端覆盖数据后仍显示中文）──
     ['function kR_(t){const e=XYo(t);return e.variants=e.variants??[],e.parameterDefinitions=e.parameterDefinitions??[],e}', 'function kR_(t){const e=XYo(t);return e.variants=e.variants??[],e.parameterDefinitions=(e.parameterDefinitions??[]).map(function(p){if(p&&p.name==="Thinking intensity")p.name="思考强度";return p}),e}'],
+    // ── 2026-08-10: 3.15 构建 OA_ 函数名重命名（等价旧 kR_，模型参数入口）──
+    ['function OA_(t){const e=sJo(t);return e.variants=e.variants??[],e.parameterDefinitions=e.parameterDefinitions??[],e}', 'function OA_(t){const e=sJo(t);return e.variants=e.variants??[],e.parameterDefinitions=(e.parameterDefinitions??[]).map(function(p){if(p&&p.name==="Thinking intensity")p.name="思考强度";return p}),e}'],
     // ── 远程扩展显示名（通用功能词，专有名词保持）──
     ['"Remote - SSH"', '"远程 - SSH"'],
     ['"Remote - WSL"', '"远程 - WSL"'],
@@ -1220,7 +1231,19 @@ const auxiliaryInterfaceReplacements = [
     // ── AI 操作动词状态（Thought/Thinking/Explored/Waited/Listed/Grepped/Editor）──
     ['"Thought"', '"思考"'],
     ['"briefly"', '"片刻"'],
-    [' ago', ' 之前'],
+    // ── 时间 ago（仅模板串 ${...} 与引号内，杜绝误伤 var ago=class 等标识符）──
+    ['} ago', '} 之前'],
+    ['}m ago', '}m 之前'],
+    ['}h ago', '}h 之前'],
+    ['}d ago', '}d 之前'],
+    ['}w ago', '}w 之前'],
+    ['}y ago', '}y 之前'],
+    ['}s ago', '}s 之前'],
+    ['}mo ago', '}mo 之前'],
+    ['} days ago', '} 天前'],
+    ['" ago', '" 之前'],
+    ['m ago"', 'm 之前"'],
+    ['h ago"', 'h 之前"'],
     // ── 补充状态动词（completedAction/loadingAction/Worked）──
     ['"Ran"', '"已运行"'],
     ['"Exploring"', '"正在探索"'],
@@ -1534,6 +1557,81 @@ const auxiliaryInterfaceReplacements = [
     ['"Stage Remaining Changes"', '"暂存剩余更改"'],
     ['"Unstage File"', '"取消暂存文件"'],
     ['"Stage File"', '"暂存文件"'],
+    // ── 2026-08-10: glass 更改面板右键菜单（changes-context-menu 三元，目录级）──
+    ['t.isDirectory?"Stage Folder":"Stage"', 't.isDirectory?"暂存文件夹":"暂存"'],
+    ['t.isDirectory?"Unstage Folder":"Unstage"', 't.isDirectory?"取消暂存文件夹":"取消暂存"'],
+    // ── 2026-08-10: 工具状态 error 分支（失败标签，desk/glass 各 60 个 ToolCall 三态）──
+    ['error:"Run"', 'error:"运行"'],
+    ['error:"Delete"', 'error:"删除"'],
+    ['error:"Grep"', 'error:"搜索"'],
+    ['error:"Read"', 'error:"读取"'],
+    ['error:"Update todos"', 'error:"更新待办"'],
+    ['error:"Read todos"', 'error:"读取待办"'],
+    ['error:"List"', 'error:"列出"'],
+    ['error:"Read lints"', 'error:"读取 Lints"'],
+    ['error:"Explore tools"', 'error:"探索工具"'],
+    ['error:"Search"', 'error:"搜索"'],
+    ['error:"Write plan"', 'error:"编写计划"'],
+    ['error:"Search web"', 'error:"搜索网页"'],
+    ['error:"Work on task"', 'error:"处理任务"'],
+    ['error:"List resources"', 'error:"列出资源"'],
+    ['error:"Read resource"', 'error:"读取资源"'],
+    ['error:"Apply diff"', 'error:"应用差异"'],
+    ['error:"Ask question"', 'error:"提问"'],
+    ['error:"Look up blame"', 'error:"查看 Blame"'],
+    ['error:"Wait"', 'error:"等待"'],
+    ['error:"Fetch"', 'error:"获取"'],
+    ['error:"Switch mode"', 'error:"切换模式"'],
+    ['error:"Generate image"', 'error:"生成图片"'],
+    ['error:"Record screen"', 'error:"录制屏幕"'],
+    ['error:"Use computer"', 'error:"使用电脑"'],
+    ['error:"Write to shell"', 'error:"写入 Shell"'],
+    ['error:"Reflect"', 'error:"反思"'],
+    ['error:"Set up VM"', 'error:"配置虚拟机"'],
+    ['error:"Replace environment"', 'error:"替换环境"'],
+    ['error:"Search conversations"', 'error:"搜索对话"'],
+    ['error:"Create goal"', 'error:"创建目标"'],
+    ['error:"Update goal"', 'error:"更新目标"'],
+    ['error:"Process"', 'error:"处理"'],
+    ['error:"Execute"', 'error:"执行"'],
+    ['error:"Plan"', 'error:"规划"'],
+    ['error:"Fetch page"', 'error:"获取页面"'],
+    ['error:"Report results"', 'error:"报告结果"'],
+    ['error:"Learn from Cursor Blame"', 'error:"从 Cursor Blame 学习"'],
+    ['error:"Update progress"', 'error:"更新进度"'],
+    ['error:"Manage PR"', 'error:"管理 PR"'],
+    ['error:"Edit PR labels"', 'error:"编辑 PR 标签"'],
+    ['error:"Fetch cloud agent data"', 'error:"获取云智能体数据"'],
+    ['error:"Authenticate MCP server"', 'error:"认证 MCP 服务器"'],
+    ['error:"Report bug"', 'error:"报告 Bug"'],
+    ['error:"Record final summary"', 'error:"记录最终总结"'],
+    ['error:"Send message"', 'error:"发送消息"'],
+    ['error:"Update metadata"', 'error:"更新元数据"'],
+    ['error:"Update code tour"', 'error:"更新代码导览"'],
+    ['error:"Record CI findings"', 'error:"记录 CI 结果"'],
+['error:"Write"', 'error:"写入"'],
+        // ── 2026-08-10: 截图一批右键菜单 / 工作区选择词条（desk 端）──
+        ['label:"Home",workspaceIdentifier', 'label:"主页",workspaceIdentifier'],
+        ['name:"Home",workspaceIdentifier', 'name:"主页",workspaceIdentifier'],
+        ['children:k?"Deleting...":"Delete"', 'children:k?"正在删除...":"删除"'],
+        ['children:"Delete"', 'children:"删除"'],
+        ['id:"delete",label:"Delete"', 'id:"delete",label:"删除"'],
+        ['label:"Delete"', 'label:"删除"'],
+        // ── 2026-08-10: 截图二轮中文残留（glass 端）──
+        ['children:["Open",b]', 'children:["打开",b]'],
+        ['children:["Open",TT(Xt,', 'children:["打开",TT(Xt,'],
+        ['children:"Plans"', 'children:"计划"'],
+        ['title:"Suggested",children:', 'title:"推荐",children:'],
+        ['title:"No agents yet"', 'title:"暂无智能体"'],
+        ['children:"No agents yet"', 'children:"暂无智能体"'],
+        ['description:"Create an agent to start working on tasks"', 'description:"创建智能体以开始处理任务"'],
+        ['actionTitle:"New Agent"', 'actionTitle:"新建智能体"'],
+        ['C8a="No Repo"', 'C8a="无仓库"'],
+        ['uUt="No Repo"', 'uUt="无仓库"'],
+        ['title:"Create New Canvas",titleColor:"tertiary"', 'title:"新建画布",titleColor:"tertiary"'],
+    // ── 2026-08-10: glass 文件树右键 Rename/Delete（dOm 菜单，T() 本地化 fallback）──
+    ['label:T("rename","Rename")', 'label:T("rename","重命名")'],
+    ['label:T("delete","Delete")', 'label:T("delete","删除")'],
     ['children:"Find in Changes"', 'children:"在更改中查找"'],
     ['children:"Refresh Changes"', 'children:"刷新更改"'],
     ['content:"Discard All Changes"', 'content:"放弃所有更改"'],
@@ -2643,6 +2741,21 @@ const auxiliaryInterfaceReplacements = [
     ['children:"Try again"', 'children:"重试"'],
     ['children:"Try Cloud Agent"', 'children:"试试云智能体"'],
     ['children:"Upgrade to Pro"', 'children:"升级到 Pro"'],
+    ['auto (default)', '自动（默认）'],
+    // ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──
+    ['Entry-level plan with access to premium models, unlimited Tab completions, and more.', '入门级套餐，可使用高级模型、无限 Tab 补全及更多功能。'],
+    ['Data Sharing Enabled', '数据共享已启用'],
+    ['Your codebase, prompts, edits and other usage data will be stored and trained on by Cursor to improve the product.', '您的代码库、提示词、编辑记录及其他使用数据将被 Cursor 存储并用于训练，以改进产品。'],
+    ['Create your public profile', '创建您的公开主页'],
+    ['Claim a handle to get a profile page showing your token, model, and agent usage.', '领取一个标识即可获得展示您的额度、模型和智能体使用情况的主页。'],
+    ['Claim handle', '领取标识'],
+    ['Default Model', '默认模型'],
+    ['Cursor Default', 'Cursor 默认'],
+    ['Default Browser', '默认浏览器'],
+    ['Upgrade to unlock premium models', '升级以解锁高级模型'],
+    ['Premium models are only available on paid plans.', '高级模型仅限付费套餐使用。'],
+    ['Steer from iOS', '从 iOS 操控'],
+    ['Please open a folder to use background agents.', '请打开文件夹以使用后台智能体。'],
     ['children:"Upgrade to Pro+"', 'children:"升级到 Pro+"'],
     ['children:"Upgrade to Ultra"', 'children:"升级到 Ultra"'],
     ['children:"Refer friends, earn usage credits"', 'children:"推荐好友，赚取用量额度"'],
@@ -2937,6 +3050,13 @@ const auxiliaryInterfaceReplacements = [
     // ── 2026-08-08 第四轮截图：Canvas 各类上下文 ──
     ['label:"Canvas",description:"Produces canvases"', 'label:"画布",description:"生成画布"'],
     ['displayName:"Canvas"', 'displayName:"画布"'],
+    // ── 2026-08-10: 插件市场 curatedCategories 分类（glass 端 ein 数组 displayName）──
+    ['displayName:"Featured"', 'displayName:"精选"'],
+    ['displayName:"Infrastructure"', 'displayName:"基础设施"'],
+    ['displayName:"Data & Analytics"', 'displayName:"数据与分析"'],
+    ['displayName:"Productivity"', 'displayName:"生产力"'],
+    ['displayName:"Payments"', 'displayName:"付款"'],
+    ['displayName:"Agent Orchestration"', 'displayName:"智能体编排"'],
     ['this.canvasPath):"Canvas"', 'this.canvasPath):"画布"'],
     ['"canvas-mention-card":return"Canvas"', '"canvas-mention-card":return"画布"'],
     ['mgt(t):"Canvas",', 'mgt(t):"画布",'],
@@ -2954,17 +3074,25 @@ const auxiliaryInterfaceReplacements = [
     ['AI-Generated: ', 'AI 生成: '],
     ['- Tab: ', '- 补全: '],
     // ── 2026-08-08 第四轮补充：Canvas 标签页/画布面板 + MCP Add/Connect ──
+    ['children:L==="rendered"?"Canvas":"Source"', 'children:L==="rendered"?"画布":"源"'],
     ['children:M==="rendered"?"Canvas":"Source"', 'children:M==="rendered"?"画布":"源"'],
+    ['case rn.Canvas:return"Canvas"', 'case rn.Canvas:return"画布"'],
     ['case an.Canvas:return"Canvas"', 'case an.Canvas:return"画布"'],
     ['"glass.agentPanel.canvasPreview.label","Canvas"', '"glass.agentPanel.canvasPreview.label","画布"'],
     ['defaultLabel:"Canvas",', 'defaultLabel:"画布",'],
     ['t.showAsButton?"Keybind":"Add"', 't.showAsButton?"快捷键":"添加"'],
     ['this.findMCPServerAuthUrl(t)?"Connect":"Add"', 'this.findMCPServerAuthUrl(t)?"连接":"添加"'],
     ['E("glass.agentPanel.openCanvas","Canvas")', 'E("glass.agentPanel.openCanvas","画布")'],
+    ['we=t?Ngt(t):"Canvas"', 'we=t?Ngt(t):"画布"'],
+    ['r=n?Ngt(n):"Canvas"', 'r=n?Ngt(n):"画布"'],
     ['?mgt(n):"Canvas";', '?mgt(n):"画布";'],
     ['createAriaLabel:"Canvas",', 'createAriaLabel:"画布",'],
     ['hintText:"Add"', 'hintText:"添加"'],
     ['{id:"canvas",label:"Canvas",icon:"brush"', '{id:"canvas",label:"画布",icon:"brush"'],
+    ['case"canvas-mention-card":return"Canvas"', 'case"canvas-mention-card":return"画布"'],
+    ['placeholder:"Coordinate tasks"', 'placeholder:"协调任务"'],
+    ['"Search plugins"', '"搜索插件"'],
+    ['children:"Suggested"', 'children:"推荐"'],
     // ── 2026-08-08 第五轮：New/Fork 菜单项 + Reset this pane 说明 ──
     ['name:"new",description:"Reset this pane to a new agent"', 'name:"新建",description:"将此面板重置为新的智能体"'],
     ['name:"fork",description:"复制此对话"', 'name:"复制",description:"复制此对话"'],
@@ -2990,7 +3118,35 @@ const auxiliaryInterfaceReplacements = [
         ['label:"Close"', 'label:"关闭"'],
         ['tooltip:"Close"', 'tooltip:"关闭"'],
         ['"aria-label":"Close"', '"aria-label":"关闭"'],
-];
+        // ── 2026-08-10 3.15 残留：Glass 窗口新形态 ──
+        ['name:"arrow-right-up"}),"Open"', 'name:"arrow-right-up"}),"打开"'],
+        ['children:["Browse"', 'children:["浏览"'],
+    ['children:["Browse"," ","Marketplace"]', 'children:["浏览插件市场"]'],
+        ['?"Discard":"归档"', '?"丢弃":"归档"'],
+        ['?"Connect":"保存"', '?"连接":"保存"'],
+        ['?"Reconnect":"Connect"', '?"重新连接":"连接"'],
+        ['children:"Connect"', 'children:"连接"'],
+        ['title:"Connect"', 'title:"连接"'],
+        ['?"Enabled":"已禁用"', '?"启用":"已禁用"'],
+        ['"aria-hidden":!0}),"Enabled"', '"aria-hidden":!0}),"启用"'],
+        ['light:"Light",dark:"Dark",lightHighContrast:"Light High Contrast",darkHighContrast:"Dark High Contrast"', 'light:"浅色",dark:"深色",lightHighContrast:"浅色高对比度",darkHighContrast:"深色高对比度"'],
+        ['"Import from File"]', '"从文件导入"]'],
+        ['"Models","Projects","Open"', '"模型","项目","打开"'],
+        [',"Other"]', ',"其他"]'],
+        ['folder:"Folders",git:"Commits",commit_notes:"Commit History"', 'folder:"文件夹",git:"提交",commit_notes:"提交历史"'],
+        ['"aria-label":"Folders"', '"aria-label":"文件夹"'],
+        ['label:"Commits",leading:V,trailing:Y,children:"Commits"', 'label:"提交",leading:V,trailing:Y,children:"提交"'],
+        ['[n," day",n===1?"":"s"," ","left"]', '[n," 天",n===1?"":""," ","剩余"]'],
+['label:"Name",layout:"row"', 'label:"名称",layout:"row"'],
+        ['placeholder:"Name",spellCheck:!1,autoComplete:"off"', 'placeholder:"名称",spellCheck:!1,autoComplete:"off"'],
+        // ── 2026-08-10 汉化版残留：Agent/omnibox 加载与操作文案（glass 独占）──
+        ['case void 0:return"Loading tools"', 'case void 0:return"正在加载工具"'],
+        ['rt("<div>Loading Rules...")', 'rt("<div>正在加载规则...")'],
+        ['rt("<div>Loading Skills...")', 'rt("<div>正在加载技能...")'],
+        ['rt("<div>Loading Commands...")', 'rt("<div>正在加载命令...")'],
+        ['label:()=>"All Commits"', 'label:()=>"全部提交"'],
+        ['title="Remove from history"', 'title="从历史记录中移除"'],
+    ];
 
 // 合并大正则：单次扫描替代逐条替换（~1675条 → 1次扫描）
 const auxInterfaceLookup = new Map(auxiliaryInterfaceReplacements.filter(([en]) => en));
@@ -3464,6 +3620,249 @@ const trickyReplacements = [
         // Always Run 常量：="Always Run '"
         regex: /="Always Run '"/g,
         zh: '="始终运行 \'"'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留：自动索引新文件夹数组新形态（4 元素，末段 " files" 含前导空格）
+        regex: /\[\s*"Automatically\s+index\s+any\s+new\s+folders\s+with\s+fewer\s+than"\s*,\s*" "\s*,\s*(.+?)\s*,\s*" files"\s*\]/gi,
+        zh: '["自动索引少于", " ", $1, " 个文件的新文件夹"]'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留：.cursorignore 模板（requires restarting 形态，变量名随构建变化，通配 ${...}）
+        regex: /`Apply\s+\.cursorignore\s+files\s+to\s+all\s+subdirectories(\$\{[^}]*\})\.\s*Changing\s+this\s+setting\s+requires\s+restarting\s+Cursor\.`/g,
+        zh: '`将 .cursorignore 文件应用至所有子目录$1。更改此设置需要重启 Cursor。`'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留：符号链接警告模板（requires restarting 形态）
+        regex: /`Use\s+with\s+caution\.\s*Skip\s+symlinks\s+during\s+\.cursorignore\s+file\s+discovery\.\s*Enable\s+only\s+when\s+all\s+\.cursorignore\s+files\s+are\s+reachable\s+without\s+symlinks(\$\{[^}]*\})\.\s*Changing\s+this\s+setting\s+requires\s+restarting\s+Cursor\.`/g,
+        zh: '`谨慎使用。在查找 .cursorignore 文件时跳过符号链接。仅当所有 .cursorignore 文件无需符号链接即可直接访问时才启用$1。更改此设置需要重启 Cursor。`'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留：New Agent in ${...}（变量名随构建变化，通配捕获）
+        regex: /`New\s+Agent\s+in\s+\$\{([^}]+)\}`/g,
+        zh: '`在 ${$1} 中新建智能体`'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留：glass "Save"（desk 已翻 0 处，glass 25 处全为 UI 文本）
+        regex: /"Save"/g,
+        zh: '"保存"'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留：升级横幅 HTML 文本（无引号包裹的裸 HTML 形态）
+        regex: /class=upgrade-pro-button-text>Upgrade to Pro/g,
+        zh: 'class=upgrade-pro-button-text>升级到 Pro'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留：新版本可用（minor-version 通知横幅）
+        regex: /class=minor-version-notification-text>New update available<\/span>/g,
+        zh: 'class=minor-version-notification-text>新版本可用</span>'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留：changelog 通知 "New in "
+        regex: /<span>New in <\/span>/g,
+        zh: '<span>新版本 </span>'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留：迁移到 Cloud 对话框按钮 / 标题 / 副标题 / Dismiss
+        regex: /class=composer-cloud-transfer-dismiss>Dismiss<\/button>/g,
+        zh: 'class=composer-cloud-transfer-dismiss>取消</button>'
+    },
+    {
+        regex: /class=composer-cloud-transfer-title>Move to Cloud<\/span>/g,
+        zh: 'class=composer-cloud-transfer-title>迁移到 Cloud</span>'
+    },
+    {
+        regex: /class=composer-cloud-transfer-primary>Move/g,
+        zh: 'class=composer-cloud-transfer-primary>迁移'
+    },
+    {
+        regex: /class=composer-cloud-transfer-subtitle>Select the branch to continue from, then confirm to transfer this agent to the cloud/g,
+        zh: 'class=composer-cloud-transfer-subtitle>选择要从中继续的分支，然后确认将此智能体迁移到云端'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留：迁移按钮文案（Transferring… / Moving to Cloud… / Confirm & Move to Cloud）
+        regex: /"Transferring\\u2026"/g,
+        zh: '"正在迁移…"'
+    },
+    {
+        regex: /"Moving to Cloud\\u2026"/g,
+        zh: '"正在迁移到 Cloud…"'
+    },
+    {
+        regex: /"Confirm & Move to Cloud"/g,
+        zh: '"确认并迁移到 Cloud"'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留：通用弹窗回退按钮 Dismiss（typeof u=="string"?u:"Dismiss"）
+        regex: /typeof\s+\w+=="string"\?\s*\w+:"Dismiss"/g,
+        zh: 'typeof u=="string"?u:"取消"'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留：Later 按钮
+        regex: /children:"Later"/g,
+        zh: 'children:"稍后"'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留：Upgrade 系列模板（变量名随构建变化，通配捕获；先处理带尾随 :"Upgrade" 的）
+        regex: /`Upgrade\s+to\s+\$\{([^}]+)\}`:"Upgrade"/g,
+        zh: '`升级到 ${$1}`:"升级"'
+    },
+    {
+        regex: /`Upgrade\s+to\s+\$\{([^}]+)\}\s+to\s+keep\s+going\.`/g,
+        zh: '`升级到 ${$1} 以继续。`'
+    },
+    {
+        regex: /`Upgrade\s+to\s+\$\{([^}]+)\}\s+to\s+use\s+Cloud\s+Agents\.`/g,
+        zh: '`升级到 ${$1} 以使用云智能体。`'
+    },
+    {
+        regex: /`Upgrade\s+to\s+\$\{([^}]+)\}\.`/g,
+        zh: '`升级到 ${$1}。`'
+    },
+    {
+        regex: /`Upgrade\s+to\s+\$\{([^}]+)\}`/g,
+        zh: '`升级到 ${$1}`'
+    },
+    {
+        regex: /`Start\s+\$\{([^}]+)\}\s+now`/g,
+        zh: '`立即开始 ${$1}`'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留：裸 Upgrade（锚定上下文，绝不匹配 name:"Upgrade" 标识）
+        regex: /return"Upgrade"/g,
+        zh: 'return"升级"'
+    },
+    {
+        regex: /\?\?"Upgrade"/g,
+        zh: '??"升级"'
+    },
+    {
+        regex: /void 0\?"Upgrade"/g,
+        zh: 'void 0?"升级"'
+    },
+    {
+        regex: /children:\["Upgrade"/g,
+        zh: 'children:["升级"'
+    },
+    {
+        regex: /children:"Upgrade"/g,
+        zh: 'children:"升级"'
+    },
+    {
+        regex: /,"Upgrade"\]/g,
+        zh: ',"升级"]'
+    },
+    {
+        regex: /label\|\|"Upgrade"/g,
+        zh: 'label||"升级"'
+    },
+    {
+        regex: /"Upgrade to keep going\."/g,
+        zh: '"升级以继续。"'
+    },
+    {
+        regex: /"Upgrading\\u2026"/g,
+        zh: '"正在升级…"'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留：用量限制弹窗按钮/说明（与 Upgrade 系列同组件）
+        regex: /ctaLabel:"Get More Usage"/g,
+        zh: 'ctaLabel:"获取更多用量"'
+    },
+    {
+        regex: /"Switched to Cursor Models\. Other Models limit reached\."/g,
+        zh: '"已切换到 Cursor Models。其他模型用量已达上限。"'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留：设置侧栏"升级到 Pro"入口 HTML 形态
+        regex: /class=cursor-settings-sidebar-cell-label>Upgrade to Pro/g,
+        zh: 'class=cursor-settings-sidebar-cell-label>升级到 Pro'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留：上下文窗口占比模板 `${...}% Full`（变量名随构建变化，通配捕获；Full 语义为"已使用"，不是"已满"）
+        regex: /`(\$\{[^}]*\})% Full`/g,
+        zh: '`$1% 已用`'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留："$X of API usage." 半翻译模板（反引号内非引号文本，safe 字典无法命中）
+        regex: / of API usage\./g,
+        zh: ' 的 API 用量。'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留：MCP 开关模板 `${...}?"禁用":"Enable"`（变量名随构建变化）
+        regex: /"禁用":"Enable"/g,
+        zh: '"禁用":"启用"'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留：搜索结果标题三元 `?"Results":"Suggested"`
+        regex: /:"Results":"Suggested"/g,
+        zh: ':"结果":"推荐"'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留：`No ${...} MCP Tools` 模板（先处理 No 前缀，再处理裸 ${...} MCP Tools）
+        regex: /`No (\$\{[^}]*\}) MCP Tools`/g,
+        zh: '`没有 $1 MCP 工具`'
+    },
+    {
+        regex: /`(\$\{[^}]*\}) MCP Tools`/g,
+        zh: '`$1 MCP 工具`'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留：插件市场"显示 N more"半翻译（`显示 ${...} more`）
+        regex: /`显示 (\$\{[^}]*\}) more`/g,
+        zh: '`显示 $1 更多`'
+    },
+    {
+        regex: /`(\$\{[^}]*\}) more`/g,
+        zh: '`$1 更多`'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留：对话框搜索框三元 `:"搜索或粘贴链接":"Search"` / 模型选择器 `type==="models"?"搜索模型":"Search"`
+        regex: /:"搜索或粘贴链接":"Search"/g,
+        zh: ':"搜索或粘贴链接":"搜索"'
+    },
+    {
+        regex: /type==="models"\?"搜索模型":"Search"/g,
+        zh: 'type==="models"?"搜索模型":"搜索"'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留：MCP 服务器按钮链 `name===X?"Enable":findMCPServerAuthUrl()?"Connect":"Add"`（desk 形态，变量名通配）
+        regex: /([A-Za-z_$][\w$]*\.name===[A-Za-z_$][\w$]*)\?"Enable":this\.findMCPServerAuthUrl\(([A-Za-z_$][\w$]*)\)\?"Connect":"Add"/g,
+        zh: '$1?"启用":this.findMCPServerAuthUrl($2)?"连接":"添加"'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留：MCP 弹窗 `children:X?Y:"Connect"` 三元（变量名通配）
+        regex: /(children:[A-Za-z_$][\w$]*\?[A-Za-z_$][\w$]*):"Connect"/g,
+        zh: '$1:"连接"'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留：MCP label 比较串 `getButtonLabelForMCPServer(x)==="Connect"`（与上面按钮链译文保持一致）
+        regex: /==="Connect"/g,
+        zh: '==="连接"'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留：MCP 连接状态映射 `case"connectUnavailable":return"Connect"`
+        regex: /case"connectUnavailable":return"Connect"/g,
+        zh: 'case"connectUnavailable":return"连接"'
+    },
+    {
+        // ── 2026-08-10：3.15 构建残留：主题菜单 `b===null?"Import from IDE":`Import from IDE (${b})``
+        regex: /([A-Za-z_$][\w$]*===null\?"Import from IDE":)`Import from IDE \(\$\{([^}]*)\}\)`/g,
+        zh: '$1`从 IDE 导入（${$2}）`'
+    },
+    {
+        // ── 2026-08-10：行数单位 `===1?"line":"lines"` 三元（desk/glass 形态：const M=i===1?、N.lineCount===1?、折叠模板 e/t===1?，通配；双分支都置中文避免语法破坏）──
+        regex: /===1\?"line":"lines"/g,
+        zh: '===1?"行":"行"'
+    },
+    {
+        // ── 2026-08-10：`children:[i," unmodified ",M]` → 中文语序「2 行未修改」（desk=M / glass=E，通配）──
+        regex: /,\s*"\s*unmodified\s*"\s*,[A-Za-z_$][\w$]*\]/g,
+        zh: '," 行未修改"]'
+    },
+    {
+        // ── 2026-08-10：diff 折叠提示 `[${e} ${e===1?"line":"lines"} collapsed]` → 「N 行 已折叠」(上一步已将三元置中文，保留完整三分支防语法错误)──
+        regex: /===1\?"行":"行"\}\s+collapsed\]/g,
+        zh: '===1?"行":"行"} 已折叠]'
     },
 ];
 
@@ -4039,6 +4438,95 @@ function translate(paths) {
     const scopedReplacements = [
         // ── 2026-08-08: Agents Window 插值参数（desk 的 Jwn 变量）──
         ['Jwn="Agents Window"', 'Jwn="智能体窗口"'],
+        // ── 2026-08-10: 3.15 构建变量名改为 bSn（desk 顶栏"切换到智能体窗口"插值）──
+        ['bSn="Agents Window"', 'bSn="智能体窗口"'],
+        // ── 2026-08-10: 插件市场 curatedCategories 分类（desk 端 Onn 数组 displayName）──
+        ['displayName:"Featured"', 'displayName:"精选"'],
+        ['displayName:"Infrastructure"', 'displayName:"基础设施"'],
+        ['displayName:"Data & Analytics"', 'displayName:"数据与分析"'],
+        ['displayName:"Productivity"', 'displayName:"生产力"'],
+        ['displayName:"Payments"', 'displayName:"付款"'],
+        ['displayName:"Agent Orchestration"', 'displayName:"智能体编排"'],
+        ['displayName:"Canvas"', 'displayName:"画布"'],
+        // ── 2026-08-10: 工具状态 error 分支（失败标签，desk/glass 各 60 个 ToolCall 三态）──
+        ['error:"Run"', 'error:"运行"'],
+        ['error:"Delete"', 'error:"删除"'],
+        ['error:"Grep"', 'error:"搜索"'],
+        ['error:"Read"', 'error:"读取"'],
+        ['error:"Update todos"', 'error:"更新待办"'],
+        ['error:"Read todos"', 'error:"读取待办"'],
+        ['error:"List"', 'error:"列出"'],
+        ['error:"Read lints"', 'error:"读取 Lints"'],
+        ['error:"Explore tools"', 'error:"探索工具"'],
+        ['error:"Search"', 'error:"搜索"'],
+        ['error:"Write plan"', 'error:"编写计划"'],
+        ['error:"Search web"', 'error:"搜索网页"'],
+        ['error:"Work on task"', 'error:"处理任务"'],
+        ['error:"List resources"', 'error:"列出资源"'],
+        ['error:"Read resource"', 'error:"读取资源"'],
+        ['error:"Apply diff"', 'error:"应用差异"'],
+        ['error:"Ask question"', 'error:"提问"'],
+        ['error:"Look up blame"', 'error:"查看 Blame"'],
+        ['error:"Wait"', 'error:"等待"'],
+        ['error:"Fetch"', 'error:"获取"'],
+        ['error:"Switch mode"', 'error:"切换模式"'],
+        ['error:"Generate image"', 'error:"生成图片"'],
+        ['error:"Record screen"', 'error:"录制屏幕"'],
+        ['error:"Use computer"', 'error:"使用电脑"'],
+        ['error:"Write to shell"', 'error:"写入 Shell"'],
+        ['error:"Reflect"', 'error:"反思"'],
+        ['error:"Set up VM"', 'error:"配置虚拟机"'],
+        ['error:"Replace environment"', 'error:"替换环境"'],
+        ['error:"Search conversations"', 'error:"搜索对话"'],
+        ['error:"Create goal"', 'error:"创建目标"'],
+        ['error:"Update goal"', 'error:"更新目标"'],
+        ['error:"Process"', 'error:"处理"'],
+        ['error:"Execute"', 'error:"执行"'],
+        ['error:"Plan"', 'error:"规划"'],
+        ['error:"Fetch page"', 'error:"获取页面"'],
+        ['error:"Report results"', 'error:"报告结果"'],
+        ['error:"Learn from Cursor Blame"', 'error:"从 Cursor Blame 学习"'],
+        ['error:"Update progress"', 'error:"更新进度"'],
+        ['error:"Manage PR"', 'error:"管理 PR"'],
+        ['error:"Edit PR labels"', 'error:"编辑 PR 标签"'],
+        ['error:"Fetch cloud agent data"', 'error:"获取云智能体数据"'],
+        ['error:"Authenticate MCP server"', 'error:"认证 MCP 服务器"'],
+        ['error:"Report bug"', 'error:"报告 Bug"'],
+        ['error:"Record final summary"', 'error:"记录最终总结"'],
+        ['error:"Send message"', 'error:"发送消息"'],
+        ['error:"Update metadata"', 'error:"更新元数据"'],
+        ['error:"Update code tour"', 'error:"更新代码导览"'],
+        ['error:"Record CI findings"', 'error:"记录 CI 结果"'],
+['error:"Write"', 'error:"写入"'],
+    // ── 2026-08-10: 截图一批右键菜单 / 复制路径 / 输出面板 / 插件市场词条（glass）──
+    ['label:"Home",workspaceIdentifier', 'label:"主页",workspaceIdentifier'],
+    ['title:ce?"Copied!":"Copy path"', 'title:ce?"已复制!":"复制路径"'],
+    ['"aria-label":"Copy path"', '"aria-label":"复制路径"'],
+    ['message:"Copied path to clipboard"', 'message:"已复制路径到剪贴板"'],
+    ['message:T("glassFileTreeCopiedRelativePath","Copied path to clipboard")', 'message:T("glassFileTreeCopiedRelativePath","已复制相对路径到剪贴板")'],
+    ['message:T("glassFileTreeCopiedPath","Copied path to clipboard")', 'message:T("glassFileTreeCopiedPath","已复制路径到剪贴板")'],
+    ['message:T("glassFileTreeCopiedCursorComLink","Copied URL to clipboard")', 'message:T("glassFileTreeCopiedCursorComLink","已复制 URL 到剪贴板")'],
+    ['"No output yet"', '"暂无输出"'],
+    ['"No output channels available"', '"无可用输出通道"'],
+    ['heading:"Suggested"', 'heading:"推荐"'],
+    ['children:"Suggested"', 'children:"推荐"'],
+    ['title:ce?"Results":"Suggested"', 'title:ce?"结果":"推荐"'],
+    ['case"canvas-mention-card":return"Canvas"', 'case"canvas-mention-card":return"画布"'],
+    ['placeholder:"Coordinate tasks"', 'placeholder:"协调任务"'],
+    ['"Search plugins"', '"搜索插件"'],
+    ['"Root workspace"', '"根工作区"'],
+    ['children:k?"Deleting...":"Delete"', 'children:k?"正在删除...":"删除"'],
+    ['children:"Delete"', 'children:"删除"'],
+    ['id:"delete",label:"Delete"', 'id:"delete",label:"删除"'],
+    ['label:"Delete"', 'label:"删除"'],
+    ['placeholder:"Search"', 'placeholder:"搜索"'],
+        // ── 2026-08-10: 截图二轮中文残留（desk 端）──
+        ['children:["Open",_]', 'children:["打开",_]'],
+        ['children:["Open",k0(Bi,', 'children:["打开",k0(Bi,'],
+        ['title:"Create New Canvas",titleColor:"tertiary"', 'title:"新建画布",titleColor:"tertiary"'],
+        ['title:"No agents yet"', 'title:"暂无智能体"'],
+        ['description:"Create an agent to start working on tasks"', 'description:"创建智能体以开始处理任务"'],
+        ['actionTitle:"New Agent"', 'actionTitle:"新建智能体"'],
         // ── 2026-08-08: 选中代码工具栏/右键菜单（desk 形式）──
         ['_createButton(this._buttonContainer,GCe,"Quick Edit")', '_createButton(this._buttonContainer,GCe,"快速编辑")'],
         ['{value:"Create Rule",original:"Create Rule"}', '{value:"创建规则",original:"创建规则"}'],
@@ -4170,8 +4658,15 @@ function translate(paths) {
         ['"Loading changes..."', '"正在加载更改..."'],
         ['"Loading changes"', '"正在加载更改"'],
         // ── Cycle 命令（desktop 状态栏）──
-        ['title:{value:"Cycle model parameter",original:"Cycle model parameter"}', 'title:{value:"循环切换模型参数",original:"循环切换模型参数"}'],
-        ['\\xB7 Cycle ${Jn} (${Lr})', '\\xB7 循环切换 ${Jn} (${Lr})'],
+        ['title:{value:"Cycle model parameter",original:"Cycle model parameter"}', 'title:{value:"切换模型参数",original:"切换模型参数"}'],
+        ['\\xB7 Cycle ${Jn} (${Lr})', '\\xB7 切换${Jn} (${Lr})'],
+        // ── 2026-08-10: 3.15 构建 Cycle 变量名为 Or/Ni（等价旧 Jn/Lr）──
+        ['\\xB7 Cycle ${Or} (${Ni})', '\\xB7 切换${Or} (${Ni})'],
+        // ── 2026-08-10: 相对时间 Just now（desktop，等价 glass 的 aux 规则）──
+        ['nowLabel:"Just now"', 'nowLabel:"刚刚"'],
+        ['if(n<60)return"Just now"', 'if(n<60)return"刚刚"'],
+        ['if(a<60)return"just now"', 'if(a<60)return"刚刚"'],
+        ['?"just now":', '?"刚刚":'],
         // ── Done（完成）：状态文本 ──
         ['`Done \\u2022 ${s}`', '`完成 \\u2022 ${s}`'],
         ['"Agent complete"', '"智能体完成"'],
@@ -4183,6 +4678,8 @@ function translate(paths) {
         ['`Show ${T} more`', '`显示 ${T} 更多`'],
         // ── Thinking intensity 持久翻译：mSg 注入参数名映射（服务端覆盖数据后仍显示中文）──
         ['function mSg(e){const t=ERs(e);return t.variants=t.variants??[],t.parameterDefinitions=t.parameterDefinitions??[],t}', 'function mSg(e){const t=ERs(e);return t.variants=t.variants??[],t.parameterDefinitions=(t.parameterDefinitions??[]).map(function(p){if(p&&p.name==="Thinking intensity")p.name="思考强度";return p}),t}'],
+        // ── 2026-08-10: 3.15 构建 Lfg 函数名重命名（等价旧 mSg，模型参数入口）──
+        ['function Lfg(e){const t=kRs(e);return t.variants=t.variants??[],t.parameterDefinitions=t.parameterDefinitions??[],t}', 'function Lfg(e){const t=kRs(e);return t.variants=t.variants??[],t.parameterDefinitions=(t.parameterDefinitions??[]).map(function(p){if(p&&p.name==="Thinking intensity")p.name="思考强度";return p}),t}'],
         // ── 文件树/资源管理器/终端/预览/删除状态 ──
         ['"New Folder"', '"新建文件夹"'],
         ['"New File"', '"新建文件"'],
@@ -4276,7 +4773,19 @@ function translate(paths) {
         // ── AI 操作动词状态 ──
         ['"Thought"', '"思考"'],
         ['"briefly"', '"片刻"'],
-        [' ago', ' 之前'],
+        // ── 时间 ago（仅模板串 ${...} 与引号内，杜绝误伤 var ago=class 等标识符）──
+        ['} ago', '} 之前'],
+        ['}m ago', '}m 之前'],
+        ['}h ago', '}h 之前'],
+        ['}d ago', '}d 之前'],
+        ['}w ago', '}w 之前'],
+        ['}y ago', '}y 之前'],
+        ['}s ago', '}s 之前'],
+        ['}mo ago', '}mo 之前'],
+        ['} days ago', '} 天前'],
+        ['" ago', '" 之前'],
+        ['m ago"', 'm 之前"'],
+        ['h ago"', 'h 之前"'],
         // ── 补充状态动词（completedAction/loadingAction/Worked）──
         ['"Ran"', '"已运行"'],
         ['"Exploring"', '"正在探索"'],
@@ -5006,7 +5515,18 @@ function translate(paths) {
         ['description:"Wrap long lines in Agent conversation code blocks"', 'description:"在智能体对话代码块中自动换行长行"'],
         ['label:"Voice Submit Keywords"', 'label:"语音提交关键词"'],
         ['description:"Custom words that submit a voice prompt. Spaces and punctuation are ignored."', 'description:"用于提交语音提示的自定义词。会忽略空格和标点。"'],
-        ['label:"Explore Subagent Model"', 'label:"探索子智能体模型"'],
+['label:"Explore Subagent Model"', 'label:"探索子智能体模型"'],
+    // ── 2026-08-10 新发现：Claude Code 导入弹窗 + 会话验证错误 ──
+    ['children:"Import from Claude Code"', 'children:"从 Claude Code 导入"'],
+    ['children:"Bring over your chats, and send a follow-up to fork it. Your plugins and skills are synced by default."', 'children:"带过来您的聊天记录，发送一条后续消息即可分叉继续。插件与技能默认已同步。"'],
+    ['fja("Plugins & skills"', 'fja("插件与技能"'],
+    ['fja("Chats"', 'fja("聊天"'],
+    ['children:"Your plugins and skills are synced by default."', 'children:"您的插件与技能默认已同步。"'],
+    ['children:"Sync your chats and continue them in Cursor"', 'children:"同步您的聊天记录并在 Cursor 中继续"'],
+    ['children:"Import your Claude Code conversations"', 'children:"导入您的 Claude Code 对话"'],
+    ['case yc.Unauthenticated:return"We couldn\'t verify your session. Sign in again and retry.";', 'case yc.Unauthenticated:return"无法验证您的会话。请重新登录后重试。";'],
+    ['children:"Sync"', 'children:"同步"'],
+    ['children:"Retry"', 'children:"重试"'],
         ['description:"Choose the model used by the Explore subagent for initial research"', 'description:"选择探索子智能体进行初始研究时使用的模型"'],
         ['description:"Choose the model used by Explore subagent for initial research"', 'description:"选择探索子智能体进行初始研究时使用的模型"'],
         ['label:"Deployment Name"', 'label:"部署名称"'],
@@ -5967,6 +6487,20 @@ function translate(paths) {
         ['label:"Try Again"', 'label:"重试"'],
         ['label:"Try Cloud Agent"', 'label:"试试云智能体"'],
         ['label:"Upgrade to Pro"', 'label:"升级到 Pro"'],
+        // ── 2026-08-10: 设置文案（desk）──
+    ['Entry-level plan with access to premium models, unlimited Tab completions, and more.', '入门级套餐，可使用高级模型、无限 Tab 补全及更多功能。'],
+    ['Data Sharing Enabled', '数据共享已启用'],
+    ['Your codebase, prompts, edits and other usage data will be stored and trained on by Cursor to improve the product.', '您的代码库、提示词、编辑记录及其他使用数据将被 Cursor 存储并用于训练，以改进产品。'],
+    ['Create your public profile', '创建您的公开主页'],
+    ['Claim a handle to get a profile page showing your token, model, and agent usage.', '领取一个标识即可获得展示您的额度、模型和智能体使用情况的主页。'],
+    ['Claim handle', '领取标识'],
+    ['Default Model', '默认模型'],
+    ['Cursor Default', 'Cursor 默认'],
+    ['Default Browser', '默认浏览器'],
+    ['Upgrade to unlock premium models', '升级以解锁高级模型'],
+    ['Premium models are only available on paid plans.', '高级模型仅限付费套餐使用。'],
+    ['Steer from iOS', '从 iOS 操控'],
+    ['Please open a folder to use background agents.', '请打开文件夹以使用后台智能体。'],
         ['label:"Upgrade to Pro+"', 'label:"升级到 Pro+"'],
         ['label:"Upgrade to Ultra"', 'label:"升级到 Ultra"'],
         ['label:"Refer friends, earn usage credits"', 'label:"推荐好友，赚取用量额度"'],
@@ -6290,6 +6824,21 @@ function translate(paths) {
         ['"Most Recent Commit Scored:"', '"最近评分的提交："'],
         ['"AI-Generated:"', '"AI 生成："'],
         ['"Total Changes:"', '"总更改："'],
+        // ── 2026-08-10 3.15 残留：Desk 窗口新形态（jsx 数组元素/三元/特殊键）──
+        ['"Models","Projects","Open"', '"模型","项目","打开"'],
+        [',"Other"]', ',"其他"]'],
+        ['children:["Browse"', 'children:["浏览"'],
+        ['children:["Browse"," ","Marketplace"]', 'children:["浏览插件市场"]'],
+        ['?"Connect":"保存"', '?"连接":"保存"'],
+        ['?"Reconnect":"Connect"', '?"重新连接":"连接"'],
+        [',"New"]', ',"新建"]'],
+        ['void 0:"New",removable', 'void 0:"新建",removable'],
+        ['?"Adding...":"Add"', '?"正在添加...":"添加"'],
+        ['void 0?"Add":n', 'void 0?"添加":n'],
+        ['?"Added":"Add"', '?"已添加":"添加"'],
+        ['addLabel:"Add"', 'addLabel:"添加"'],
+        ['folder:"Folders",git:"Commits",commit_notes:"Commit History"', 'folder:"文件夹",git:"提交",commit_notes:"提交历史"'],
+        ['title="Remove from history"', 'title="从历史记录中移除"'],
     ];
 
     // 合并大正则：单次扫描替代逐条替换（~1803条 → 1次扫描）

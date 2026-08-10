@@ -30,6 +30,7 @@ Cursor 的官方界面中仍有不少英文文案，尤其是设置页、Agent �
 - 补充 Cursor 新版本中遗漏或新增的英文界面。
 - 支持一键汉化和恢复英文原版。
 - 自动备份原始资源文件，便于回退。
+- 回退后在此期间的对话信息不会回退。
 - 自动更新 `product.json` 校验值，减少"安装已损坏"提示。
 - macOS 下自动清理隔离属性并重新签名，减少系统拦截。
 
@@ -46,6 +47,8 @@ Cursor 的官方界面中仍有不少英文文案，尤其是设置页、Agent �
 需要 Node.js 18 或更高版本。
 
 > ⚠️ **重要：运行汉化前请先完全退出 Cursor**（包括托盘和后台进程）。工具会修改 `state.vscdb` 用户存储，检测到 Cursor 正在运行时会跳过该步骤，导致模式下拉、模型参数（如 Thinking intensity）等动态内容无法汉化。
+>
+> tips：搭配使用：Chinese (Simplified) (简体中文) Language Pack for Visual 更好
 
 安装依赖：
 
@@ -80,11 +83,13 @@ node index.js --action=restore --cursor-path="/Applications/Cursor.app/Contents/
 工具运行时大致按以下步骤执行：
 
 1. 定位 Cursor 安装目录。
+
    - 优先使用命令行传入的 `--cursor-path`。
    - 其次使用已保存的配置。
    - 最后自动扫描常见安装路径。
 
 2. 生成待处理文件路径。
+
    - `out/vs/workbench/workbench.desktop.main.js`（主窗口）
    - `out/vs/workbench/workbench.glass.main.js`（Glass / Agents 窗口，新版 Cursor 独有）
    - `out/nls.messages.json`（原生菜单与提示文案）
@@ -92,11 +97,13 @@ node index.js --action=restore --cursor-path="/Applications/Cursor.app/Contents/
    - `product.json`
 
 3. 创建原始备份。
+
    - 首次运行会生成 `.backup` 文件和 `.backup.meta` 版本元数据。
    - 再次运行时保留已有备份，避免把已汉化文件覆盖成备份。
    - Cursor 升级后版本变化时，自动更新备份为新版原版，避免还原导致版本降级。
 
 4. 执行汉化替换。
+
    - `src/dict.js` 保存三类词典：`safeGlobalDict`（安全长句）、`nativeNlsDict`（原生 NLS 菜单）、`riskyShortWords`（需上下文保护的短词）。
    - `src/i18n-core.js` 按以下顺序分层处理：安全长句大正则替换 → 裸文本长句替换 → 作用域精确替换（scoped） → 顽固词条正则（tricky） → 短词 UI 属性上下文替换（含键位表保护）。
    - 所有正则在模块加载时预编译，短词替换通过 3 个合并大正则单次扫描完成，`replaceStringWithCount` 内置 `indexOf` 预检跳过不匹配规则。
@@ -107,34 +114,36 @@ node index.js --action=restore --cursor-path="/Applications/Cursor.app/Contents/
 6. 更新 `product.json` 中对应资源文件的 checksum。
 
 7. macOS 下执行系统兼容处理。
+
    - 清理隔离属性：`xattr -cr`
    - 本地重新签名：`codesign --force --deep --sign -`
 
 8. 翻译用户扩展。扫描 `~/.cursor/extensions/` 中的远程开发扩展（remote-ssh/remote-wsl/remote-containers），翻译其 `package.json` 中的命令面板标题和分类。失败时跳过，不影响核心汉化。
 
 9. 翻译用户存储。通过 SQLite 操作 `state.vscdb`，翻译 `composerState.modes4` 中动态加载的 Agents 模式描述，以及 `availableDefaultModels2` 中的模型参数定义（如 `Thinking intensity`）。需 Cursor 已完全退出，失败时跳过。恢复英文时对该库做字段级还原，不整体覆盖，对话数据不受影响。
+
 10. 参数名显示层映射。在模型转换函数（`kR_`/`mSg`）注入参数名映射，保证界面常显中文，抵抗 Cursor 启动时服务端对模型配置的覆盖。
 
 ## 文件说明
 
-| 文件 | 说明 |
-| --- | --- |
-| `index.js` | 命令入口、交互菜单、静默模式入口 |
-| `src/platform.js` | 跨平台路径检测、配置保存、权限检查、提权执行 |
-| `src/i18n-core.js` | 核心汉化、备份恢复、校验修复、macOS 签名处理 |
-| `src/dict.js` | 安全词典（`safeGlobalDict`）、原生 NLS 词典（`nativeNlsDict`）、短词词典（`riskyShortWords`） |
-| `src/storage.js` | 用户存储翻译与字段级还原（state.vscdb：Agents 模式描述与模型参数定义的 SQLite 操作；恢复英文时仅还原汉化字段，对话数据不受影响） |
-| `scripts/package-release.js` | 打包脚本，生成压缩包和 SHA-256 校验文件 |
+| 文件                         | 说明                                                                                                                             |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `index.js`                   | 命令入口、交互菜单、静默模式入口                                                                                                 |
+| `src/platform.js`            | 跨平台路径检测、配置保存、权限检查、提权执行                                                                                     |
+| `src/i18n-core.js`           | 核心汉化、备份恢复、校验修复、macOS 签名处理                                                                                     |
+| `src/dict.js`                | 安全词典（`safeGlobalDict`）、原生 NLS 词典（`nativeNlsDict`）、短词词典（`riskyShortWords`）                                    |
+| `src/storage.js`             | 用户存储翻译与字段级还原（state.vscdb：Agents 模式描述与模型参数定义的 SQLite 操作；恢复英文时仅还原汉化字段，对话数据不受影响） |
+| `scripts/package-release.js` | 打包脚本，生成压缩包和 SHA-256 校验文件                                                                                          |
 
 ## 性能优化
 
 针对 Cursor 的 `workbench.desktop.main.js`（约 38MB）和 `workbench.glass.main.js`（约 46MB），旧实现逐词循环扫描导致耗时约 37 秒。通过以下优化将短词替换阶段降至 0.27 秒，整体汉化耗时从约 40 秒降至 3 秒以内：
 
-| 阶段 | 旧实现 | 优化后 | 提升 |
-| --- | --- | --- | --- |
-| 短词替换 | ~37 秒（573 次扫描） | 0.27 秒（3 次扫描） | **≈137x** |
-| 界面片段替换 | ~3478 次扫描 | 2 次大正则扫描 | 大幅减少 |
-| 整体汉化 | ~40 秒 | **< 3 秒** | **≈13x** |
+| 阶段         | 旧实现               | 优化后              | 提升      |
+| ------------ | -------------------- | ------------------- | --------- |
+| 短词替换     | ~37 秒（573 次扫描） | 0.27 秒（3 次扫描） | **≈137x** |
+| 界面片段替换 | ~3478 次扫描         | 2 次大正则扫描      | 大幅减少  |
+| 整体汉化     | ~40 秒               | **< 3 秒**          | **≈13x**  |
 
 核心手段：
 

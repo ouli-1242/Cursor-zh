@@ -437,6 +437,22 @@ const safeGlobalDict = {
     "Set a fixed amount or make it unlimited.": "设置固定额度，或设为无限制。",
     "Your plan includes at least $": "您的套餐至少包含 $",
     " of API usage.": " 的 API 用量。",
+    // ── 2026-08-10 3.15 残留：套餐横幅 / MCP 空状态 / 插件市场 ──
+    "Usage limits reset on ": "用量限制重置于 ",
+    "Adjust Plan": "调整套餐",
+    "Get Ultra": "获取 Ultra",
+    "$200/mo": "$200/月",
+    "$20/mo": "$20/月",
+    "Replace Agent": "替换智能体",
+    "Installing...": "正在安装...",
+    "Add to Cursor": "添加到 Cursor",
+    "Loading home MCP servers...": "正在加载 Home MCP 服务器...",
+    "No Home MCP Tools": "没有 Home MCP 工具",
+    "Search or enter URL": "搜索或输入 URL",
+    "Git Blame": "Git 责备",
+    "0% Full": "0% 已用",
+    // 服务端下发文案（本地磁盘无此串，预留译法；若未来构建将其挪到本地即可直接命中）
+    "Try Plan Mode": "尝试 Plan Mode",
 
     // ── Cloud / Background Agents ──
     "Get Started": "开始使用",
@@ -1410,6 +1426,44 @@ const safeGlobalDict = {
     "Go Forward": "前进",
     "Open Workspace": "打开工作区",
     "Cursor Local": "Cursor 本地",
+
+    // ── 2026-08-10 新增：3.15 构建残留英文（升级横幅 / 模型选择器 / 插件横幅 / 技能日志 / 管理员后缀）──
+    "Choose which models appear in the model picker": "选择要在模型选择器中显示的模型",
+    "Choose a model or use the cost- and availability-aware default": "选择模型，或使用会根据成本和可用性灵活调整的默认模型",
+    "Upgrade for extended limits and full model access": "升级以获取扩展限额和完整模型访问权限",
+    "Upgrade to Pro": "升级到 Pro",
+    "Upgrade to Pro now": "立即升级到 Pro",
+    "Start Pro Now": "立即开始 Pro",
+    "Start Pro+ Now": "立即开始 Pro+",
+    "Free 7-day trial": "免费 7 天试用",
+    "Upgrade to Pro & Get unlimited cursor-small": "升级到 Pro，无限制使用 cursor-small",
+    "Move to Cloud": "迁移到 Cloud",
+    "Move to Cloud to keep running longer without your computer open.": "迁移到 Cloud，即使不打开电脑也能继续长时间运行。",
+    "Move to Cloud so the agent can keep running even if you disconnect.": "迁移到 Cloud，即使断开连接智能体也能继续运行。",
+    "Connection looks slow": "连接速度较慢",
+    "Still running locally?": "仍在本地运行？",
+    "We've introduced a new home for all the ways to customize Cursor.": "我们为所有自定义 Cursor 的方式推出了一个新主页。",
+    "Plugins, MCPs, Skills, and Rules have moved to Customize": "插件、MCP、技能和规则已移至自定义",
+    "Open Skill Publishing Logs": "打开技能发布日志",
+    "Debug: Open Skill Publishing Logs": "调试：打开技能发布日志",
+    "Upgrade to Pro+": "升级到 Pro+",
+    "Upgrade to Ultra": "升级到 Ultra",
+    "Set a new limit": "设置新限额",
+    "Upgrade for 3x usage & faster responses": "升级：3 倍用量与更快响应",
+    "Upgrade for 20x usage & faster responses": "升级：20 倍用量与更快响应",
+    "Total usage limit reached": "已达到总用量限额",
+    "Usage limit reached": "已达到用量限额",
+    "Usage Limit": "用量限制",
+    "You've reached your Free plan limit. Upgrade to Pro for expanded agent usage.": "您的免费套餐用量已用尽。升级到 Pro 可获得更多智能体使用额度。",
+    "You've reached your limit. Responses may be slower. Upgrade to Pro+ for 3x more usage.": "您已达到用量上限，响应速度可能变慢。升级到 Pro+ 可获得 3 倍用量。",
+    "You've reached your limit. Responses may be slower. Upgrade to Ultra for 20x more usage.": "您已达到用量上限，响应速度可能变慢。升级到 Ultra 可获得 20 倍用量。",
+    "You've reached your monthly limit. Set a new on-demand limit to continue.": "您已达到本月用量上限。设置新的按需限额以继续使用。",
+    "You've reached your team's usage limit.": "您团队的用量已达上限。",
+    "You've reached your usage limit.": "您已达到用量上限。",
+    "Get faster responses": "获得更快的响应",
+    " (controlled by admin)": "（由管理员控制）",
+    " - DEPRECATED": " - 已弃用",
+    " (Deprecated)": "（已弃用）"
 };
 
 // 原生工作台菜单与加载状态来自 nls.messages.json。它们是短词，不能加入
@@ -1626,7 +1680,7 @@ const riskyShortWords = {
     "Run Diagnostic": "运行诊断",
     "Development": "开发",
     "Early Access": "抢先体验",
-    "Nightly": "每夜构建",
+    "Nightly": "晚上更新",
     "Configured Hooks": "已配置的钩子",
     "Execution Log": "执行日志",
     "Clear log": "清空日志",
@@ -1706,6 +1760,13 @@ const riskyShortWords = {
     "Archive": "归档",
     "Discard": "丢弃",
     "Share": "分享",
+    // ── 2026-08-10 3.15 残留：玻璃窗口新增单选/菜单项（均有伪元素枚举，走短词保护）──
+    // "Connect" 不可入危险短词：扩展 API name:"Connect" 协议名 + getButtonLabelForMCPServer==="Connect" 比较，
+    // 由 i18n-core.js 的专属规则连同比对串一起翻译。
+    "Added": "已添加",
+    "Commits": "提交",
+    "Folders": "文件夹",
+    "Try": "试用",
 
     // 常见词/键名：代码中存在枚举值或键盘扫描表，必须走短词保护机制
     "Add": "添加",

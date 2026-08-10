@@ -5,3 +5,7 @@ PR-HANDOFF.md
 
 # 构建产物 — 通过 GitHub Release 分发，不入库
 dist/
+
+# 代码智能索引缓存（FastGraph / Serena 工具状态）
+.fastgraph/
+.serena/
