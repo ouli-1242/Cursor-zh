@@ -472,6 +472,7 @@ const auxiliaryInterfaceReplacements = [
     ['{value:"Create Rule",original:"Create Rule"}', '{value:"创建规则",original:"创建规则"}'],
     ['label:"Close Panel"', 'label:"关闭面板"'],
         // ── 2026-08-08: 选中目标复制操作（Copy 短词，仅精确替换 UI fallback）──
+    ['label:s?"复制消息":"Copy"', 'label:s?"复制消息":"复制"'],
     ['E("copyPath","Copy Path")', 'E("copyPath","复制路径")'],
     // ── 2026-08-10: 3.15 构建 NLS 调用函数为 T（旧版 E），两种都覆盖 ──
     ['T("copyPath","Copy Path")', 'T("copyPath","复制路径")'],
@@ -721,6 +722,7 @@ const auxiliaryInterfaceReplacements = [
     ['title:{value:"Open Virtual Machine",original:"Open Virtual Machine"}', 'title:{value:"打开虚拟机",original:"打开虚拟机"}'],
     ['label:"Mark as Read"', 'label:"标记为已读"'],
     ['tooltip:"Mark chat as read"', 'tooltip:"将对话标记为已读"'],
+    ['?"Mark as Read":"标记为未读"', '?"标记为已读":"标记为未读"'],
     ['label:"Mark as Ready"', 'label:"标记为已就绪"'],
     ['label:"Merge commit",tooltip:"Create a merge commit"', 'label:"合并提交",tooltip:"创建合并提交"'],
     ['title:"Merge commit",id:"merge"', 'title:"合并提交",id:"merge"'],
@@ -1064,6 +1066,7 @@ const auxiliaryInterfaceReplacements = [
         ['"glassFileTreeCopyOp","Copy"', '"glassFileTreeCopyOp","复制"'],
         ['"glassFileTreeMove","Move"', '"glassFileTreeMove","移动"'],
         ['marketplace:"Marketplace"', 'marketplace:"插件市场"'],
+        ['?"自定义":"Marketplace"', '?"自定义":"插件市场"'],
         ['rootLabel:"Marketplace"', 'rootLabel:"插件市场"'],
         ['[" ","Marketplace"]', '[" ","插件市场"]'],
         ['all:"All"', 'all:"全部"'],
@@ -1083,6 +1086,7 @@ const auxiliaryInterfaceReplacements = [
     ['children:`Show ${k} more`', 'children:`显示 ${k} 更多`'],
     ['children:["Show ",g," more"]', 'children:["显示 ",g," 更多"]'],
     ['moreLabel:"Show more"', 'moreLabel:"显示更多"'],
+    ['?"收起":"Show more"', '?"收起":"显示更多"'],
     // ── Prompt 对话框默认按钮与标题 ──
     ['confirmLabel??"Confirm"', 'confirmLabel??"确认"'],
     ['cancelLabel??"Cancel"', 'cancelLabel??"取消"'],
@@ -1462,6 +1466,7 @@ const auxiliaryInterfaceReplacements = [
     // LABEL 直接赋值（Help菜单中的 Report Issue）
     ['.LABEL="Report Issue"', '.LABEL="报告问题"'],
     // ── 字体大小选项（Small/Default/Large/超大）──
+    ['case .85:return"Small";case 1:return"Default";case 1.15:return"Large";case 1.3:return"超大"', 'case .85:return"小";case 1:return"默认";case 1.15:return"大";case 1.3:return"超大"'],
     // ── Show/Hide 切换按钮（title getter 三元表达式）──
     ['?"Hide":"Show"', '?"隐藏":"显示"'],
     // ── Import 按钮（Importing... 状态）──
@@ -1791,6 +1796,7 @@ const auxiliaryInterfaceReplacements = [
     ['QLt={image:"Image",attachments:"', 'QLt={image:"图片",attachments:"'],
     ['$=d==="image"?"Image":"File"', '$=d==="image"?"图片":"文件"'],
     ['case"image":return"Image"', 'case"image":return"图片"'],
+    ['i?"Close Settings":"设置"', 'i?"关闭设置":"设置"'],
     ['"Close Settings"', '"关闭设置"'],
     ['title:"Open Instance Selector"', 'title:"打开实例选择器"'],
     // ── 编辑菜单 nls 索引转字面量（Agents 窗口 nls 不生效时 fallback 英文）──
@@ -3078,6 +3084,9 @@ const auxiliaryInterfaceReplacements = [
     ['failure:"Failing",running:"Running"', 'failure:"失败",running:"运行中"'],
     ['?"Server Error":"Failing"', '?"服务器错误":"失败"'],
     // ── 2026-08-08 第四轮截图：AI 代码追踪统计 - Tab 系列 ──
+    ['"AI 代码追踪统计 - Tab"', '"AI 代码追踪统计 - 补全"'],
+    ['Tab 统计：', '补全统计：'],
+    ['Tab AI 统计', '补全 AI 统计'],
     ['Total Lines: ', '总行数: '],
     ['AI-Generated Lines: ', 'AI 生成行数: '],
     ['AI-Generated: ', 'AI 生成: '],
@@ -3106,6 +3115,7 @@ const auxiliaryInterfaceReplacements = [
     ['children:"Suggested"', 'children:"推荐"'],
     // ── 2026-08-08 第五轮：New/Fork 菜单项 + Reset this pane 说明 ──
     ['name:"new",description:"Reset this pane to a new agent"', 'name:"新建",description:"将此面板重置为新的智能体"'],
+    ['name:"fork",description:"复制此对话"', 'name:"复制",description:"复制此对话"'],
     ['tooltip:"Reset this pane to a new agent. In a tileset, replaces the current tile with a blank draft instead of leaving the tileset."', 'tooltip:"将此面板重置为新的智能体。在图块集中，将当前图块替换为空白草稿，而不是离开图块集。"'],
     // ── 2026-08-08 第六轮：浏览器导航 / 书签 / 证书 UI ──
     ['title="Navigate back"', 'title="后退"'],
@@ -3132,9 +3142,12 @@ const auxiliaryInterfaceReplacements = [
         ['name:"arrow-right-up"}),"Open"', 'name:"arrow-right-up"}),"打开"'],
         ['children:["Browse"', 'children:["浏览"'],
     ['children:["Browse"," ","Marketplace"]', 'children:["浏览插件市场"]'],
+        ['?"Discard":"归档"', '?"丢弃":"归档"'],
+        ['?"Connect":"保存"', '?"连接":"保存"'],
         ['?"Reconnect":"Connect"', '?"重新连接":"连接"'],
         ['children:"Connect"', 'children:"连接"'],
         ['title:"Connect"', 'title:"连接"'],
+        ['?"Enabled":"已禁用"', '?"启用":"已禁用"'],
         ['"aria-hidden":!0}),"Enabled"', '"aria-hidden":!0}),"启用"'],
         ['light:"Light",dark:"Dark",lightHighContrast:"Light High Contrast",darkHighContrast:"Dark High Contrast"', 'light:"浅色",dark:"深色",lightHighContrast:"浅色高对比度",darkHighContrast:"深色高对比度"'],
         ['"Import from File"]', '"从文件导入"]'],
@@ -4554,6 +4567,7 @@ function translate(paths) {
         ['_createButton(this._buttonContainer,k0e,"Quick Edit")', '_createButton(this._buttonContainer,k0e,"快速编辑")'],
         ['{value:"Create Rule",original:"Create Rule"}', '{value:"创建规则",original:"创建规则"}'],
         // ── 2026-08-08: 选中目标复制操作（desk 形式）──
+        ['label:s?"复制消息":"Copy"', 'label:s?"复制消息":"复制"'],
         // ── 2026-08-08: markdown 编辑工具栏（desk 形式）──
         ['label:"Bold"', 'label:"加粗"'],
         ['label:"Italic"', 'label:"斜体"'],
@@ -4667,6 +4681,7 @@ function translate(paths) {
         ['{value:"name",label:"Name",icon:"text-aa"}', '{value:"name",label:"名称",icon:"text-aa"}'],
         ['?"Manage in Dashboard":"Open"', '?"在仪表盘中管理":"打开"'],
         ['prompt:"Enter Command Name",placeHolder:"Command name"', 'prompt:"输入命令名称",placeHolder:"命令名称"'],
+        ['?"收起":"Show more"', '?"收起":"显示更多"'],
         ['prompt:"User Rules apply to all of your chats"', 'prompt:"用户规则适用于你的所有对话"'],
         // ── New User Skill/Subagent 创建对话框（desktop：oe/M 大写变量改中文供 title/prompt 用；skill/subagent 保持英文供占位符示例用）──
         ['te==="skill"?"Skill":"Subagent"', 'te==="skill"?"技能":"子代理"'],
@@ -4962,6 +4977,7 @@ function translate(paths) {
         ['worktrees:"Worktrees"', 'worktrees:"工作树"'],
         ['docs:"Docs"', 'docs:"官方文档"'],
         ['`Search settings ${ne()}`', '`搜索设置 ${ne()}`'],
+        ['n.isGlass?"Indexing":"索引与文档"', 'n.isGlass?"索引":"索引与文档"'],
         ['title:"Conversation"', 'title:"对话"'],
         ['s===void 0?"Automations":s', 's===void 0?"自动化":s'],
         ['label:"Conversation"', 'label:"对话"'],
@@ -5578,7 +5594,9 @@ function translate(paths) {
         ['<div><div>Improve Cursor for everyone', '<div><div>帮助所有人改进 Cursor'],
         ['<div><div>Privacy Mode</div>', '<div><div>隐私模式</div>'],
         ['<div><div>No training. Code may be stored for Background Agent and other features.', '<div><div>不用于训练。代码可能会被存储，以支持后台智能体和其他功能。'],
+        ['<div><div>隐私模式（旧版）</div><div>No training and no storage. Background Agent and other features that require code storage will be disabled.', '<div><div>隐私模式（旧版）</div><div>不用于训练，也不存储。后台智能体和其他需要代码存储的功能将被禁用。'],
         ['<span>More Options</span>', '<span>更多选项</span>'],
+        ['n.server.enabled?i()&&!s()?"Connecting...":s()&&J?.phase==="needsAuth"?"正在等待回调...":J?.phase==="checking"?s()?"正在交换令牌...":"Checking server status":J?.phase==="needsAuth"?"Needs authentication":J?.phase==="error"?d():"Connected":"Disabled"', 'n.server.enabled?i()&&!s()?"正在连接...":s()&&J?.phase==="needsAuth"?"正在等待回调...":J?.phase==="checking"?s()?"正在交换令牌...":"正在检查服务器状态":J?.phase==="needsAuth"?"需要身份验证":J?.phase==="error"?d():"已连接":"已禁用"'],
         ['name:"Agent",actionId:"composerMode.agent"', 'name:"智能体",actionId:"composerMode.agent"'],
         ['name:"Triage",actionId:"composerMode.triage"', 'name:"分诊",actionId:"composerMode.triage"'],
         ['name:"Spec",actionId:"composerMode.spec"', 'name:"规格",actionId:"composerMode.spec"'],
@@ -5605,6 +5623,7 @@ function translate(paths) {
         ['"glassFileTreeCopyOp","Copy"', '"glassFileTreeCopyOp","复制"'],
         ['"glassFileTreeMove","Move"', '"glassFileTreeMove","移动"'],
         ['marketplace:"Marketplace"', 'marketplace:"插件市场"'],
+        ['?"自定义":"Marketplace"', '?"自定义":"插件市场"'],
         ['% Auto used', '% 自动用量'],
         ['% Auto and', '% 自动用量，'],
         ['% API used', '% API 用量'],
@@ -5612,6 +5631,7 @@ function translate(paths) {
         ['?"Fixed":Q()==="unlimited"?"Unlimited":"Disabled"', '?"固定":Q()==="unlimited"?"无限制":"已禁用"'],
         ['<div><span>Subagents', '<div><span>子智能体'],
         ['<div><div title="Choose Explore subagent model"', '<div><div title="选择探索子智能体模型"'],
+        ['<div><div title="Choose 探索子智能体模型"', '<div><div title="选择探索子智能体模型"'],
         ['aria-label="Max Mode required"', 'aria-label="需要 Max 模式"'],
         ['SAS="Subagent model overrides will only be used in Max Mode"', 'SAS="子智能体模型覆盖仅会在 Max 模式中使用"'],
         ['label:"Reset to default"', 'label:"重置为默认值"'],
@@ -5947,6 +5967,7 @@ function translate(paths) {
         ['"paste","Paste"', '"paste","粘贴"'],
         ['"selectAll","Select All"', '"selectAll","全选"'],
         ['marketplace:"Marketplace"', 'marketplace:"插件市场"'],
+        ['?"自定义":"Marketplace"', '?"自定义":"插件市场"'],
         ['rootLabel:"Marketplace"', 'rootLabel:"插件市场"'],
         ['[" ","Marketplace"]', '[" ","插件市场"]'],
         ['all:"All"', 'all:"全部"'],
@@ -5992,6 +6013,7 @@ function translate(paths) {
         ['E("glassRecycle","Move to Recycle Bin")', 'E("glassRecycle","移到回收站")'],
         ['E("glassTrash","Move to Trash")', 'E("glassTrash","移到回收站")'],
         ['E("glassDelete","Delete")', 'E("glassDelete","删除")'],
+        ['i?"Close Settings":"设置"', 'i?"关闭设置":"设置"'],
         ['"Close Settings"', '"关闭设置"'],
         // Cloud 在 UI 属性中
         ['children:"Cloud"', 'children:"云端"'],
@@ -6038,6 +6060,7 @@ function translate(paths) {
         // LABEL 直接赋值（Help菜单中的 Report Issue）
         ['.LABEL="Report Issue"', '.LABEL="报告问题"'],
         // ── 字体大小选项（Small/Default/Large/超大）──
+        ['case .85:return"Small";case 1:return"Default";case 1.15:return"Large";case 1.3:return"超大"', 'case .85:return"小";case 1:return"默认";case 1.15:return"大";case 1.3:return"超大"'],
         // ── Show/Hide 切换按钮（title getter 三元表达式）──
         ['?"Hide":"Show"', '?"隐藏":"显示"'],
         // ── Import 按钮（Importing... 状态）──
@@ -6848,6 +6871,7 @@ function translate(paths) {
         [',"Other"]', ',"其他"]'],
         ['children:["Browse"', 'children:["浏览"'],
         ['children:["Browse"," ","Marketplace"]', 'children:["浏览插件市场"]'],
+        ['?"Connect":"保存"', '?"连接":"保存"'],
         ['?"Reconnect":"Connect"', '?"重新连接":"连接"'],
         [',"New"]', ',"新建"]'],
         ['void 0:"New",removable', 'void 0:"新建",removable'],
