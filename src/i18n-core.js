@@ -7015,4 +7015,4 @@ function restore(paths) {
     }
 }
 
-module.exports = { translate, restore, backupFile, restoreFromBackup, fixProductHash };
+module.exports = { translate, restore, backupFile, restoreFromBackup, fixProductHash, getClpRoot };

@@ -1,10 +1,12 @@
 // 生成 clp 语言包缓存的未翻译英文清单
 const fs = require('fs');
 const path = require('path');
-const clpRoot = 'C:/Users/ouli/AppData/Roaming/Cursor/clp';
+const { getClpRoot } = require(path.join(__dirname, '..', 'src', 'i18n-core.js'));
+const clpRoot = getClpRoot();
 
 // 找 zh 目录下的 nls.messages.json
 function findNls() {
+  if (!fs.existsSync(clpRoot)) return [];
   const results = [];
   for (const dir of fs.readdirSync(clpRoot, { withFileTypes: true })) {
     if (!dir.isDirectory() || !/zh/i.test(dir.name)) continue;

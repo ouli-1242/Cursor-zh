@@ -16,7 +16,16 @@ function extractArray(name) {
   }
   const block = lines.slice(start, end + 1).join('\n');
   const arrText = block.slice(block.indexOf('['), block.lastIndexOf(']') + 1);
-  return eval(arrText);
+  try {
+    const arr = eval(arrText);
+    if (!Array.isArray(arr) || arr.length === 0) {
+      throw new Error(`解析出的 ${name} 为空或非数组`);
+    }
+    return arr;
+  } catch (e) {
+    // 大声失败：若 i18n-core.js 结构变动导致数组无法提取，明确指出而不是静默产出错误报告
+    throw new Error(`无法从 i18n-core.js 提取 ${name} 数组（可能结构改动了）: ${e.message}`);
+  }
 }
 
 const aux = extractArray('auxiliaryInterfaceReplacements');
