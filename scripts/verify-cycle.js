@@ -5,6 +5,8 @@ const APP_ROOT = process.argv[2] || 'D:/Program Files/cursor/resources/app';
 const WB = path.join(APP_ROOT, 'out/vs/workbench');
 const glass = fs.readFileSync(path.join(WB, 'workbench.glass.main.js'), 'utf8');
 const desk = fs.readFileSync(path.join(WB, 'workbench.desktop.main.js'), 'utf8');
+require('./lib/bundle-state').checkBundle(path.join(WB, 'workbench.glass.main.js'), 'glass');
+require('./lib/bundle-state').checkBundle(path.join(WB, 'workbench.desktop.main.js'), 'desk');
 function cnt(src, kw) {
   let i = src.indexOf(kw), n = 0;
   while (i !== -1) { n++; i = src.indexOf(kw, i + kw.length); }

@@ -39,6 +39,7 @@ const regex = new RegExp(
 // Cursor 安装根目录（默认 D: 盘，可用 argv[2] 覆盖）
 const APP_ROOT = process.argv[2] || 'D:/Program Files/cursor/resources/app';
 const glass = fs.readFileSync(path.join(APP_ROOT, 'out/vs/workbench/workbench.glass.main.js'), 'utf8');
+require('./lib/bundle-state').checkBundle(path.join(APP_ROOT, 'out/vs/workbench/workbench.glass.main.js'), 'glass');
 
 const t0 = Date.now();
 const fired = new Set();

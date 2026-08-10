@@ -4,6 +4,7 @@ const path = require('path');
 // Cursor 安装根目录（默认 D: 盘，可用 argv[2] 覆盖）
 const APP_ROOT = process.argv[2] || 'D:/Program Files/cursor/resources/app';
 const glass = fs.readFileSync(path.join(APP_ROOT, 'out/vs/workbench/workbench.glass.main.js'), 'utf8');
+require('./lib/bundle-state').checkBundle(path.join(APP_ROOT, 'out/vs/workbench/workbench.glass.main.js'), 'glass');
 const i18nSrc = fs.readFileSync(path.join(__dirname, '..', 'src', 'i18n-core.js'), 'utf8');
 
 // 6 个 glass 原生编辑菜单条目（3.15 构建函数名是 T，旧版是 E，两种都覆盖）
