@@ -165,6 +165,7 @@ node index.js --action=restore --cursor-path="/Applications/Cursor.app/Contents/
 | `verify-semantics.js` | 对话框语义 | 模拟替换 New User Skill/Subagent 创建对话框，断言中文标题、prompt 变量的正确性、占位符不被中文污染 |
 | `verify-glassos.js` | Glass 原生编辑菜单 | 校验 `glassOsEdit*` 规则在 bundle 中的 E/T 两种形态命中 |
 | `verify-loading.js` / `verify-done.js` / `verify-cycle.js` | 加载状态 / Done / Cycle | 高频状态文本的命中覆盖 |
+| `verify-restore-cycle.js` | 备份/还原完整性 | 沙箱中验证 backupFile → 篡改 → restoreFromBackup 字节一致、版本元数据、fixProductHash 重算 |
 | `gen-untranslated-md.js` / `gen-clp-md.js` | 未翻译清单 | 扫描 bundle / clp 语言包缓存中**尚未覆盖**的英文短语，生成 Markdown 报告（建议翻译列留空），供人工补充词典后回填 |
 
 使用方式：`node scripts/verify-hf.js [Cursor 安装根目录]`，默认读 `D:/Program Files/cursor/resources/app`，可传参覆盖。
