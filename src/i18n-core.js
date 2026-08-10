@@ -2200,6 +2200,8 @@ const auxiliaryInterfaceReplacements = [
     ['title:"Background agent"', 'title:"后台智能体"'],
     ['title:"Browser Menu"', 'title:"浏览器菜单"'],
     ['title:"Browser Tab"', 'title:"浏览器标签页"'],
+    // ── 2026-08-10: 标签标题模板（玻璃端变量 st）──
+    ['`Browser Tab: ${st}`', '`浏览器标签页：${st}`'],
     ['title:"Browser Tools"', 'title:"浏览器工具"'],
     ['title:"Source Action..."', 'title:"源代码操作..."'],
     ['title:"Ordered list"', 'title:"有序列表"'],
@@ -6418,6 +6420,8 @@ function translate(paths) {
         ['title:"Background agent"', 'title:"后台智能体"'],
         ['title:"Browser Menu"', 'title:"浏览器菜单"'],
         ['title:"Browser Tab"', 'title:"浏览器标签页"'],
+        // ── 2026-08-10: 标签标题模板（桌面端变量 gt）──
+        ['`Browser Tab: ${gt}`', '`浏览器标签页：${gt}`'],
         ['title:"Browser Tools"', 'title:"浏览器工具"'],
         ['title:"Source Action..."', 'title:"源代码操作..."'],
         ['title:"Ordered list"', 'title:"有序列表"'],

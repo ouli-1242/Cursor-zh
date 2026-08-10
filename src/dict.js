@@ -1443,7 +1443,11 @@ const safeGlobalDict = {
     "Get faster responses": "获得更快的响应",
     " (controlled by admin)": "（由管理员控制）",
     " - DEPRECATED": " - 已弃用",
-    " (Deprecated)": "（已弃用）"
+    " (Deprecated)": "（已弃用）",
+    // ── 2026-08-10: 用户反馈 desk 漏译。裸引号形态（非 UI 属性上下文），
+    // riskyShortWords 覆盖不到，需放 safeGlobalDict 全局匹配 ──
+    "Browser Tab": "浏览器标签页",
+    "Filter by Environment": "按环境筛选"
 };
 
 // 原生工作台菜单与加载状态来自 nls.messages.json。它们是短词，不能加入
