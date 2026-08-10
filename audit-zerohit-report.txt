@@ -1,0 +1,952 @@
+0 命中规则审计报告 (2026-08-10)
+总规则 2385 | 命中 1552 | 0命中 943
+分类: gone 139 | leak 431 | covered 373
+
+===== gone-死规则候选可删 (139) =====
+[// ── 2026-08-08: 选中目标复制操作（Copy 短词，仅精确替换] EN: label:s?"复制消息":"Copy"  → 核心: 复制消息
+[// ── 2026-08-08 用户反馈(第二轮): Close/Dictat] EN: "Taking longer than expected\\u2026"  → 核心: Taking longer than expected\…
+[// ── 2026-08-08 用户反馈(第二轮): Close/Dictat] EN: "&&Close Window"  → 核心: &&Close Window
+[// ── 2026-08-08 用户反馈(第二轮): Close/Dictat] EN: "Clos&&e Window"  → 核心: Clos&&e Window
+[// ── 2026-08-08 用户反馈(第二轮): Close/Dictat] EN: "Sharing canvas…"  → 核心: Sharing canvas…
+[// ── 2026-08-08 用户反馈(第二轮): Close/Dictat] EN: "Canvas shared. Copy the link from the share menu if needed."  → 核心: Canvas shared. Copy the link from the share menu if needed.
+[// ── 2026-08-08 用户反馈(第二轮): Close/Dictat] EN: "Canvas synced."  → 核心: Canvas synced.
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: >View All Models"  → 核心: >View All Models"
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: "self-driving":"Self-driving PRs"  → 核心: Self-driving PRs
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: "<div>Web Search Tool"  → 核心: <div>Web Search Tool
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: "Ask questions without making changes..."  → 核心: Ask questions without making changes...
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: `Ask questions without making changes...`  → 核心: Ask questions without making changes...
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: placeholder:"Ask questions without making changes..."  → 核心: Ask questions without making changes...
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: description:"Ask questions without making changes"  → 核心: Ask questions without making changes
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: label:"Cursor Local"  → 核心: Cursor Local
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: title:"Cursor Local"  → 核心: Cursor Local
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: children:"Cursor Local"  → 核心: Cursor Local
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: label:"Open Editor Window"  → 核心: Open Editor Window
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: title:"Open Editor Window"  → 核心: Open Editor Window
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: children:"Open Editor Window"  → 核心: Open Editor Window
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: label:"Open in Editor Window"  → 核心: Open in Editor Window
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: title:"Open in Editor Window"  → 核心: Open in Editor Window
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: children:"Open in Editor Window"  → 核心: Open in Editor Window
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: "Open in Editor Window"  → 核心: Open in Editor Window
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: "Import from Editor Window"  → 核心: Import from Editor Window
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: `Import from Editor Window (${S})`  → 核心: Import from Editor Window ({})
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: label:"Open Agents Window on startup"  → 核心: Open Agents Window on startup
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: description:"When launching Cursor, open Agents Window by default"  → 核心: When launching Cursor, open Agents Window by default
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: description:"Open the Agents Window by default when Cursor launches"  → 核心: Open the Agents Window by default when Cursor launches
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: description:"Choose the model used by the Explore subagent for initial research"  → 核心: Choose the model used by the Explore subagent for initial research
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: "Extensions have been modified on disk. Please reload the window."  → 核心: Extensions have been modified on disk. Please reload the window.
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: "Upgrade to Ultra Plan for near unlimited use, or set a Spend Limit for overages."  → 核心: Upgrade to Ultra Plan for near unlimited use, or set a Spend Limit for overages.
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: detail:"Upgrade to Ultra Plan for near unlimited use, or set a Spend Limit for overages."  → 核心: Upgrade to Ultra Plan for near unlimited use, or set a Spend Limit for overages.
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: "Loading branches..."  → 核心: Loading branches...
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: "Tracked repositories"  → 核心: Tracked repositories
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: `${e.slice(0,-1).join(", ")}, or ${e[e.length-1]}`  → 核心: {}, or {}
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: label:"Team default"  → 核心: Team default
+[// 附加窗口（Glass）独有或 HTML 包裹的片段。] EN: "<div>Web Fetch Tool"  → 核心: <div>Web Fetch Tool
+[// 附加窗口（Glass）独有或 HTML 包裹的片段。] EN: "<div><span>Task Models"  → 核心: <div><span>Task Models
+[// 附加窗口（Glass）独有或 HTML 包裹的片段。] EN: <span>On-Demand Usage  → 核心: <span>On-Demand Usage
+[// ── 命令创建对话框（nls 索引转字面量 + 字面量版）──] EN: title:E(7683,null),placeHolder:E(7684,null),prompt:E(7685,null)  → 核心: title:E(7683,null),placeHolder:E(7684,null),prompt:E(7685,null)
+[// ── Cycle 命令（循环切换模型参数，Ctrl+Alt+/；参数名由 ] EN: \\xB7 Cycle ${En} (${bi})  → 核心: \\xB7 Cycle {} ({})
+[// ── 2026-08-10: 3.15 构建 Cycle 变量名为 x2/] EN: \\xB7 Cycle ${oi} (${Hn})  → 核心: \\xB7 Cycle {} ({})
+[// ── Done（完成）：按钮/状态/标签 ──] EN: `Done \\u2022 ${s}`  → 核心: Done \\u2022 {}
+[// ── 欢迎页：Recent projects / Settings / I] EN: opacity-80">Settings\'  → 核心: opacity-80">Settings\'
+[// ── Thinking intensity 持久翻译：kR_ 注入参数名映] EN: function kR_(t){const e=XYo(t);return e.variants=e.variants??[],e.parameterDefinitions=e.parameterDefinitions??[],e}  → 核心: function kR_(t){const e=XYo(t);return e.variants=e.variants??[],e.parameterDefinitions=e.parameterDefinitions??[],e}
+[// Run on / This PC] EN: "Run on This PC"  → 核心: Run on This PC
+[// Run on / This PC] EN: "Run on Cloud"  → 核心: Run on Cloud
+[// + Add] EN: children:"+ Add"  → 核心: + Add
+[// + Add] EN: label:"+ Add"  → 核心: + Add
+[// + Add] EN: >"+ Add"  → 核心: + Add
+[// User Config] EN: children:"User Config"  → 核心: User Config
+[// User Config] EN: label:"User Config"  → 核心: User Config
+[// User Config] EN: title:"User Config"  → 核心: User Config
+[// Click or hold Ctrl M to dictate] EN: children:"Click or hold Ctrl M to dictate"  → 核心: Click or hold Ctrl M to dictate
+[// Click or hold Ctrl M to dictate] EN: placeholder:"Click or hold Ctrl M to dictate"  → 核心: Click or hold Ctrl M to dictate
+[// Learn more（HTML 上下文）] EN: >Learn more\'  → 核心: >Learn more\'
+[// Learn more（HTML 上下文）] EN: >Learn more"  → 核心: >Learn more"
+[// Learn more（HTML 上下文）] EN: >Learn more<  → 核心: >Learn more<
+[// Give Feedback...] EN: "Give Feedback..."  → 核心: Give Feedback...
+[// Give Feedback...] EN: children:"Give Feedback..."  → 核心: Give Feedback...
+[// Give Feedback...] EN: label:"Give Feedback..."  → 核心: Give Feedback...
+[// 模板字符串中的动态 tooltip（safeMegaRegex 无法匹配反] EN: `Toggle Agents (${  → 核心: `Toggle Agents (${
+[// 模板字符串中的动态 tooltip（safeMegaRegex 无法匹配反] EN: `Toggle Primary Side Bar (${  → 核心: `Toggle Primary Side Bar (${
+[// 模板字符串中的动态 tooltip（safeMegaRegex 无法匹配反] EN: `Show Agents Side Bar (${  → 核心: `Show Agents Side Bar (${
+[// ── Import 按钮（Importing... 状态）──] EN: ?"Importing\u2026":"Import"  → 核心: Importing…
+[// ── Import 按钮（Importing... 状态）──] EN: ?"Importing...":"Import"  → 核心: Importing...
+[// ── 编辑菜单 nls 索引转字面量（Agents 窗口 nls 不生效时] EN: title:E(192,null)  → 核心: title:E(192,null)
+[// ── 编辑菜单 nls 索引转字面量（Agents 窗口 nls 不生效时] EN: title:E(193,null)  → 核心: title:E(193,null)
+[// ── 编辑菜单 nls 索引转字面量（Agents 窗口 nls 不生效时] EN: title:E(194,null)  → 核心: title:E(194,null)
+[// ── 编辑菜单 nls 索引转字面量（Agents 窗口 nls 不生效时] EN: title:E(195,null)  → 核心: title:E(195,null)
+[// ── 编辑菜单 nls 索引转字面量（Agents 窗口 nls 不生效时] EN: title:E(196,null)  → 核心: title:E(196,null)
+[// ── 编辑菜单 nls 索引转字面量（Agents 窗口 nls 不生效时] EN: title:E(197,null)  → 核心: title:E(197,null)
+[// ── 编辑菜单 nls 索引转字面量（Agents 窗口 nls 不生效时] EN: title:E(198,null)  → 核心: title:E(198,null)
+[// ── 编辑菜单 nls 索引转字面量（Agents 窗口 nls 不生效时] EN: title:E(199,null)  → 核心: title:E(199,null)
+[// ── 编辑菜单 nls 索引转字面量（Agents 窗口 nls 不生效时] EN: title:E(945,null)  → 核心: title:E(945,null)
+[// ── 编辑菜单 nls 索引转字面量（Agents 窗口 nls 不生效时] EN: title:E(953,null)  → 核心: title:E(953,null)
+[// ── 编辑菜单 nls 索引转字面量（Agents 窗口 nls 不生效时] EN: title:E(954,null)  → 核心: title:E(954,null)
+[// ── 编辑菜单 nls 索引转字面量（Agents 窗口 nls 不生效时] EN: title:E(955,null)  → 核心: title:E(955,null)
+[// ── 编辑菜单 nls 索引转字面量（Agents 窗口 nls 不生效时] EN: title:E(956,null)  → 核心: title:E(956,null)
+[// ── 编辑菜单 nls 索引转字面量（Agents 窗口 nls 不生效时] EN: title:E(957,null)  → 核心: title:E(957,null)
+[// ── 编辑菜单 nls 索引转字面量（Agents 窗口 nls 不生效时] EN: title:E(958,null)  → 核心: title:E(958,null)
+[// ── 编辑菜单 nls 索引转字面量（Agents 窗口 nls 不生效时] EN: title:E(959,null)  → 核心: title:E(959,null)
+[// ── 编辑菜单 nls 索引转字面量（Agents 窗口 nls 不生效时] EN: title:E(960,null)  → 核心: title:E(960,null)
+[// ── 编辑菜单 nls 索引转字面量（Agents 窗口 nls 不生效时] EN: title:E(961,null)  → 核心: title:E(961,null)
+[// ── 编辑菜单 nls 索引转字面量（Agents 窗口 nls 不生效时] EN: title:E(962,null)  → 核心: title:E(962,null)
+[// ── 编辑菜单 nls 索引转字面量（Agents 窗口 nls 不生效时] EN: title:E(963,null)  → 核心: title:E(963,null)
+[// ── 编辑菜单 nls 索引转字面量（Agents 窗口 nls 不生效时] EN: title:E(964,null)  → 核心: title:E(964,null)
+[// ── Expand/Collapse 三元（Agents 窗口）──] EN: title:"Toggle Performance Bar"  → 核心: Toggle Performance Bar
+[// ── 设置页 ──] EN: title:"Open Tasks"  → 核心: Open Tasks
+[// ── 设置页 ──] EN: title:"Agent Stores"  → 核心: Agent Stores
+[// ── 设置页 ──] EN: hint.textContent = \'Click to select, drag to draw\'  → 核心: hint.textContent = \'Click to select, drag to draw\'
+[// ── 设置页 ──] EN: title:"Remove from List"  → 核心: Remove from List
+[// ── 设置页 ──] EN: title:"Show files"  → 核心: Show files
+[// ── 设置页 ──] EN: title:"Page isn\'t working"  → 核心: Page isn\'t working
+[// ── 设置页 ──] EN: title:"Can\'t connect to server"  → 核心: Can\'t connect to server
+[// ── 设置页 ──] EN: title:"You\'ve hit your hard limit"  → 核心: You\'ve hit your hard limit
+[// ── 设置页 ──] EN: title:"You\'ve hit your rate limit on your current plan"  → 核心: You\'ve hit your rate limit on your current plan
+[// ── 设置页 ──] EN: title:"We\'ve introduced a new home for all the ways to customize Cursor."  → 核心: We\'ve introduced a new home for all the ways to customize Cursor.
+[// ── 设置页 ──] EN: title:"Prepare workspace"  → 核心: Prepare workspace
+[// ── 设置页 ──] EN: title:"Applying changes locally…"  → 核心: Applying changes locally…
+[// ── 设置页 ──] EN: title:"Your changes will be lost if you don\'t save them."  → 核心: Your changes will be lost if you don\'t save them.
+[// ── 设置页 ──] EN: title:"You don\'t have access to this automation\'s run history."  → 核心: You don\'t have access to this automation\'s run history.
+[// ── 设置页 ──] EN: title:"You\'ll be logged out of your Cursor account on this device."  → 核心: You\'ll be logged out of your Cursor account on this device.
+[// ── 设置页 ──] EN: title:"We couldn\'t generate your referral link. Try again."  → 核心: We couldn\'t generate your referral link. Try again.
+[// ── 设置页 ──] EN: title:"Choose an environment"  → 核心: Choose an environment
+[// ── label 类型 ──] EN: label:"Review Mode"  → 核心: Review Mode
+[// ── label 类型 ──] EN: label:"Background Mode"  → 核心: Background Mode
+[// ── label 类型 ──] EN: label:"Can\'t connect to server"  → 核心: Can\'t connect to server
+[// ── label 类型 ──] EN: label:"Agent Stores"  → 核心: Agent Stores
+[// ── label 类型 ──] EN: label:"Remove from List"  → 核心: Remove from List
+[// ── label 类型 ──] EN: label:"Show files"  → 核心: Show files
+[// ── label 类型 ──] EN: label:"You\'ve hit your hard limit"  → 核心: You\'ve hit your hard limit
+[// ── label 类型 ──] EN: label:"You\'ve hit your rate limit on your current plan"  → 核心: You\'ve hit your rate limit on your current plan
+[// ── label 类型 ──] EN: label:"Your changes will be lost if you don\'t save them."  → 核心: Your changes will be lost if you don\'t save them.
+[// ── label 类型 ──] EN: label:"We couldn\'t generate your referral link. Try again."  → 核心: We couldn\'t generate your referral link. Try again.
+[// ── label 类型 ──] EN: label:"You don\'t have access to this automation\'s run history."  → 核心: You don\'t have access to this automation\'s run history.
+[// ── label 类型 ──] EN: label:"You\'ll be logged out of your Cursor account on this device."  → 核心: You\'ll be logged out of your Cursor account on this device.
+[// ── label 类型 ──] EN: label:"Applying changes locally…"  → 核心: Applying changes locally…
+[// ── label 类型 ──] EN: label:"Page isn\'t working"  → 核心: Page isn\'t working
+[// ── children 类型 ──] EN: children:"Review Mode"  → 核心: Review Mode
+[// ── children 类型 ──] EN: children:"Background Mode"  → 核心: Background Mode
+[// ── children 类型 ──] EN: children:"Show files"  → 核心: Show files
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Can\'t connect to server"  → 核心: Can\'t connect to server
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"You\'ve hit your hard limit"  → 核心: You\'ve hit your hard limit
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"You\'ve hit your rate limit on your current plan"  → 核心: You\'ve hit your rate limit on your current plan
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Page isn\'t working"  → 核心: Page isn\'t working
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Your changes will be lost if you don\'t save them."  → 核心: Your changes will be lost if you don\'t save them.
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"We couldn\'t generate your referral link. Try again."  → 核心: We couldn\'t generate your referral link. Try again.
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"You don\'t have access to this automation\'s run history."  → 核心: You don\'t have access to this automation\'s run history.
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"You\'ll be logged out of your Cursor account on this device."  → 核心: You\'ll be logged out of your Cursor account on this device.
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Applying changes locally…"  → 核心: Applying changes locally…
+[// ── 用户反馈缺失：Show/Hide Details（三元 + HTML] EN: btn.textContent = \'Hide Details\'  → 核心: btn.textContent = \'Hide Details\'
+[// ── 用户反馈缺失：Show/Hide Details（三元 + HTML] EN: btn.textContent = \'Show Details\'  → 核心: btn.textContent = \'Show Details\'
+[// ── 2026-08-08 第四轮截图：自动化状态 / 错误弹窗 ──] EN: ?"Server Error":"Failing"  → 核心: Server Error
+[// ── 2026-08-08 第四轮截图：AI 代码追踪统计 - Tab 系] EN: "AI 代码追踪统计 - Tab"  → 核心: AI 代码追踪统计 - Tab
+[// ── 2026-08-08 第四轮截图：AI 代码追踪统计 - Tab 系] EN: Tab 统计：  → 核心: Tab 统计：
+[// ── 2026-08-08 第四轮截图：AI 代码追踪统计 - Tab 系] EN: Tab AI 统计  → 核心: Tab AI 统计
+[// ── 2026-08-08 第五轮：New/Fork 菜单项 + Rese] EN: name:"fork",description:"复制此对话"  → 核心: 复制此对话
+
+===== leak-漏译候选 (431) =====
+[// ── 2026-08-08: 选中代码工具栏/右键菜单/关闭面板 ──] EN: _createButton(this._buttonContainer,k5e,"Quick Edit")  → 核心: Quick Edit
+[// ── 2026-08-08: 选中目标复制操作（Copy 短词，仅精确替换] EN: E("copyPath","Copy Path")  → 核心: Copy Path
+[// ── 2026-08-08 用户反馈(第二轮): Close/Dictat] EN: `Today ${s}`  → 核心: Today {}
+[// ── 2026-08-08 未翻译清单：高频词条 ──] EN: label:"Copy ID"  → 核心: Copy ID
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: `Open project: ${n.projectName}`  → 核心: Open project: {}
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: "Open project"  → 核心: Open project
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: children:"Local"  → 核心: Local
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: children:"Search"  → 核心: Search
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: title:"Automations"  → 核心: Automations
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: children:"Automations"  → 核心: Automations
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: s===void 0?"Automations"  → 核心: Automations
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: children:"Marketplace"  → 核心: Marketplace
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: name:Je(9469,"Repositories")  → 核心: Repositories
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: name:ot(9469,"Repositories")  → 核心: Repositories
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: label:"Repositories"  → 核心: Repositories
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: title:"Repositories"  → 核心: Repositories
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: label:s?"Unpin":"Pin"  → 核心: Unpin
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: label:ge?"Discard":"Archive"  → 核心: Discard
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: children:"Fork"  → 核心: Fork
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: children:"Export"  → 核心: Export
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: children:"Pin"  → 核心: Pin
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: children:"Archive"  → 核心: Archive
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: "Current Branch"  → 核心: Current Branch
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: title:"Pull Requests"  → 核心: Pull Requests
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: `${e[0]} or ${e[1]}`  → 核心: {} or {}
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: return n==="externalBrowser"?"Default browser":"Inside Cursor"  → 核心: externalBrowser
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: {id:"inApp",label:"Inside Cursor"},{id:"externalBrowser",label:"Default browser"}  → 核心: externalBrowser
+[// ── Glass 编辑菜单 OS 原生组：title:E/T({key:"] EN: title:E({key:"glassOsEditUndo",comment:["&& denotes a mnemonic"]},"&&Undo")  → 核心: && denotes a mnemonic
+[// ── Glass 编辑菜单 OS 原生组：title:E/T({key:"] EN: title:E({key:"glassOsEditRedo",comment:["&& denotes a mnemonic"]},"&&Redo")  → 核心: && denotes a mnemonic
+[// ── Glass 编辑菜单 OS 原生组：title:E/T({key:"] EN: title:E({key:"glassOsEditCut",comment:["&& denotes a mnemonic"]},"Cu&&t")  → 核心: && denotes a mnemonic
+[// ── Glass 编辑菜单 OS 原生组：title:E/T({key:"] EN: title:E({key:"glassOsEditCopy",comment:["&& denotes a mnemonic"]},"&&Copy")  → 核心: && denotes a mnemonic
+[// ── Glass 编辑菜单 OS 原生组：title:E/T({key:"] EN: title:E({key:"glassOsEditPaste",comment:["&& denotes a mnemonic"]},"&&Paste")  → 核心: && denotes a mnemonic
+[// ── Glass 编辑菜单 OS 原生组：title:E/T({key:"] EN: title:E({key:"glassOsEditSelectAll",comment:["&& denotes a mnemonic"]},"Select &&All")  → 核心: && denotes a mnemonic
+[// ── Agents 操作按钮动态文本（Undo/Copy 三元表达式，非 ] EN: ?"自定义":"Marketplace"  → 核心: Marketplace
+[// ── Agents 操作按钮动态文本（Undo/Copy 三元表达式，非 ] EN: rootLabel:"Marketplace"  → 核心: Marketplace
+[// ── Show {num} more / Show more ──] EN: ?"收起":"Show more"  → 核心: Show more
+[// ── New User Skill/Subagent 创建对话框（ne/T] EN: Z==="skill"?"Skill":"Subagent"  → 核心: Subagent
+[// ── New User Skill/Subagent 创建对话框（ne/T] EN: C==="skill"?"Skill":"Subagent"  → 核心: Subagent
+[// ── 重连/重试/规划状态 ──] EN: loading:"Exploring"  → 核心: Exploring
+[// "New" 作为独立 UI 文案（不加入 riskyShortWords ] EN: title:"New"  → 核心: New
+[// "New" 作为独立 UI 文案（不加入 riskyShortWords ] EN: placeholder:"New"  → 核心: New
+[// "New" 作为独立 UI 文案（不加入 riskyShortWords ] EN: name:"New"  → 核心: New
+[// "New" 作为独立 UI 文案（不加入 riskyShortWords ] EN: >"New"  → 核心: New
+[// Documentation] EN: label:"Documentation"  → 核心: Documentation
+[// Documentation] EN: title:"Documentation"  → 核心: Documentation
+[// Connected] EN: children:"Connected"  → 核心: Connected
+[// Connected] EN: >"Connected"  → 核心: Connected
+[// Installed] EN: label:"Installed"  → 核心: Installed
+[// Installed] EN: >"Installed"  → 核心: Installed
+[// Image] EN: children:"Image"  → 核心: Image
+[// Image] EN: label:"Image"  → 核心: Image
+[// Image] EN: title:"Image"  → 核心: Image
+[// Cloud] EN: >"Cloud"  → 核心: Cloud
+[// Recents] EN: children:"Recents"  → 核心: Recents
+[// Recents] EN: label:"Recents"  → 核心: Recents
+[// Recents] EN: >"Recents"  → 核心: Recents
+[// Run on / This PC] EN: children:"Run on"  → 核心: Run on
+[// Run on / This PC] EN: label:"Run on"  → 核心: Run on
+[// title 属性直接赋值（非 Te()/ft() 包裹，glass.js ] EN: title:"Report Issue"  → 核心: Report Issue
+[// ── 字体大小选项（Small/Default/Large/超大）──] EN: case .85:return"Small";case 1:return"Default";case 1.15:return"Large";case 1.3:return"超大"  → 核心: Default
+[// ── 模型选择器 Results/Suggested 标题（minifie] EN: title:tt?"Results":"Suggested"  → 核心: Suggested
+[// ── Agent 面板底部快捷键提示（Select/Open/Back）─] EN: shortcut:"\\u2191\\u2193"}),label:"Select"  → 核心: \\u2191\\u2193
+[// ── Agents 面板：分组/排序/筛选标签 ──] EN: value:"created",label:"Created"  → 核心: created
+[// ── Agents 面板：分组/排序/筛选标签 ──] EN: label:"Status",trailing:sb(dAi  → 核心: Status
+[// ── 文件操作 ──] EN: label:"New File"  → 核心: New File
+[// ── glass 翻译键回退值 ──] EN: void 0?"Automations"  → 核心: Automations
+[// ── Agents 面板：Environment/Source 子菜单触发] EN: label:"Environment",trailing:sb(dAi  → 核心: Environment
+[// ── Agents 面板：Environment/Source 子菜单触发] EN: label:"Source",trailing:sb(dAi  → 核心: Source
+[// ── "Changes" 标签/返回值 ──] EN: ?"Change":"Changes"  → 核心: Changes
+[// ── 用户反馈缺失：Git 空状态（图12-15）──] EN: `No uncommitted changes \xB7 ${Aa} ${Aa===1?"commit":"commits"}`  → 核心: No uncommitted changes \xB7 {} {}
+[// ── 用户反馈缺失：Git 空状态（图12-15）──] EN: "No uncommitted changes"  → 核心: No uncommitted changes
+[// ── 用户反馈缺失：图16/18/19 ──] EN: E("glassRecycle","Move to Recycle Bin")  → 核心: Move to Recycle Bin
+[// ── 用户反馈缺失：图16/18/19 ──] EN: E("glassTrash","Move to Trash")  → 核心: Move to Trash
+[// ── 用户反馈缺失：图16/18/19 ──] EN: E("glassDelete","Delete")  → 核心: glassDelete
+[// ── 用户反馈缺失：图16/18/19 ──] EN: QLt={image:"Image",attachments:"  → 核心: Image
+[// ── Expand/Collapse 三元（Agents 窗口）──] EN: e[e.Expand=1]="Expand"  → 核心: Expand
+[// ── 按钮/标签 ──] EN: title:"Open",type:"tertiary"  → 核心: tertiary
+[// ── 设置页 ──] EN: title:"Open Settings"  → 核心: Open Settings
+[// ── 设置页 ──] EN: title:"Open Rule"  → 核心: Open Rule
+[// ── 设置页 ──] EN: title:"Open Issues"  → 核心: Open Issues
+[// ── 设置页 ──] EN: title:"Open Window"  → 核心: Open Window
+[// ── 设置页 ──] EN: title:"Open Agent"  → 核心: Open Agent
+[// ── 设置页 ──] EN: title:"Open PR"  → 核心: Open PR
+[// ── 设置页 ──] EN: title:"Open File"  → 核心: Open File
+[// ── 设置页 ──] EN: title:"Open Tab"  → 核心: Open Tab
+[// ── 设置页 ──] EN: title:"Open SSH Config"  → 核心: Open SSH Config
+[// ── 设置页 ──] EN: title:"Open Existing"  → 核心: Open Existing
+[// ── 设置页 ──] EN: title:"Open Debug Directory"  → 核心: Open Debug Directory
+[// ── 设置页 ──] EN: title:"Open Recording Folder"  → 核心: Open Recording Folder
+[// ── 设置页 ──] EN: title:"Open Request Logs"  → 核心: Open Request Logs
+[// ── 设置页 ──] EN: title:"Open Datadog Logs"  → 核心: Open Datadog Logs
+[// ── 设置页 ──] EN: title:"Open Section Headers Quick Pick"  → 核心: Open Section Headers Quick Pick
+[// ── 设置页 ──] EN: title:"Open Prompt Quality"  → 核心: Open Prompt Quality
+[// ── 设置页 ──] EN: title:"Open Background Agent Overview"  → 核心: Open Background Agent Overview
+[// ── 设置页 ──] EN: title:"Open environment.json"  → 核心: Open environment.json
+[// ── 设置页 ──] EN: title:"Open in Cursor Browser"  → 核心: Open in Cursor Browser
+[// ── 设置页 ──] EN: title:"Open in External Browser"  → 核心: Open in External Browser
+[// ── 设置页 ──] EN: title:"Open in Datadog"  → 核心: Open in Datadog
+[// ── 设置页 ──] EN: title:"Open in Statsig"  → 核心: Open in Statsig
+[// ── 设置页 ──] EN: title:"Open a different workspace"  → 核心: Open a different workspace
+[// ── 设置页 ──] EN: title:"Open new window in worktree"  → 核心: Open new window in worktree
+[// ── 设置页 ──] EN: title:"Open terminal in worktree"  → 核心: Open terminal in worktree
+[// ── 设置页 ──] EN: title:"Open Link"  → 核心: Open Link
+[// ── 设置页 ──] EN: title:"About Allowlist"  → 核心: About Allowlist
+[// ── 设置页 ──] EN: title:"Access Settings"  → 核心: Access Settings
+[// ── 设置页 ──] EN: title:"Agent Layout"  → 核心: Agent Layout
+[// ── 设置页 ──] EN: title:"Agent Window"  → 核心: Agent Window
+[// ── 设置页 ──] EN: title:"Agent Instructions"  → 核心: Agent Instructions
+[// ── 设置页 ──] EN: title:"Add MCP"  → 核心: Add MCP
+[// ── 设置页 ──] EN: title:"Add Port"  → 核心: Add Port
+[// ── 设置页 ──] EN: title:"Add Folder"  → 核心: Add Folder
+[// ── 设置页 ──] EN: title:"Add link"  → 核心: Add link
+[// ── 设置页 ──] EN: title:"Add to Team"  → 核心: Add to Team
+[// ── 设置页 ──] EN: title:"Ask Sidechat"  → 核心: Ask Sidechat
+[// ── 设置页 ──] EN: title:"Ask question"  → 核心: Ask question
+[// ── 设置页 ──] EN: title:"Accept All"  → 核心: Accept All
+[// ── 设置页 ──] EN: title:"Accept Edits"  → 核心: Accept Edits
+[// ── 设置页 ──] EN: title:"Accept Cursor Tab Suggestion"  → 核心: Accept Cursor Tab Suggestion
+[// ── 设置页 ──] EN: title:"Accept Partial Edit"  → 核心: Accept Partial Edit
+[// ── 设置页 ──] EN: title:"Accept & Run"  → 核心: Accept & Run
+[// ── 设置页 ──] EN: title:"Apply Changes"  → 核心: Apply Changes
+[// ── 设置页 ──] EN: title:"Build Progress"  → 核心: Build Progress
+[// ── 设置页 ──] EN: title:"Discard Changes"  → 核心: Discard Changes
+[// ── 设置页 ──] EN: title:"Reject All Edits"  → 核心: Reject All Edits
+[// ── 设置页 ──] EN: title:"Reject Partial Edit"  → 核心: Reject Partial Edit
+[// ── 设置页 ──] EN: title:"Undo Edits"  → 核心: Undo Edits
+[// ── 设置页 ──] EN: title:"Undo All"  → 核心: Undo All
+[// ── 设置页 ──] EN: title:"Undo & Apply"  → 核心: Undo & Apply
+[// ── 设置页 ──] EN: title:"Undo File"  → 核心: Undo File
+[// ── 设置页 ──] EN: title:"Rename Folder"  → 核心: Rename Folder
+[// ── 设置页 ──] EN: title:"Remove from History"  → 核心: Remove from History
+[// ── 设置页 ──] EN: title:"Remove Favorite"  → 核心: Remove Favorite
+[// ── 设置页 ──] EN: title:"Refresh Status"  → 核心: Refresh Status
+[// ── 设置页 ──] EN: title:"Replace All"  → 核心: Replace All
+[// ── 设置页 ──] EN: title:"Reset All"  → 核心: Reset All
+[// ── 设置页 ──] EN: title:"Run Now"  → 核心: Run Now
+[// ── 设置页 ──] EN: title:"Run in Background"  → 核心: Run in Background
+[// ── 设置页 ──] EN: title:"Reopen PR"  → 核心: Reopen PR
+[// ── 设置页 ──] EN: title:"Reopen conversation"  → 核心: Reopen conversation
+[// ── 设置页 ──] EN: title:"Review Again"  → 核心: Review Again
+[// ── 设置页 ──] EN: title:"Review Plan"  → 核心: Review Plan
+[// ── 设置页 ──] EN: title:"Review next file"  → 核心: Review next file
+[// ── 设置页 ──] EN: title:"Send to Cloud"  → 核心: Send to Cloud
+[// ── 设置页 ──] EN: title:"Send Test Notification"  → 核心: Send Test Notification
+[// ── 设置页 ──] EN: title:"Start New Thread With Summary"  → 核心: Start New Thread With Summary
+[// ── 设置页 ──] EN: title:"Start onboarding"  → 核心: Start onboarding
+[// ── 设置页 ──] EN: title:"Stash Changes"  → 核心: Stash Changes
+[// ── 设置页 ──] EN: title:"Suggest Changes"  → 核心: Suggest Changes
+[// ── 设置页 ──] EN: title:"Switch mode"  → 核心: Switch mode
+[// ── 设置页 ──] EN: title:"Switch to Auto"  → 核心: Switch to Auto
+[// ── 设置页 ──] EN: title:"Take Control"  → 核心: Take Control
+[// ── 设置页 ──] EN: title:"Try again"  → 核心: Try again
+[// ── 设置页 ──] EN: title:"Undo All"  → 核心: Undo All
+[// ── 设置页 ──] EN: title:"Unlink PR"  → 核心: Unlink PR
+[// ── 设置页 ──] EN: title:"Unpublish Skill"  → 核心: Unpublish Skill
+[// ── 设置页 ──] EN: title:"Publish Skill"  → 核心: Publish Skill
+[// ── 设置页 ──] EN: title:"View All Changes"  → 核心: View All Changes
+[// ── 设置页 ──] EN: title:"View Automation"  → 核心: View Automation
+[// ── 设置页 ──] EN: title:"View Current Branch"  → 核心: View Current Branch
+[// ── 设置页 ──] EN: title:"View referral history"  → 核心: View referral history
+[// ── 设置页 ──] EN: title:"Show History"  → 核心: Show History
+[// ── 设置页 ──] EN: title:"Show Less"  → 核心: Show Less
+[// ── 设置页 ──] EN: title:"Show More"  → 核心: Show More
+[// ── 设置页 ──] EN: title:"Show Changes"  → 核心: Show Changes
+[// ── 设置页 ──] EN: title:"Pause Indexing"  → 核心: Pause Indexing
+[// ── 设置页 ──] EN: title:"Pause goal"  → 核心: Pause goal
+[// ── 设置页 ──] EN: title:"Resume goal"  → 核心: Resume goal
+[// ── 设置页 ──] EN: title:"Use Existing..."  → 核心: Use Existing...
+[// ── 设置页 ──] EN: title:"Recently changed"  → 核心: Recently changed
+[// ── 设置页 ──] EN: title:"Your Tasks"  → 核心: Your Tasks
+[// ── 设置页 ──] EN: title:"All repositories"  → 核心: All repositories
+[// ── 设置页 ──] EN: title:"All repos"  → 核心: All repos
+[// ── 设置页 ──] EN: title:"Team Default"  → 核心: Team Default
+[// ── 设置页 ──] EN: title:"Usage Remaining"  → 核心: Usage Remaining
+[// ── 设置页 ──] EN: title:"Quick Question"  → 核心: Quick Question
+[// ── 设置页 ──] EN: title:"Side Chat"  → 核心: Side Chat
+[// ── 设置页 ──] EN: title:"Side chats"  → 核心: Side chats
+[// ── 设置页 ──] EN: title:"Past Chat"  → 核心: Past Chat
+[// ── 设置页 ──] EN: title:"Self-driving Settings"  → 核心: Self-driving Settings
+[// ── 设置页 ──] EN: title:"Background agent"  → 核心: Background agent
+[// ── 设置页 ──] EN: title:"Browser Tab"  → 核心: Browser Tab
+[// ── 设置页 ──] EN: title:"Source Action..."  → 核心: Source Action...
+[// ── 设置页 ──] EN: title:"Something went wrong"  → 核心: Something went wrong
+[// ── 设置页 ──] EN: title:"Something went wrong."  → 核心: Something went wrong.
+[// ── 设置页 ──] EN: title:"Something is off"  → 核心: Something is off
+[// ── 设置页 ──] EN: title:"Review required"  → 核心: Review required
+[// ── 设置页 ──] EN: title:"Action Needed"  → 核心: Action Needed
+[// ── 设置页 ──] EN: title:"Refer friends, earn usage credits"  → 核心: Refer friends, earn usage credits
+[// ── 设置页 ──] EN: title:"Referral link"  → 核心: Referral link
+[// ── 设置页 ──] EN: title:"Public Profile"  → 核心: Public Profile
+[// ── 设置页 ──] EN: title:"Share an invite link or send invites by email."  → 核心: Share an invite link or send invites by email.
+[// ── 设置页 ──] EN: title:"Verified by Cursor"  → 核心: Verified by Cursor
+[// ── 设置页 ──] EN: title:"Would you like to remember this preference for future sessions?"  → 核心: Would you like to remember this preference for future sessions?
+[// ── 设置页 ──] EN: title:"This action cannot be undone. Proceed anyway?"  → 核心: This action cannot be undone. Proceed anyway?
+[// ── 设置页 ──] EN: title:"Are you sure you want to close this window?"  → 核心: Are you sure you want to close this window?
+[// ── 设置页 ──] EN: title:"Are you sure you want to perform this action?"  → 核心: Are you sure you want to perform this action?
+[// ── 设置页 ──] EN: title:"Proceed anyway (changes might not apply correctly)"  → 核心: Proceed anyway (changes might not apply correctly)
+[// ── 设置页 ──] EN: title:"This workspace"  → 核心: This workspace
+[// ── 设置页 ──] EN: title:"Add a plugin to this agent"  → 核心: Add a plugin to this agent
+[// ── 设置页 ──] EN: title:"Remove a plugin from this agent"  → 核心: Remove a plugin from this agent
+[// ── 设置页 ──] EN: title:"Add plugins to this marketplace so your team can install them."  → 核心: Add plugins to this marketplace so your team can install them.
+[// ── 设置页 ──] EN: title:"API Key"  → 核心: API Key
+[// ── 设置页 ──] EN: title:"Base URL"  → 核心: Base URL
+[// ── 设置页 ──] EN: title:"OAuth 2.0 Client ID"  → 核心: OAuth 2.0 Client ID
+[// ── 设置页 ──] EN: title:"OAuth 2.0 Client Secret (optional)"  → 核心: OAuth 2.0 Client Secret (optional)
+[// ── 设置页 ──] EN: title:"Azure DevOps"  → 核心: Azure DevOps
+[// ── 设置页 ──] EN: title:"Backend API"  → 核心: Backend API
+[// ── 设置页 ──] EN: title:"Backend Server"  → 核心: Backend Server
+[// ── 设置页 ──] EN: title:"Production Server"  → 核心: Production Server
+[// ── 设置页 ──] EN: title:"CLI Credentials"  → 核心: CLI Credentials
+[// ── 设置页 ──] EN: title:"This chat could not be loaded."  → 核心: This chat could not be loaded.
+[// ── 设置页 ──] EN: title:"This pull request cannot be merged"  → 核心: This pull request cannot be merged
+[// ── 设置页 ──] EN: title:"This pull request tab does not have a branch name yet."  → 核心: This pull request tab does not have a branch name yet.
+[// ── 设置页 ──] EN: title:"This task is missing its pull request URL."  → 核心: This task is missing its pull request URL.
+[// ── 设置页 ──] EN: title:"Unable to load this step."  → 核心: Unable to load this step.
+[// ── 设置页 ──] EN: title:"An error occurred while processing your request."  → 核心: An error occurred while processing your request.
+[// ── 设置页 ──] EN: title:"The certificate for this site is not trusted"  → 核心: The certificate for this site is not trusted
+[// ── 设置页 ──] EN: title:"Switch where this agent runs"  → 核心: Switch where this agent runs
+[// ── 设置页 ──] EN: title:"Resize sections"  → 核心: Resize sections
+[// ── 设置页 ──] EN: title:"Resize section"  → 核心: Resize section
+[// ── 设置页 ──] EN: title:"Resize terminal tree"  → 核心: Resize terminal tree
+[// ── 设置页 ──] EN: title:"Resize changes sidebar"  → 核心: Resize changes sidebar
+[// ── 设置页 ──] EN: title:"Resize canvas list"  → 核心: Resize canvas list
+[// ── 设置页 ──] EN: title:"Resize browser sidebar"  → 核心: Resize browser sidebar
+[// ── 设置页 ──] EN: title:"Resize diff meter"  → 核心: Resize diff meter
+[// ── 设置页 ──] EN: title:"Resize pull request file trees"  → 核心: Resize pull request file trees
+[// ── 设置页 ──] EN: title:"Resize All Heights"  → 核心: Resize All Heights
+[// ── 设置页 ──] EN: title:"Try resizing this"  → 核心: Try resizing this
+[// ── 设置页 ──] EN: title:"Automation name"  → 核心: Automation name
+[// ── 设置页 ──] EN: title:"Run command"  → 核心: Run command
+[// ── 设置页 ──] EN: title:"Squash merge"  → 核心: Squash merge
+[// ── 设置页 ──] EN: title:"Push unpushed commits"  → 核心: Push unpushed commits
+[// ── 设置页 ──] EN: title:"View Current Branch"  → 核心: View Current Branch
+[// ── 设置页 ──] EN: title:"Permanently discard your current changes before switching branches"  → 核心: Permanently discard your current changes before switching branches
+[// ── 设置页 ──] EN: title:"Recommended to ensure correct base for changes"  → 核心: Recommended to ensure correct base for changes
+[// ── 设置页 ──] EN: title:"Save changes to a stash and restore them later"  → 核心: Save changes to a stash and restore them later
+[// ── 设置页 ──] EN: title:"Save your changes and restore them later"  → 核心: Save your changes and restore them later
+[// ── 设置页 ──] EN: title:"Search web"  → 核心: Search web
+[// ── 设置页 ──] EN: title:"Search again in all files"  → 核心: Search again in all files
+[// ── 设置页 ──] EN: title:"Report Good"  → 核心: Report Good
+[// ── 设置页 ──] EN: title:"Report Bad"  → 核心: Report Bad
+[// ── 设置页 ──] EN: title:"Report with Comment"  → 核心: Report with Comment
+[// ── 设置页 ──] EN: title:"Stop Bisect"  → 核心: Stop Bisect
+[// ── 设置页 ──] EN: title:"Stop Control"  → 核心: Stop Control
+[// ── 设置页 ──] EN: title:"Set Up Workspace"  → 核心: Set Up Workspace
+[// ── 设置页 ──] EN: title:"Set Value"  → 核心: Set Value
+[// ── 设置页 ──] EN: title:"Select an option"  → 核心: Select an option
+[// ── 设置页 ──] EN: title:"Select to End"  → 核心: Select to End
+[// ── 设置页 ──] EN: title:"Choose a repo"  → 核心: Choose a repo
+[// ── 设置页 ──] EN: title:"Choose a workspace"  → 核心: Choose a workspace
+[// ── label 类型 ──] EN: label:"Agent Mode"  → 核心: Agent Mode
+[// ── label 类型 ──] EN: label:"Self-Driving Mode"  → 核心: Self-Driving Mode
+[// ── label 类型 ──] EN: label:"Run Task"  → 核心: Run Task
+[// ── label 类型 ──] EN: label:"Personal Usage"  → 核心: Personal Usage
+[// ── label 类型 ──] EN: label:"Your Tasks"  → 核心: Your Tasks
+[// ── label 类型 ──] EN: label:"Team agents"  → 核心: Team agents
+[// ── label 类型 ──] EN: label:"Recently changed"  → 核心: Recently changed
+[// ── label 类型 ──] EN: label:"Your branches"  → 核心: Your branches
+[// ── label 类型 ──] EN: label:"Browser Tools"  → 核心: Browser Tools
+[// ── label 类型 ──] EN: label:"Sign Up"  → 核心: Sign Up
+[// ── label 类型 ──] EN: label:"Try Again"  → 核心: Try Again
+[// ── label 类型 ──] EN: label:"Upgrade to Ultra"  → 核心: Upgrade to Ultra
+[// ── label 类型 ──] EN: label:"Refer friends, earn usage credits"  → 核心: Refer friends, earn usage credits
+[// ── label 类型 ──] EN: label:"Referral link"  → 核心: Referral link
+[// ── label 类型 ──] EN: label:"AWS Bedrock"  → 核心: AWS Bedrock
+[// ── label 类型 ──] EN: label:"Azure OpenAI"  → 核心: Azure OpenAI
+[// ── label 类型 ──] EN: label:"OAuth 2.0 Client ID"  → 核心: OAuth 2.0 Client ID
+[// ── label 类型 ──] EN: label:"Scheduled Tasks"  → 核心: Scheduled Tasks
+[// ── label 类型 ──] EN: label:"Something went wrong"  → 核心: Something went wrong
+[// ── label 类型 ──] EN: label:"Outdated Client"  → 核心: Outdated Client
+[// ── label 类型 ──] EN: label:"Payment failed"  → 核心: Payment failed
+[// ── label 类型 ──] EN: label:"Update Required"  → 核心: Update Required
+[// ── label 类型 ──] EN: label:"Restart to Update"  → 核心: Restart to Update
+[// ── label 类型 ──] EN: label:"Pause Indexing"  → 核心: Pause Indexing
+[// ── label 类型 ──] EN: label:"Replace all"  → 核心: Replace all
+[// ── label 类型 ──] EN: label:"Preserve Case"  → 核心: Preserve Case
+[// ── label 类型 ──] EN: label:"Use Regular Expression"  → 核心: Use Regular Expression
+[// ── label 类型 ──] EN: label:"Select Workspace"  → 核心: Select Workspace
+[// ── label 类型 ──] EN: label:"Select Backend"  → 核心: Select Backend
+[// ── label 类型 ──] EN: label:"Send to Cloud"  → 核心: Send to Cloud
+[// ── label 类型 ──] EN: label:"Send invite"  → 核心: Send invite
+[// ── label 类型 ──] EN: label:"Add MCP"  → 核心: Add MCP
+[// ── label 类型 ──] EN: label:"Add Folder"  → 核心: Add Folder
+[// ── label 类型 ──] EN: label:"Add to Team"  → 核心: Add to Team
+[// ── label 类型 ──] EN: label:"Access Settings"  → 核心: Access Settings
+[// ── label 类型 ──] EN: label:"Agent Instructions"  → 核心: Agent Instructions
+[// ── label 类型 ──] EN: label:"Accept All"  → 核心: Accept All
+[// ── label 类型 ──] EN: label:"Rename Folder"  → 核心: Rename Folder
+[// ── label 类型 ──] EN: label:"Reset All"  → 核心: Reset All
+[// ── label 类型 ──] EN: label:"Reset zoom"  → 核心: Reset zoom
+[// ── label 类型 ──] EN: label:"Show Less"  → 核心: Show Less
+[// ── label 类型 ──] EN: label:"Show More"  → 核心: Show More
+[// ── label 类型 ──] EN: label:"Show Chat"  → 核心: Show Chat
+[// ── label 类型 ──] EN: label:"Take Control"  → 核心: Take Control
+[// ── label 类型 ──] EN: label:"Self-Driving PRs"  → 核心: Self-Driving PRs
+[// ── label 类型 ──] EN: label:"Self-driving Settings"  → 核心: Self-driving Settings
+[// ── label 类型 ──] EN: label:"Branch Pull Requests"  → 核心: Branch Pull Requests
+[// ── label 类型 ──] EN: label:"PR Routing & Approval"  → 核心: PR Routing & Approval
+[// ── label 类型 ──] EN: label:"Verified by Cursor"  → 核心: Verified by Cursor
+[// ── label 类型 ──] EN: label:"Something is off"  → 核心: Something is off
+[// ── label 类型 ──] EN: label:"Past Chat"  → 核心: Past Chat
+[// ── label 类型 ──] EN: label:"Run in"  → 核心: Run in
+[// ── label 类型 ──] EN: label:"Report Bug"  → 核心: Report Bug
+[// ── label 类型 ──] EN: label:"Report Lag"  → 核心: Report Lag
+[// ── label 类型 ──] EN: label:"Select to End"  → 核心: Select to End
+[// ── label 类型 ──] EN: label:"Source Action..."  → 核心: Source Action...
+[// ── label 类型 ──] EN: label:"Outdated Client"  → 核心: Outdated Client
+[// ── label 类型 ──] EN: label:"Payment Method Update Required"  → 核心: Payment Method Update Required
+[// ── label 类型 ──] EN: label:"Payment failed"  → 核心: Payment failed
+[// ── label 类型 ──] EN: label:"Usage Pricing Required"  → 核心: Usage Pricing Required
+[// ── label 类型 ──] EN: label:"This workspace"  → 核心: This workspace
+[// ── label 类型 ──] EN: label:"Add a plugin to this agent"  → 核心: Add a plugin to this agent
+[// ── label 类型 ──] EN: label:"Remove a plugin from this agent"  → 核心: Remove a plugin from this agent
+[// ── label 类型 ──] EN: label:"Add plugins to this marketplace so your team can install them."  → 核心: Add plugins to this marketplace so your team can install them.
+[// ── label 类型 ──] EN: label:"This action cannot be undone. Proceed anyway?"  → 核心: This action cannot be undone. Proceed anyway?
+[// ── label 类型 ──] EN: label:"Are you sure you want to close this window?"  → 核心: Are you sure you want to close this window?
+[// ── label 类型 ──] EN: label:"Are you sure you want to perform this action?"  → 核心: Are you sure you want to perform this action?
+[// ── label 类型 ──] EN: label:"Proceed anyway (changes might not apply correctly)"  → 核心: Proceed anyway (changes might not apply correctly)
+[// ── label 类型 ──] EN: label:"Would you like to remember this preference for future sessions?"  → 核心: Would you like to remember this preference for future sessions?
+[// ── label 类型 ──] EN: label:"An error occurred while processing your request."  → 核心: An error occurred while processing your request.
+[// ── label 类型 ──] EN: label:"The certificate for this site is not trusted"  → 核心: The certificate for this site is not trusted
+[// ── label 类型 ──] EN: label:"Unable to load this step."  → 核心: Unable to load this step.
+[// ── label 类型 ──] EN: label:"This chat could not be loaded."  → 核心: This chat could not be loaded.
+[// ── label 类型 ──] EN: label:"This pull request cannot be merged"  → 核心: This pull request cannot be merged
+[// ── label 类型 ──] EN: label:"This pull request tab does not have a branch name yet."  → 核心: This pull request tab does not have a branch name yet.
+[// ── label 类型 ──] EN: label:"This task is missing its pull request URL."  → 核心: This task is missing its pull request URL.
+[// ── label 类型 ──] EN: label:"Something went wrong"  → 核心: Something went wrong
+[// ── label 类型 ──] EN: label:"Something went wrong."  → 核心: Something went wrong.
+[// ── label 类型 ──] EN: label:"Select an option"  → 核心: Select an option
+[// ── label 类型 ──] EN: label:"Switch where this agent runs"  → 核心: Switch where this agent runs
+[// ── label 类型 ──] EN: label:"Permanently discard your current changes before switching branches"  → 核心: Permanently discard your current changes before switching branches
+[// ── label 类型 ──] EN: label:"Recommended to ensure correct base for changes"  → 核心: Recommended to ensure correct base for changes
+[// ── label 类型 ──] EN: label:"Save changes to a stash and restore them later"  → 核心: Save changes to a stash and restore them later
+[// ── label 类型 ──] EN: label:"Save your changes and restore them later"  → 核心: Save your changes and restore them later
+[// ── label 类型 ──] EN: label:"Push unpushed commits"  → 核心: Push unpushed commits
+[// ── label 类型 ──] EN: label:"Score Commit for AI Content"  → 核心: Score Commit for AI Content
+[// ── label 类型 ──] EN: label:"Run in"  → 核心: Run in
+[// ── label 类型 ──] EN: label:"Replace all"  → 核心: Replace all
+[// ── children 类型 ──] EN: children:"Open Settings"  → 核心: Open Settings
+[// ── children 类型 ──] EN: children:"Agent Mode"  → 核心: Agent Mode
+[// ── children 类型 ──] EN: children:"Self-Driving Mode"  → 核心: Self-Driving Mode
+[// ── children 类型 ──] EN: children:"Accept Edits"  → 核心: Accept Edits
+[// ── children 类型 ──] EN: children:"Reject All Edits"  → 核心: Reject All Edits
+[// ── children 类型 ──] EN: children:"Undo Edits"  → 核心: Undo Edits
+[// ── children 类型 ──] EN: children:"Undo All"  → 核心: Undo All
+[// ── children 类型 ──] EN: children:"Apply Changes"  → 核心: Apply Changes
+[// ── children 类型 ──] EN: children:"Rename Chat"  → 核心: Rename Chat
+[// ── children 类型 ──] EN: children:"View All Changes"  → 核心: View All Changes
+[// ── children 类型 ──] EN: children:"Show History"  → 核心: Show History
+[// ── children 类型 ──] EN: children:"Show Chat"  → 核心: Show Chat
+[// ── children 类型 ──] EN: children:"Show Changes"  → 核心: Show Changes
+[// ── children 类型 ──] EN: children:"Switch mode"  → 核心: Switch mode
+[// ── children 类型 ──] EN: children:"Try again"  → 核心: Try again
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Upgrade to Ultra"  → 核心: Upgrade to Ultra
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Run Now"  → 核心: Run Now
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Run Task"  → 核心: Run Task
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Run in Background"  → 核心: Run in Background
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Run command"  → 核心: Run command
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Pause Indexing"  → 核心: Pause Indexing
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Pause goal"  → 核心: Pause goal
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Resume goal"  → 核心: Resume goal
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Stash Changes"  → 核心: Stash Changes
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Replace all"  → 核心: Replace all
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Preserve Case"  → 核心: Preserve Case
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Use Regular Expression"  → 核心: Use Regular Expression
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Select Workspace"  → 核心: Select Workspace
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Select Backend"  → 核心: Select Backend
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Send invite"  → 核心: Send invite
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Share Transcript"  → 核心: Share Transcript
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Open Settings"  → 核心: Open Settings
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Source Action..."  → 核心: Source Action...
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Browse Files"  → 核心: Browse Files
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Build Locally"  → 核心: Build Locally
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Build in Cloud"  → 核心: Build in Cloud
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Search Agents"  → 核心: Search Agents
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Search web"  → 核心: Search web
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Report Bug"  → 核心: Report Bug
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Report Good"  → 核心: Report Good
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Report Bad"  → 核心: Report Bad
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Report Lag"  → 核心: Report Lag
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Select to End"  → 核心: Select to End
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Reset zoom"  → 核心: Reset zoom
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Switch where this agent runs"  → 核心: Switch where this agent runs
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Action Needed"  → 核心: Action Needed
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Review required"  → 核心: Review required
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Something is off"  → 核心: Something is off
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Outdated Client"  → 核心: Outdated Client
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Payment Method Update Required"  → 核心: Payment Method Update Required
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Payment failed"  → 核心: Payment failed
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Update Required"  → 核心: Update Required
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Restart to Update"  → 核心: Restart to Update
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Usage Pricing Required"  → 核心: Usage Pricing Required
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Add a plugin to this agent"  → 核心: Add a plugin to this agent
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Remove a plugin from this agent"  → 核心: Remove a plugin from this agent
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Add plugins to this marketplace so your team can install them."  → 核心: Add plugins to this marketplace so your team can install them.
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Are you sure you want to close this window?"  → 核心: Are you sure you want to close this window?
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Proceed anyway (changes might not apply correctly)"  → 核心: Proceed anyway (changes might not apply correctly)
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"This pull request cannot be merged"  → 核心: This pull request cannot be merged
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"This pull request tab does not have a branch name yet."  → 核心: This pull request tab does not have a branch name yet.
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"This task is missing its pull request URL."  → 核心: This task is missing its pull request URL.
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Permanently discard your current changes before switching branches"  → 核心: Permanently discard your current changes before switching branches
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Recommended to ensure correct base for changes"  → 核心: Recommended to ensure correct base for changes
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Save changes to a stash and restore them later"  → 核心: Save changes to a stash and restore them later
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Save your changes and restore them later"  → 核心: Save your changes and restore them later
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Push unpushed commits"  → 核心: Push unpushed commits
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Score Commit for AI Content"  → 核心: Score Commit for AI Content
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"PR Routing & Approval"  → 核心: PR Routing & Approval
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Run in"  → 核心: Run in
+[// ── heading 类型 ──] EN: heading:"Plans"  → 核心: Plans
+[// ── 开发者/调试命令 ──] EN: title:"Delete Old Chats..."  → 核心: Delete Old Chats...
+[// ── Agents 窗口缺失的编辑菜单/操作按钮构造函数形式 ──] EN: new ks("undo","Undo"  → 核心: undo
+[// ── Agents 窗口缺失的编辑菜单/操作按钮构造函数形式 ──] EN: new ks("redo","Redo"  → 核心: redo
+[// ── Agents 窗口缺失的编辑菜单/操作按钮构造函数形式 ──] EN: new ks("cut","Cut"  → 核心: cut
+[// ── Agents 窗口缺失的编辑菜单/操作按钮构造函数形式 ──] EN: new ks("copy","Copy"  → 核心: copy
+[// ── Agents 窗口缺失的编辑菜单/操作按钮构造函数形式 ──] EN: new ks("paste","Paste"  → 核心: paste
+[// ── Agents 窗口缺失的编辑菜单/操作按钮构造函数形式 ──] EN: new ks("selectAll","Select All"  → 核心: Select All
+[// ── Agents 窗口缺失的编辑菜单/操作按钮构造函数形式 ──] EN: new ks("collapse-all","Collapse All"  → 核心: collapse-all
+[// ── 用户反馈缺失：Discard Anular Changes / Di] EN: E("glassSaveConflictDiscard","Discard Changes")  → 核心: glassSaveConflictDiscard
+[// ── 用户反馈缺失：Home、（Collapse All 其余形式）──] EN: title:ft(9500,"Collapse All")  → 核心: Collapse All
+[// ── 2026-08-08 第四轮截图：New / Add 按钮文案 ──] EN: tone:"added"},"New");  → 核心: added
+[// ── 2026-08-10: 插件市场 curatedCategories] EN: "canvas-mention-card":return"Canvas"  → 核心: canvas-mention-card
+[// ── 2026-08-10: 插件市场 curatedCategories] EN: mgt(t):"Canvas",  → 核心: Canvas
+[// ── 2026-08-10: 插件市场 curatedCategories] EN: aLt(e):"Canvas",  → 核心: Canvas
+[// ── 2026-08-08 第四轮补充：Canvas 标签页/画布面板 +] EN: children:M==="rendered"?"Canvas":"Source"  → 核心: rendered
+[// ── 2026-08-08 第四轮补充：Canvas 标签页/画布面板 +] EN: case an.Canvas:return"Canvas"  → 核心: Canvas
+[// ── 2026-08-08 第四轮补充：Canvas 标签页/画布面板 +] EN: E("glass.agentPanel.openCanvas","Canvas")  → 核心: glass.agentPanel.openCanvas
+[// ── 2026-08-08 第四轮补充：Canvas 标签页/画布面板 +] EN: ?mgt(n):"Canvas";  → 核心: Canvas
+[// ── 2026-08-10 3.15 残留：Glass 窗口新形态 ──] EN: children:["Browse"," ","Marketplace"]  → 核心: Marketplace
+[// ── 2026-08-10 3.15 残留：Glass 窗口新形态 ──] EN: ?"Discard":"归档"  → 核心: Discard
+[// ── 2026-08-10 3.15 残留：Glass 窗口新形态 ──] EN: ?"Connect":"保存"  → 核心: Connect
+[// ── 2026-08-10 3.15 残留：Glass 窗口新形态 ──] EN: ?"Enabled":"已禁用"  → 核心: Enabled
+
+===== covered-已覆盖冗余 (373) =====
+[// ── 2026-08-08 未翻译清单：中频词条（glass 存在的形式）] EN: ?"Mark as Read":"标记为未读"  → 核心: Mark as Read
+[// ── 2026-08-08 未翻译清单：中频第二批（登录/云端/任务/对话] EN: label:"Replace Chat"  → 核心: Replace Chat
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: "<span>Recent projects"  → 核心: <span>Recent projects
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: "Clone repo"  → 核心: Clone repo
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: "Try a new window for running parallel agents"  → 核心: Try a new window for running parallel agents
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: "Plan New Idea"  → 核心: Plan New Idea
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: `Plan New Idea`  → 核心: Plan New Idea
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: title:"Plan New Idea"  → 核心: Plan New Idea
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: children:"Plan New Idea"  → 核心: Plan New Idea
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: label:"Ultra Plan"  → 核心: Ultra Plan
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: title:"Ultra Plan"  → 核心: Ultra Plan
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: children:"Ultra Plan"  → 核心: Ultra Plan
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: children:"New Agent in Project"  → 核心: New Agent in Project
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: description:"New Agents Window (Glass)"  → 核心: New Agents Window (Glass)
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: `New Agent in ${tr}`  → 核心: New Agent in {}
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: `New Agent in ${ti.name}`  → 核心: New Agent in {}
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: label:"Editor Window"  → 核心: Editor Window
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: title:"Editor Window"  → 核心: Editor Window
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: children:"Editor Window"  → 核心: Editor Window
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: "aria-label":"Editor Window"  → 核心: Editor Window
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: message:"Failed to start multitasking."  → 核心: Failed to start multitasking.
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: label:"Open Agents Window on Startup"  → 核心: Open Agents Window on Startup
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: return`Apply .cursorignore files to all subdirectories${n()?" (controlled by admin)":""}. Changing this setting requires restarting Cursor.`  → 核心: Apply .cursorignore files to all subdirectories{}. Changing this setting requires restarting Cursor.
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: return`Use with caution. Skip symlinks during .cursorignore file discovery. Enable only when all .cursorignore files are reachable without symlinks${i()?" (controlled by admin)":""}. Changing this setting requires restarting Cursor.`  → 核心: Use with caution. Skip symlinks during .cursorignore file discovery. Enable only when all .cursorignore files are reachable without symlinks{}. Changing this setting requires restarting Cursor.
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: get title(){return`Configured Hooks (${I()})`}  → 核心: Configured Hooks ({})
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: get title(){return`Configured Hooks (${A()})`}  → 核心: Configured Hooks ({})
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: children:"Open in New Window"  → 核心: Open in New Window
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: label:"Split Up"  → 核心: Split Up
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: label:"Split Left"  → 核心: Split Left
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: Je(3511,"Split Up")  → 核心: Split Up
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: Je(3512,"Split Down")  → 核心: Split Down
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: Je(3513,"Split Left")  → 核心: Split Left
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: Je(3514,"Split Right")  → 核心: Split Right
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: Je(3515,"Split in Group")  → 核心: Split in Group
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: ot(3511,"Split Up")  → 核心: Split Up
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: ot(3512,"Split Down")  → 核心: Split Down
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: ot(3513,"Split Left")  → 核心: Split Left
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: ot(3514,"Split Right")  → 核心: Split Right
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: ot(3515,"Split in Group")  → 核心: Split in Group
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: "Search branches..."  → 核心: Search branches...
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: return`Choose ${BtT(n)} for pull request links on web and desktop`  → 核心: Choose {} for pull request links on web and desktop
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: label:"Open chat as editor tabs"  → 核心: Open chat as editor tabs
+[// ── 2026-08-08 未翻译清单：中频第三批 ──] EN: title:"Configure Ignored Files"  → 核心: Configure Ignored Files
+[// ── New User Skill/Subagent 创建对话框（ne/T] EN: title:`New User ${ne}`  → 核心: New User {}
+[// ── New User Skill/Subagent 创建对话框（ne/T] EN: prompt:`Enter a name for the new ${Y}`  → 核心: Enter a name for the new {}
+[// ── New User Skill/Subagent 创建对话框（ne/T] EN: title:`New User ${T}`  → 核心: New User {}
+[// ── New User Skill/Subagent 创建对话框（ne/T] EN: prompt:`Enter a name for the new ${x}`  → 核心: Enter a name for the new {}
+[// ── 主题显示名 ──] EN: p$m={light:"Light",dark:"Dark",lightHighContrast:"Light High Contrast",darkHighContrast:"Dark High Contrast"}  → 核心: Light High Contrast
+[// ── Cycle 命令（循环切换模型参数，Ctrl+Alt+/；参数名由 ] EN: label:`Cycle ${EP}`  → 核心: Cycle {}
+[// ── 欢迎页：Recent projects / Settings / I] EN: `Show ${s} more recent ${s===1?"agent":"agents"}`  → 核心: Show {} more recent {}
+[// Run on / This PC] EN: children:"This PC"  → 核心: This PC
+[// Run on / This PC] EN: label:"This PC"  → 核心: This PC
+[// New Worktree] EN: children:"New Worktree"  → 核心: New Worktree
+[// Run Cursor anywhere...] EN: children:"Run Cursor anywhere..."  → 核心: Run Cursor anywhere...
+[// Run Cursor anywhere...] EN: placeholder:"Run Cursor anywhere..."  → 核心: Run Cursor anywhere...
+[// title 属性直接赋值（非 Te()/ft() 包裹，glass.js ] EN: title:"Open Process Explorer"  → 核心: Open Process Explorer
+[// ── Cursor Tab 通知/状态栏悬浮框（glass.js）──] EN: K$i="auto (default)"  → 核心: auto (default)
+[// ── Glass 命令面板：键绑定命令标题 ──] EN: title:"Select Model"  → 核心: Select Model
+[// ── 用户反馈缺失：Git 提交面板（图7）──] EN: "Files Changed"  → 核心: Files Changed
+[// ── 用户反馈缺失：图16/18/19 ──] EN: i?"Close Settings":"设置"  → 核心: Close Settings
+[// ── 编辑菜单 nls 索引转字面量（Agents 窗口 nls 不生效时] EN: label:"Initialize Repository"  → 核心: Initialize Repository
+[// ── 编辑菜单 nls 索引转字面量（Agents 窗口 nls 不生效时] EN: children:"Initialize a git repository to create worktrees."  → 核心: Initialize a git repository to create worktrees.
+[// ── Expand/Collapse 三元（Agents 窗口）──] EN: title:"Send Queued Message"  → 核心: Send Queued Message
+[// ── 设置页 ──] EN: title:"Open Composer Settings"  → 核心: Open Composer Settings
+[// ── 设置页 ──] EN: title:"Open Documentation"  → 核心: Open Documentation
+[// ── 设置页 ──] EN: title:"Open Source Control"  → 核心: Open Source Control
+[// ── 设置页 ──] EN: title:"Open Hooks"  → 核心: Open Hooks
+[// ── 设置页 ──] EN: title:"Open Rules"  → 核心: Open Rules
+[// ── 设置页 ──] EN: title:"Open Plugins"  → 核心: Open Plugins
+[// ── 设置页 ──] EN: title:"Open MCPs"  → 核心: Open MCPs
+[// ── 设置页 ──] EN: title:"Open Skills"  → 核心: Open Skills
+[// ── 设置页 ──] EN: title:"Open Tabs"  → 核心: Open Tabs
+[// ── 设置页 ──] EN: title:"Open Virtual Machine"  → 核心: Open Virtual Machine
+[// ── 设置页 ──] EN: title:"Open from new branch"  → 核心: Open from new branch
+[// ── 设置页 ──] EN: title:"Open from this branch"  → 核心: Open from this branch
+[// ── 设置页 ──] EN: title:"Open in Browser"  → 核心: Open in Browser
+[// ── 设置页 ──] EN: title:"Open in Design Mode"  → 核心: Open in Design Mode
+[// ── 设置页 ──] EN: title:"Open settings"  → 核心: Open settings
+[// ── 设置页 ──] EN: title:"Add Doc"  → 核心: Add Doc
+[// ── 设置页 ──] EN: title:"Add MCP Server"  → 核心: Add MCP Server
+[// ── 设置页 ──] EN: title:"Add Skills"  → 核心: Add Skills
+[// ── 设置页 ──] EN: title:"Add Link"  → 核心: Add Link
+[// ── 设置页 ──] EN: title:"Add folder"  → 核心: Add folder
+[// ── 设置页 ──] EN: title:"Add Marketplace"  → 核心: Add Marketplace
+[// ── 设置页 ──] EN: title:"Add to Chat"  → 核心: Add to Chat
+[// ── 设置页 ──] EN: title:"Add to Home"  → 核心: Add to Home
+[// ── 设置页 ──] EN: title:"Add to Project"  → 核心: Add to Project
+[// ── 设置页 ──] EN: title:"Add for Myself"  → 核心: Add for Myself
+[// ── 设置页 ──] EN: title:"Add an agent to get started"  → 核心: Add an agent to get started
+[// ── 设置页 ──] EN: title:"Add a to-do to get started"  → 核心: Add a to-do to get started
+[// ── 设置页 ──] EN: title:"Adjust Plan"  → 核心: Adjust Plan
+[// ── 设置页 ──] EN: title:"Archive All"  → 核心: Archive All
+[// ── 设置页 ──] EN: label:"Archive All"  → 核心: Archive All
+[// ── 设置页 ──] EN: label:"Remove from Sidebar"  → 核心: Remove from Sidebar
+[// ── 设置页 ──] EN: label:"Connect SSH"  → 核心: Connect SSH
+[// ── 设置页 ──] EN: label:"Connect WSL"  → 核心: Connect WSL
+[// ── 设置页 ──] EN: children:"No Commits"  → 核心: No Commits
+[// ── 设置页 ──] EN: title:"Archive Prior Chats"  → 核心: Archive Prior Chats
+[// ── 设置页 ──] EN: title:"Ask Agent"  → 核心: Ask Agent
+[// ── 设置页 ──] EN: title:"Apply Manually"  → 核心: Apply Manually
+[// ── 设置页 ──] EN: title:"Apply Intelligently"  → 核心: Apply Intelligently
+[// ── 设置页 ──] EN: title:"Browse MCPs"  → 核心: Browse MCPs
+[// ── 设置页 ──] EN: title:"Browse Marketplace"  → 核心: Browse Marketplace
+[// ── 设置页 ──] EN: title:"Build in New Agent"  → 核心: Build in New Agent
+[// ── 设置页 ──] EN: title:"Discard All Changes"  → 核心: Discard All Changes
+[// ── 设置页 ──] EN: title:"Remove folder"  → 核心: Remove folder
+[// ── 设置页 ──] EN: title:"Reset Position"  → 核心: Reset Position
+[// ── 设置页 ──] EN: title:"Reset cache"  → 核心: Reset cache
+[// ── 设置页 ──] EN: title:"Restore defaults"  → 核心: Restore defaults
+[// ── 设置页 ──] EN: title:"Run Autonomously"  → 核心: Run Autonomously
+[// ── 设置页 ──] EN: title:"Review Next File"  → 核心: Review Next File
+[// ── 设置页 ──] EN: title:"Search Extensions"  → 核心: Search Extensions
+[// ── 设置页 ──] EN: title:"Select Multiple"  → 核心: Select Multiple
+[// ── 设置页 ──] EN: title:"Send to Chat"  → 核心: Send to Chat
+[// ── 设置页 ──] EN: title:"Sign In"  → 核心: Sign In
+[// ── 设置页 ──] EN: title:"Skip For Now"  → 核心: Skip For Now
+[// ── 设置页 ──] EN: title:"Start New Chat"  → 核心: Start New Chat
+[// ── 设置页 ──] EN: title:"Take control"  → 核心: Take control
+[// ── 设置页 ──] EN: title:"Trust & Continue"  → 核心: Trust & Continue
+[// ── 设置页 ──] EN: title:"View Agent"  → 核心: View Agent
+[// ── 设置页 ──] EN: title:"View Changes"  → 核心: View Changes
+[// ── 设置页 ──] EN: title:"View PR"  → 核心: View PR
+[// ── 设置页 ──] EN: title:"View Source"  → 核心: View Source
+[// ── 设置页 ──] EN: title:"View changelog"  → 核心: View changelog
+[// ── 设置页 ──] EN: title:"View on Web"  → 核心: View on Web
+[// ── 设置页 ──] EN: title:"View docs"  → 核心: View docs
+[// ── 设置页 ──] EN: title:"View setup instructions"  → 核心: View setup instructions
+[// ── 设置页 ──] EN: title:"Show Output"  → 核心: Show Output
+[// ── 设置页 ──] EN: title:"Show Options"  → 核心: Show Options
+[// ── 设置页 ──] EN: title:"Shut down"  → 核心: Shut down
+[// ── 设置页 ──] EN: title:"Use Cursor Browser"  → 核心: Use Cursor Browser
+[// ── 设置页 ──] EN: title:"Use External Browser"  → 核心: Use External Browser
+[// ── 设置页 ──] EN: title:"Use in IDE"  → 核心: Use in IDE
+[// ── 设置页 ──] EN: title:"Use DMs"  → 核心: Use DMs
+[// ── 设置页 ──] EN: title:"Pin to workspace"  → 核心: Pin to workspace
+[// ── 设置页 ──] EN: title:"Other Agents"  → 核心: Other Agents
+[// ── 设置页 ──] EN: title:"Available Marketplaces"  → 核心: Available Marketplaces
+[// ── 设置页 ──] EN: title:"All Members"  → 核心: All Members
+[// ── 设置页 ──] EN: title:"All Tasks"  → 核心: All Tasks
+[// ── 设置页 ──] EN: title:"Same chat"  → 核心: Same chat
+[// ── 设置页 ──] EN: title:"Remote Host"  → 核心: Remote Host
+[// ── 设置页 ──] EN: title:"Ordered list"  → 核心: Ordered list
+[// ── 设置页 ──] EN: title:"Bullet list"  → 核心: Bullet list
+[// ── 设置页 ──] EN: title:"Server Status"  → 核心: Server Status
+[// ── 设置页 ──] EN: title:"Pending approval"  → 核心: Pending approval
+[// ── 设置页 ──] EN: title:"Request received"  → 核心: Request received
+[// ── 设置页 ──] EN: title:"Profile Image"  → 核心: Profile Image
+[// ── 设置页 ──] EN: title:"What should we build?"  → 核心: What should we build?
+[// ── 设置页 ──] EN: title:"Ship better code, faster"  → 核心: Ship better code, faster
+[// ── 设置页 ──] EN: title:"Screen recording"  → 核心: Screen recording
+[// ── 设置页 ──] EN: title:"Preparing workspace"  → 核心: Preparing workspace
+[// ── 设置页 ──] EN: title:"Preparing save form..."  → 核心: Preparing save form...
+[// ── 设置页 ──] EN: title:"Preparing secrets form..."  → 核心: Preparing secrets form...
+[// ── 设置页 ──] EN: title:"Starting processes..."  → 核心: Starting processes...
+[// ── 设置页 ──] EN: title:"Stopping processes..."  → 核心: Stopping processes...
+[// ── 设置页 ──] EN: title:"Processes stopped"  → 核心: Processes stopped
+[// ── 设置页 ──] EN: title:"Taking a little while..."  → 核心: Taking a little while...
+[// ── 设置页 ──] EN: title:"This will permanently delete all your data. This action cannot be undone."  → 核心: This will permanently delete all your data. This action cannot be undone.
+[// ── 设置页 ──] EN: title:"Add a Custom MCP Server"  → 核心: Add a Custom MCP Server
+[// ── 设置页 ──] EN: title:"Add plugins or import from GitHub to make them available for your team."  → 核心: Add plugins or import from GitHub to make them available for your team.
+[// ── 设置页 ──] EN: title:"Browse the marketplace or import custom plugins to extend"  → 核心: Browse the marketplace or import custom plugins to extend
+[// ── 设置页 ──] EN: title:"Slack Channel"  → 核心: Slack Channel
+[// ── 设置页 ──] EN: title:"Slack Token"  → 核心: Slack Token
+[// ── 设置页 ──] EN: title:"Access Key ID"  → 核心: Access Key ID
+[// ── 设置页 ──] EN: title:"Anthropic API Key"  → 核心: Anthropic API Key
+[// ── 设置页 ──] EN: title:"Active Connections"  → 核心: Active Connections
+[// ── 设置页 ──] EN: title:"This automation is private"  → 核心: This automation is private
+[// ── 设置页 ──] EN: title:"This automation can only be viewed by the creator and team admins."  → 核心: This automation can only be viewed by the creator and team admins.
+[// ── 设置页 ──] EN: title:"Unable to load automations."  → 核心: Unable to load automations.
+[// ── 设置页 ──] EN: title:"Unable to load organizations"  → 核心: Unable to load organizations
+[// ── 设置页 ──] EN: title:"Unable to load Microsoft Teams channels"  → 核心: Unable to load Microsoft Teams channels
+[// ── 设置页 ──] EN: title:"An unexpected error occurred. Reload the window to try again."  → 核心: An unexpected error occurred. Reload the window to try again.
+[// ── 设置页 ──] EN: title:"Rate limited by GitHub"  → 核心: Rate limited by GitHub
+[// ── 设置页 ──] EN: title:"Reset this pane to a new agent"  → 核心: Reset this pane to a new agent
+[// ── 设置页 ──] EN: title:"Resize sidebar"  → 核心: Resize sidebar
+[// ── 设置页 ──] EN: title:"Frontend QA"  → 核心: Frontend QA
+[// ── 设置页 ──] EN: title:"Squash & Merge"  → 核心: Squash & Merge
+[// ── 设置页 ──] EN: title:"Rebase Merge"  → 核心: Rebase Merge
+[// ── 设置页 ──] EN: title:"Push branch to remote"  → 核心: Push branch to remote
+[// ── 设置页 ──] EN: title:"Branch Changes"  → 核心: Branch Changes
+[// ── 设置页 ──] EN: title:"Branch Prefix"  → 核心: Branch Prefix
+[// ── 设置页 ──] EN: title:"Open from new branch"  → 核心: Open from new branch
+[// ── 设置页 ──] EN: title:"Open from this branch"  → 核心: Open from this branch
+[// ── 设置页 ──] EN: title:"Stash and save your changes so you can restore them later"  → 核心: Stash and save your changes so you can restore them later
+[// ── 设置页 ──] EN: title:"Stash + Overwrite"  → 核心: Stash + Overwrite
+[// ── 设置页 ──] EN: title:"Binary file not shown"  → 核心: Binary file not shown
+[// ── 设置页 ──] EN: title:"Only whitespace changes"  → 核心: Only whitespace changes
+[// ── 设置页 ──] EN: title:"Search with Google"  → 核心: Search with Google
+[// ── 设置页 ──] EN: title:"Type to search actions"  → 核心: Type to search actions
+[// ── 设置页 ──] EN: title:"Thumbs Up"  → 核心: Thumbs Up
+[// ── 设置页 ──] EN: title:"Thumbs Down"  → 核心: Thumbs Down
+[// ── 设置页 ──] EN: title:"See Details"  → 核心: See Details
+[// ── 设置页 ──] EN: title:"Reveal in File Explorer"  → 核心: Reveal in File Explorer
+[// ── 设置页 ──] EN: title:"Select a canvas from the sidebar"  → 核心: Select a canvas from the sidebar
+[// ── 设置页 ──] EN: title:"Select a Linux distro to connect."  → 核心: Select a Linux distro to connect.
+[// ── 设置页 ──] EN: title:"Choose a mode"  → 核心: Choose a mode
+[// ── 设置页 ──] EN: title:"Choose a model"  → 核心: Choose a model
+[// ── label 类型 ──] EN: label:"Close Settings"  → 核心: Close Settings
+[// ── label 类型 ──] EN: label:"Actions Palette"  → 核心: Actions Palette
+[// ── label 类型 ──] EN: label:"Save Automation"  → 核心: Save Automation
+[// ── label 类型 ──] EN: label:"Available Marketplaces"  → 核心: Available Marketplaces
+[// ── label 类型 ──] EN: label:"Other Marketplaces"  → 核心: Other Marketplaces
+[// ── label 类型 ──] EN: label:"All Plugins"  → 核心: All Plugins
+[// ── label 类型 ──] EN: label:"All Members"  → 核心: All Members
+[// ── label 类型 ──] EN: label:"Recent commits"  → 核心: Recent commits
+[// ── label 类型 ──] EN: label:"Browser Menu"  → 核心: Browser Menu
+[// ── label 类型 ──] EN: label:"Sign-in restricted"  → 核心: Sign-in restricted
+[// ── label 类型 ──] EN: label:"Skip For Now"  → 核心: Skip For Now
+[// ── label 类型 ──] EN: label:"Trust & Continue"  → 核心: Trust & Continue
+[// ── label 类型 ──] EN: label:"Try Cloud Agent"  → 核心: Try Cloud Agent
+[// ── label 类型 ──] EN: label:"Upgrade to Pro+"  → 核心: Upgrade to Pro+
+[// ── label 类型 ──] EN: label:"Anthropic API Key"  → 核心: Anthropic API Key
+[// ── label 类型 ──] EN: label:"Operation Complete"  → 核心: Operation Complete
+[// ── label 类型 ──] EN: label:"Plan ending soon"  → 核心: Plan ending soon
+[// ── label 类型 ──] EN: label:"Binary file not shown"  → 核心: Binary file not shown
+[// ── label 类型 ──] EN: label:"Only whitespace changes"  → 核心: Only whitespace changes
+[// ── label 类型 ──] EN: label:"Select Multiple"  → 核心: Select Multiple
+[// ── label 类型 ──] EN: label:"Select Environment"  → 核心: Select Environment
+[// ── label 类型 ──] EN: label:"Pin / Unpin Agent"  → 核心: Pin / Unpin Agent
+[// ── label 类型 ──] EN: label:"Previous Agent"  → 核心: Previous Agent
+[// ── label 类型 ──] EN: label:"Add Doc"  → 核心: Add Doc
+[// ── label 类型 ──] EN: label:"Add Models"  → 核心: Add Models
+[// ── label 类型 ──] EN: label:"Add Skills"  → 核心: Add Skills
+[// ── label 类型 ──] EN: label:"Add Link"  → 核心: Add Link
+[// ── label 类型 ──] EN: label:"Add Marketplace"  → 核心: Add Marketplace
+[// ── label 类型 ──] EN: label:"Add for Myself"  → 核心: Add for Myself
+[// ── label 类型 ──] EN: label:"Open Automations"  → 核心: Open Automations
+[// ── label 类型 ──] EN: label:"Open Build Menu"  → 核心: Open Build Menu
+[// ── label 类型 ──] EN: label:"Open Canvas"  → 核心: Open Canvas
+[// ── label 类型 ──] EN: label:"Open Gallery"  → 核心: Open Gallery
+[// ── label 类型 ──] EN: label:"About Cursor"  → 核心: About Cursor
+[// ── label 类型 ──] EN: label:"Agent Settings"  → 核心: Agent Settings
+[// ── label 类型 ──] EN: label:"Discard All Changes"  → 核心: Discard All Changes
+[// ── label 类型 ──] EN: label:"Remove folder"  → 核心: Remove folder
+[// ── label 类型 ──] EN: label:"Remove model"  → 核心: Remove model
+[// ── label 类型 ──] EN: label:"Refresh All"  → 核心: Refresh All
+[// ── label 类型 ──] EN: label:"Refresh Explorer"  → 核心: Refresh Explorer
+[// ── label 类型 ──] EN: label:"Restore defaults"  → 核心: Restore defaults
+[// ── label 类型 ──] EN: label:"View changelog"  → 核心: View changelog
+[// ── label 类型 ──] EN: label:"View on Web"  → 核心: View on Web
+[// ── label 类型 ──] EN: label:"View docs"  → 核心: View docs
+[// ── label 类型 ──] EN: label:"Show Options"  → 核心: Show Options
+[// ── label 类型 ──] EN: label:"Show Status Bar"  → 核心: Show Status Bar
+[// ── label 类型 ──] EN: label:"Use in IDE"  → 核心: Use in IDE
+[// ── label 类型 ──] EN: label:"Use in Agents Window"  → 核心: Use in Agents Window
+[// ── label 类型 ──] EN: label:"Use DMs"  → 核心: Use DMs
+[// ── label 类型 ──] EN: label:"Scan and Triage Security Vulnerabilities"  → 核心: Scan and Triage Security Vulnerabilities
+[// ── label 类型 ──] EN: label:"Automate with Hooks"  → 核心: Automate with Hooks
+[// ── label 类型 ──] EN: label:"Teach Cursor New Skills"  → 核心: Teach Cursor New Skills
+[// ── label 类型 ──] EN: label:"Plugins, MCPs, Skills, and Rules have moved to Customize"  → 核心: Plugins, MCPs, Skills, and Rules have moved to Customize
+[// ── label 类型 ──] EN: label:"The best way to code with AI"  → 核心: The best way to code with AI
+[// ── label 类型 ──] EN: label:"Ship better code, faster"  → 核心: Ship better code, faster
+[// ── label 类型 ──] EN: label:"What should we build?"  → 核心: What should we build?
+[// ── label 类型 ──] EN: label:"Save Image As..."  → 核心: Save Image As...
+[// ── label 类型 ──] EN: label:"Type to search actions"  → 核心: Type to search actions
+[// ── label 类型 ──] EN: label:"See Details"  → 核心: See Details
+[// ── label 类型 ──] EN: label:"Select All in Diff"  → 核心: Select All in Diff
+[// ── label 类型 ──] EN: label:"Select All in File"  → 核心: Select All in File
+[// ── label 类型 ──] EN: label:"Open Browser Tab"  → 核心: Open Browser Tab
+[// ── label 类型 ──] EN: label:"Activate Browser Tab"  → 核心: Activate Browser Tab
+[// ── label 类型 ──] EN: label:"Operation Complete"  → 核心: Operation Complete
+[// ── label 类型 ──] EN: label:"This automation is private"  → 核心: This automation is private
+[// ── label 类型 ──] EN: label:"Add a Custom MCP Server"  → 核心: Add a Custom MCP Server
+[// ── label 类型 ──] EN: label:"Add plugins or import from GitHub to make them available for your team."  → 核心: Add plugins or import from GitHub to make them available for your team.
+[// ── label 类型 ──] EN: label:"Browse the marketplace or import custom plugins to extend"  → 核心: Browse the marketplace or import custom plugins to extend
+[// ── label 类型 ──] EN: label:"This will permanently delete all your data. This action cannot be undone."  → 核心: This will permanently delete all your data. This action cannot be undone.
+[// ── label 类型 ──] EN: label:"An unexpected error occurred. Reload the window to try again."  → 核心: An unexpected error occurred. Reload the window to try again.
+[// ── label 类型 ──] EN: label:"Please update your payment method to keep using Cursor."  → 核心: Please update your payment method to keep using Cursor.
+[// ── label 类型 ──] EN: label:"Rate limited by GitHub"  → 核心: Rate limited by GitHub
+[// ── label 类型 ──] EN: label:"Unable to load automations."  → 核心: Unable to load automations.
+[// ── label 类型 ──] EN: label:"Unable to load organizations"  → 核心: Unable to load organizations
+[// ── label 类型 ──] EN: label:"Unable to load Microsoft Teams channels"  → 核心: Unable to load Microsoft Teams channels
+[// ── label 类型 ──] EN: label:"This automation can only be viewed by the creator and team admins."  → 核心: This automation can only be viewed by the creator and team admins.
+[// ── label 类型 ──] EN: label:"Uploading snapshot to Cursor..."  → 核心: Uploading snapshot to Cursor...
+[// ── label 类型 ──] EN: label:"Taking a little while..."  → 核心: Taking a little while...
+[// ── label 类型 ──] EN: label:"Still running locally?"  → 核心: Still running locally?
+[// ── label 类型 ──] EN: label:"Working on a Long Task?"  → 核心: Working on a Long Task?
+[// ── label 类型 ──] EN: label:"Preparing workspace"  → 核心: Preparing workspace
+[// ── label 类型 ──] EN: label:"Preparing save form..."  → 核心: Preparing save form...
+[// ── label 类型 ──] EN: label:"Preparing secrets form..."  → 核心: Preparing secrets form...
+[// ── label 类型 ──] EN: label:"Stashing changes..."  → 核心: Stashing changes...
+[// ── label 类型 ──] EN: label:"Add an agent to get started"  → 核心: Add an agent to get started
+[// ── label 类型 ──] EN: label:"Add a to-do to get started"  → 核心: Add a to-do to get started
+[// ── label 类型 ──] EN: label:"Select a canvas from the sidebar"  → 核心: Select a canvas from the sidebar
+[// ── label 类型 ──] EN: label:"Select a local marketplace folder"  → 核心: Select a local marketplace folder
+[// ── label 类型 ──] EN: label:"Select a local plugin repo"  → 核心: Select a local plugin repo
+[// ── label 类型 ──] EN: label:"Select a Linux distro to connect."  → 核心: Select a Linux distro to connect.
+[// ── label 类型 ──] EN: label:"Select Custom Chime Sound"  → 核心: Select Custom Chime Sound
+[// ── label 类型 ──] EN: label:"Reset this pane to a new agent"  → 核心: Reset this pane to a new agent
+[// ── label 类型 ──] EN: label:"Open subagent preview in agents tray"  → 核心: Open subagent preview in agents tray
+[// ── label 类型 ──] EN: label:"Try Open Subagent Preview by ID"  → 核心: Try Open Subagent Preview by ID
+[// ── label 类型 ──] EN: label:"Checkout Agent Branch"  → 核心: Checkout Agent Branch
+[// ── label 类型 ──] EN: label:"Push local branch to remote"  → 核心: Push local branch to remote
+[// ── children 类型 ──] EN: children:"Close Settings"  → 核心: Close Settings
+[// ── children 类型 ──] EN: children:"Apply Manually"  → 核心: Apply Manually
+[// ── children 类型 ──] EN: children:"Discard All Changes"  → 核心: Discard All Changes
+[// ── children 类型 ──] EN: children:"Reset Position"  → 核心: Reset Position
+[// ── children 类型 ──] EN: children:"Refresh All"  → 核心: Refresh All
+[// ── children 类型 ──] EN: children:"View Agent"  → 核心: View Agent
+[// ── children 类型 ──] EN: children:"Show Options"  → 核心: Show Options
+[// ── children 类型 ──] EN: children:"Show Status Bar"  → 核心: Show Status Bar
+[// ── children 类型 ──] EN: children:"Shut down"  → 核心: Shut down
+[// ── children 类型 ──] EN: children:"Try Cloud Agent"  → 核心: Try Cloud Agent
+[// ── children 类型 ──] EN: children:"Upgrade to Pro"  → 核心: Upgrade to Pro
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Upgrade to Pro+"  → 核心: Upgrade to Pro+
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Pin / Unpin Agent"  → 核心: Pin / Unpin Agent
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Pin to workspace"  → 核心: Pin to workspace
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Run Autonomously"  → 核心: Run Autonomously
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Squash & Merge"  → 核心: Squash & Merge
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Rebase Merge"  → 核心: Rebase Merge
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Use Cursor Browser"  → 核心: Use Cursor Browser
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Use External Browser"  → 核心: Use External Browser
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Use in Agents Window"  → 核心: Use in Agents Window
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Ordered list"  → 核心: Ordered list
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Bullet list"  → 核心: Bullet list
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Select Environment"  → 核心: Select Environment
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Send to Chat"  → 核心: Send to Chat
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"About Cursor"  → 核心: About Cursor
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Add to Chat"  → 核心: Add to Chat
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Open Source Control"  → 核心: Open Source Control
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Open Plugins"  → 核心: Open Plugins
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Open MCPs"  → 核心: Open MCPs
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Open Skills"  → 核心: Open Skills
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Open Hooks"  → 核心: Open Hooks
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Open Rules"  → 核心: Open Rules
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Open Automations"  → 核心: Open Automations
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Open Build Menu"  → 核心: Open Build Menu
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Open Canvas"  → 核心: Open Canvas
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Open Gallery"  → 核心: Open Gallery
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Open Documentation"  → 核心: Open Documentation
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Open Plan"  → 核心: Open Plan
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Open Browser Tab"  → 核心: Open Browser Tab
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Activate Browser Tab"  → 核心: Activate Browser Tab
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Save Image As..."  → 核心: Save Image As...
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Search Cursor Settings"  → 核心: Search Cursor Settings
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Search Extensions"  → 核心: Search Extensions
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Thumbs Up"  → 核心: Thumbs Up
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Thumbs Down"  → 核心: Thumbs Down
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Reveal in File Explorer"  → 核心: Reveal in File Explorer
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Select All in Diff"  → 核心: Select All in Diff
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Select All in File"  → 核心: Select All in File
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Select Custom Chime Sound"  → 核心: Select Custom Chime Sound
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Reset zoom to 100%"  → 核心: Reset zoom to 100%
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Reset this pane to a new agent"  → 核心: Reset this pane to a new agent
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Pending approval"  → 核心: Pending approval
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Request received"  → 核心: Request received
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Operation Complete"  → 核心: Operation Complete
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Plan ending soon"  → 核心: Plan ending soon
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Please update your payment method to keep using Cursor."  → 核心: Please update your payment method to keep using Cursor.
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Uploading snapshot to Cursor..."  → 核心: Uploading snapshot to Cursor...
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Still running locally?"  → 核心: Still running locally?
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Working on a Long Task?"  → 核心: Working on a Long Task?
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Stashing changes..."  → 核心: Stashing changes...
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Starting processes..."  → 核心: Starting processes...
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Stopping processes..."  → 核心: Stopping processes...
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Processes stopped"  → 核心: Processes stopped
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Select a local marketplace folder"  → 核心: Select a local marketplace folder
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Select a local plugin repo"  → 核心: Select a local plugin repo
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Open subagent preview in agents tray"  → 核心: Open subagent preview in agents tray
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Try Open Subagent Preview by ID"  → 核心: Try Open Subagent Preview by ID
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Checkout Agent Branch"  → 核心: Checkout Agent Branch
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Stash and save your changes so you can restore them later"  → 核心: Stash and save your changes so you can restore them later
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Stash + Overwrite"  → 核心: Stash + Overwrite
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Push branch to remote"  → 核心: Push branch to remote
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Push local branch to remote"  → 核心: Push local branch to remote
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Open from new branch"  → 核心: Open from new branch
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Open from this branch"  → 核心: Open from this branch
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Plugins, MCPs, Skills, and Rules have moved to Customize"  → 核心: Plugins, MCPs, Skills, and Rules have moved to Customize
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Teach Cursor New Skills"  → 核心: Teach Cursor New Skills
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Automate with Hooks"  → 核心: Automate with Hooks
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Scan and Triage Security Vulnerabilities"  → 核心: Scan and Triage Security Vulnerabilities
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Save Automation"  → 核心: Save Automation
+[// ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──] EN: children:"Screen recording"  → 核心: Screen recording

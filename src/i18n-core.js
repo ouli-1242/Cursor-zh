@@ -472,6 +472,8 @@ const auxiliaryInterfaceReplacements = [
         // ── 2026-08-08: 选中目标复制操作（Copy 短词，仅精确替换 UI fallback）──
     ['label:s?"复制消息":"Copy"', 'label:s?"复制消息":"复制"'],
     ['E("copyPath","Copy Path")', 'E("copyPath","复制路径")'],
+    // ── 2026-08-10: 3.15 构建 NLS 调用函数为 T（旧版 E），两种都覆盖 ──
+    ['T("copyPath","Copy Path")', 'T("copyPath","复制路径")'],
         // ── 2026-08-08: markdown 编辑工具栏 ──
     ['label:"Bold"', 'label:"加粗"'],
     ['label:"Italic"', 'label:"斜体"'],
@@ -1785,6 +1787,10 @@ const auxiliaryInterfaceReplacements = [
     ['E("glassRecycle","Move to Recycle Bin")', 'E("glassRecycle","移到回收站")'],
     ['E("glassTrash","Move to Trash")', 'E("glassTrash","移到回收站")'],
     ['E("glassDelete","Delete")', 'E("glassDelete","删除")'],
+    // ── 2026-08-10: 3.15 构建 NLS 调用函数为 T（旧版 E），两种都覆盖 ──
+    ['T("glassRecycle","Move to Recycle Bin")', 'T("glassRecycle","移到回收站")'],
+    ['T("glassTrash","Move to Trash")', 'T("glassTrash","移到回收站")'],
+    ['T("glassDelete","Delete")', 'T("glassDelete","删除")'],
     ['QLt={image:"Image",attachments:"', 'QLt={image:"图片",attachments:"'],
     ['$=d==="image"?"Image":"File"', '$=d==="image"?"图片":"文件"'],
     ['case"image":return"Image"', 'case"image":return"图片"'],
@@ -3022,6 +3028,8 @@ const auxiliaryInterfaceReplacements = [
     // ── 用户反馈缺失：Discard Anular Changes / Discard Changes（E 形式）──
     ['?"Discard Unstaged Changes":"Discard All Changes"', '?"放弃未暂存更改":"放弃所有更改"'],
     ['E("glassSaveConflictDiscard","Discard Changes")', 'E("glassSaveConflictDiscard","放弃更改")'],
+    // ── 2026-08-10: 3.15 构建 NLS 调用函数为 T（旧版 E），两种都覆盖 ──
+    ['T("glassSaveConflictDiscard","Discard Changes")', 'T("glassSaveConflictDiscard","放弃更改")'],
     ['label:"Discard Tracked Only"', 'label:"仅放弃已跟踪"'],
     ['?"Move to Trash":"Discard All"', '?"移到回收站":"全部放弃"'],
     // ── 用户反馈缺失：Home、（Collapse All 其余形式）──
@@ -3089,6 +3097,8 @@ const auxiliaryInterfaceReplacements = [
     ['t.showAsButton?"Keybind":"Add"', 't.showAsButton?"快捷键":"添加"'],
     ['this.findMCPServerAuthUrl(t)?"Connect":"Add"', 'this.findMCPServerAuthUrl(t)?"连接":"添加"'],
     ['E("glass.agentPanel.openCanvas","Canvas")', 'E("glass.agentPanel.openCanvas","画布")'],
+    // ── 2026-08-10: 3.15 构建 NLS 调用函数为 T（旧版 E），两种都覆盖 ──
+    ['T("glass.agentPanel.openCanvas","Canvas")', 'T("glass.agentPanel.openCanvas","画布")'],
     ['we=t?Ngt(t):"Canvas"', 'we=t?Ngt(t):"画布"'],
     ['r=n?Ngt(n):"Canvas"', 'r=n?Ngt(n):"画布"'],
     ['?mgt(n):"Canvas";', '?mgt(n):"画布";'],
