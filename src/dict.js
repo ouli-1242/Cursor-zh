@@ -124,7 +124,6 @@ const safeGlobalDict = {
     "Auto-Hide Editor When Empty": "编辑器为空时自动隐藏",
     "When all editors are closed, hide the editor area and maximize chat": "关闭所有编辑器时，隐藏编辑器并最大化聊天窗口",
     "Open Chat as Editor Tabs": "将聊天作为编辑器标签页打开",
-    "Show chats as editor tabs inside the chat area instead of the legacy stacked view": "在聊天区域中以编辑器标签页显示聊天，而非旧版堆叠视图",
     "Startup": "启动",
     "Window Restoration": "窗口恢复",
     "Controls which windows Cursor restores on startup": "控制 Cursor 启动时恢复哪些窗口",
@@ -253,12 +252,10 @@ const safeGlobalDict = {
     "Island": "浮动面板",
     "Context-aware, multi-line suggestions around your cursor based on recent edits": "基于最近编辑，在光标周围提供上下文感知的多行建议",
     "Partial Accepts": "部分接受",
-    "Accept the next word of a suggestion via Ctrl+RightArrow": "通过 Ctrl+右箭头接受建议的下一个单词",
     "Suggestions While Commenting": "注释时建议",
     "Allow Tab to trigger while in a comment region": "允许在注释区域中触发 Tab 补全",
     "Whitespace-Only Suggestions": "仅空白建议",
     "Suggest edits like new lines and indentation that modify whitespace only": "仅建议修改空白的编辑，如换行和缩进",
-    "Automatically import necessary modules for TypeScript": "自动导入 TypeScript 所需的模块",
     "Auto Import for Python": "Python 自动导入",
     "Enable auto import for Python. This is a beta feature.": "启用 Python 自动导入。这是一个测试功能。",
     "Provide domain-specific knowledge and workflows for the agent": "为智能体提供特定领域的知识和工作流",
@@ -423,10 +420,8 @@ const safeGlobalDict = {
 
     // ── Miscellaneous ──
     "Accept the next word of a suggestion via Ctrl+RightArrow": "通过 Ctrl+RightArrow 接受建议的下一个词",
-    "Automatically import necessary modules for TypeScript": "自动为 TypeScript 导入必要的模块",
 
     // ── Usage Limits ──
-    "Increase limits for faster responses": "提高限制以获得更快的响应",
     "You're over your current usage limit and your requests are being processed with Auto in the slow queue.": "您已超出当前配置的使用量限制，您的请求正以临时排队方式在慢速队列中处理。",
     "Set new limit": "设置新限制",
     "On-Demand Usage": "按需用量",
@@ -841,7 +836,6 @@ const safeGlobalDict = {
     // ── Composer modes ──
     "Plan, search, make edits, run commands": "规划、搜索、编辑并运行命令",
     "Plan, search, build anything": "规划、搜索、构建任何内容",
-    "Systematically diagnose and fix bugs using runtime traces": "使用运行时追踪系统地诊断并修复问题",
     "Coordinate long-horizon tasks with delegated subagents": "通过委派子智能体协调长期任务",
     "Create detailed plans for accomplishing tasks": "为完成任务创建详细计划",
     "Create structured plans with implementation steps": "创建包含实现步骤的结构化计划",
@@ -874,7 +868,6 @@ const safeGlobalDict = {
     "Are you sure? This replaces your settings and extensions with your vscode ones. This cannot be undone.": "确定要继续吗？这将用您的 VS Code 设置和扩展替换当前的设置和扩展。此操作无法撤销。",
     "Reset \"Don't Ask Again\" Dialogs": "重置“不再询问”弹窗",
     "Reset \"Don’t Ask Again\" Dialogs": "重置“不再询问”弹窗",
-    "See warnings and tips that you've hidden": "查看您已隐藏的警告和提示",
     "See warnings and tips that you’ve hidden": "查看您已隐藏的警告和提示",
     "No Hidden Dialogs Yet": "暂无隐藏的弹窗",
     "You haven't marked any dialogs as \"Don't ask again\". Any hidden dialogs will appear here to manage.": "您尚未将任何弹窗标记为“不再询问”。任何隐藏的弹窗都将显示在此处以供管理。",
@@ -887,7 +880,6 @@ const safeGlobalDict = {
     " inserts a newline": " 插入换行",
     "Accept the next word of a suggestion via ": "使用 ",
     " accept the next word of a suggestion": " 接受建议的下一个词",
-    "Automatically import necessary modules for TypeScript": "自动为 TypeScript 导入必要的模块",
 
     // Codebase 相关设置
     "Codebase": "代码库",
@@ -984,9 +976,7 @@ const safeGlobalDict = {
     "Visualize information in a custom interface": "在自定义界面中可视化信息",
 
     // ── Automations ──
-    "Automate repetitive tasks with always-on cloud agents that respond to environment triggers.": "使用始终在线的云端智能体自动执行由环境触发的重复任务。",
     "Automate repetitive tasks with always-on agents and configure Cursor's built-in agents for your team.": "使用始终在线的智能体自动执行重复任务，并为团队配置 Cursor 内置智能体。",
-    "Automations use Cloud Agents, which require us to give agents access to your codebase. This is not compatible with Legacy Privacy Mode.": "自动化功能使用云端智能体，需要授予智能体访问代码库的权限。这与旧版隐私模式不兼容。",
     "Edit Privacy Settings": "编辑隐私设置",
     "Learn More": "了解更多",
 
@@ -1013,8 +1003,6 @@ const safeGlobalDict = {
     "AWS Access Key ID": "AWS 访问密钥 ID",
     "AWS Secret Access Key": "AWS 秘密访问密钥",
     "Ignore Files": "忽略文件",
-    "Hierarchical Cursor Ignore": "分层 Cursor 忽略",
-    "Ignore Symlinks in Cursor Ignore Search": "在 Cursor 忽略搜索中忽略符号链接",
     "Toggle Chat Pane": "切换聊天面板",
     "Maximize Chat": "最大化聊天",
     "Close Tab": "关闭标签页",
@@ -1052,8 +1040,6 @@ const safeGlobalDict = {
 
     // ── IDE 界面 ──
     "Switch Agent Mode": "切换 Agent 模式",
-    "Toggle Agents": "切换 Agents",
-    "Toggle Agents Side Bar": "切换 Agents 侧边栏",
     "Open Cursor Settings": "打开 Cursor 设置",
     "Give Feedback": "提供反馈",
     "Conversation Density": "对话密度",
@@ -1108,7 +1094,6 @@ const safeGlobalDict = {
     "Restore": "恢复",
     "Automate repetitive tasks with always-on cloud agents that respond to environment triggers.": "自动化重复性任务：常驻云端智能体响应环境触发器",
     "Automations use Cloud Agents, which require us to give agents access to your codebase. This is not compatible with Legacy Privacy Mode.": "自动化使用云端智能体，这需要我们允许智能体访问您的代码库。这与旧版隐私模式不兼容",
-    "Edit Privacy Settings": "编辑隐私设置",
     "View License": "查看许可证",
     "Command Palette": "命令面板",
     "Reset Zoom": "重置缩放",
@@ -1144,7 +1129,6 @@ const safeGlobalDict = {
     "Cursor-Managed Worktrees": "Cursor 托管的工作树",
     "Report Issue": "报告问题",
     "Toggle Developer Tools": "切换开发者工具",
-    "Open Process Explorer": "打开进程资源管理器",
     "Show Chat History": "显示聊天历史",
     "Switch Model": "切换模型",
     "Add files, folders, docs...": "添加文件、文件夹、文档...",
@@ -1357,7 +1341,6 @@ const safeGlobalDict = {
     "Automatically parse links pasted into Quick Edit": "粘贴到快速编辑时自动解析链接",
 
     // ── nls 原生菜单缺失词条（带 visibility 后缀的完整形式）──
-    "Show Agents Side Bar": "显示 Agents 侧边栏",
     "Agents Window Button": "智能体窗口按钮",
     "Agents Window 按钮": "智能体窗口按钮",
     "Toggle visibility of the Agents Window button in the title bar": "切换标题栏中智能体窗口按钮的可见性",
@@ -1393,12 +1376,10 @@ const safeGlobalDict = {
     // ── 用户反馈第二批未翻译词条 ──
     "Show Terminal": "显示终端",
     "Hide Terminal": "隐藏终端",
-    "Toggle Developer Tools": "切换开发者工具",
     "Open Process Explorer": "打开进程浏览器",
     "Toggle Agents": "切换智能体",
     "Toggle Agents Side Bar": "切换智能体侧边栏",
     "Show Agents Side Bar": "显示智能体侧边栏",
-    "Open Cursor Settings": "打开 Cursor 设置",
     "Open config": "打开配置",
     "Disable": "禁用",
     "Systematically diagnose and fix bugs using runtime traces": "使用运行时跟踪系统性地诊断和修复 Bug",
@@ -1421,7 +1402,6 @@ const safeGlobalDict = {
     "Recently Viewed": "最近查看",
     "Change Filter": "切换筛选器",
     "Last Used": "上次使用",
-    "New Worktree": "新工作树",
     "Go Back": "返回",
     "Go Forward": "前进",
     "Open Workspace": "打开工作区",
@@ -1652,7 +1632,6 @@ const riskyShortWords = {
     "Imports": "导入",
     "Rules": "规则",
     "Skills": "技能",
-    "Subagents": "子智能体",
     "Commands": "命令",
     "Unlimited": "无限制",
     "Disabled": "已禁用",
@@ -1715,7 +1694,6 @@ const riskyShortWords = {
     "Imported": "已导入",
     "Local": "本地",
     "Recent": "最近",
-    "Agents": "智能体",
     "Extension": "扩展",
     "Verified": "已验证",
     "Pinned": "已固定",
