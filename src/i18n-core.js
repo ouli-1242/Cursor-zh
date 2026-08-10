@@ -4054,6 +4054,22 @@ function translateNlsMessagesFile(filePath) {
 }
 
 /**
+ * clp 语言包缓存目录（跨平台，仿 storage.js getDbPath）。
+ * Windows: %APPDATA%\Cursor\clp, macOS: ~/Library/Application Support/Cursor/clp,
+ * Linux: ~/.config/Cursor/clp
+ */
+function getClpRoot() {
+    const home = os.homedir();
+    if (PLATFORM === 'win32') {
+        return path.join(home, 'AppData', 'Roaming', 'Cursor', 'clp');
+    }
+    if (PLATFORM === 'darwin') {
+        return path.join(home, 'Library', 'Application Support', 'Cursor', 'clp');
+    }
+    return path.join(home, '.config', 'Cursor', 'clp');
+}
+
+/**
  * 汉化语言包缓存（clp 目录下的 nls.messages.json）。
  * 当用户已安装官方 zh-hans 语言包时，Cursor 的实际界面文案来自
  * %APPDATA%\Cursor\clp\<hash>.<locale>\<commit>\nls.messages.json，
@@ -4061,8 +4077,7 @@ function translateNlsMessagesFile(filePath) {
  * Cursor 新词条（浏览器右键菜单等）需在此缓存中补翻。
  */
 function translateClpLanguagePacks() {
-    const home = os.homedir();
-    const clpRoot = path.join(home, 'AppData', 'Roaming', 'Cursor', 'clp');
+    const clpRoot = getClpRoot();
     if (!fs.existsSync(clpRoot)) {
         console.log('\nℹ️  未找到语言包缓存目录（clp），已跳过。');
         return { processed: false };
@@ -4102,8 +4117,7 @@ function translateClpLanguagePacks() {
  * @returns {number} 还原数量
  */
 function restoreClpLanguagePacks() {
-    const home = os.homedir();
-    const clpRoot = path.join(home, 'AppData', 'Roaming', 'Cursor', 'clp');
+    const clpRoot = getClpRoot();
     if (!fs.existsSync(clpRoot)) return 0;
 
     let restored = 0;
