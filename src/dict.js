@@ -1272,6 +1272,8 @@ const safeGlobalDict = {
     "The plugins you're removing from the marketplace will no longer be available to users and Cloud Agents that rely on them.": "您从插件市场移除的插件将不再对依赖它们的用户和云端智能体可用。",
     "Plugins bundle rules, skills, subagents, commands, MCP servers, and hooks into one installable package.": "插件将规则、技能、子智能体、命令、MCP 服务器和钩子打包到一个可安装的包中。",
     "Model Context Protocol servers connect Cursor to external tools and data sources like Linear, Figma, and Notion.": "模型上下文协议（MCP）服务器将 Cursor 连接到外部工具和数据源，如 Linear、Figma 和 Notion。",
+    // ── 2026-08-10: MCP 设置页空状态标题（description 已译, title 漏）──
+    "Connect External Tools with MCP": "通过 MCP 连接外部工具",
     "Skills package domain-specific knowledge and workflows that Agent applies automatically when relevant.": "技能打包了领域特定知识和工作流，智能体会在相关时自动应用。",
     "Subagents are specialized assistants that run in their own context window so Agent can parallelize and stay focused.": "子智能体是在自己的上下文窗口中运行的专业助手，让智能体可以并行处理并保持专注。",
     "Rules give Agent persistent, system-level instructions for your coding standards and workflows.": "规则为智能体提供关于编码标准和工作流的持久化系统级指令。",
