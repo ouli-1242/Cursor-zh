@@ -1,6 +1,10 @@
 const fs = require('fs');
-const glass = fs.readFileSync('D:/Program Files/cursor/resources/app/out/vs/workbench/workbench.glass.main.js', 'utf8');
-const desk = fs.readFileSync('D:/Program Files/cursor/resources/app/out/vs/workbench/workbench.desktop.main.js', 'utf8');
+const path = require('path');
+// Cursor 安装根目录（默认 D: 盘，可用 argv[2] 覆盖）
+const APP_ROOT = process.argv[2] || 'D:/Program Files/cursor/resources/app';
+const WB = path.join(APP_ROOT, 'out/vs/workbench');
+const glass = fs.readFileSync(path.join(WB, 'workbench.glass.main.js'), 'utf8');
+const desk = fs.readFileSync(path.join(WB, 'workbench.desktop.main.js'), 'utf8');
 const rules = [
   ['"Loading changes..."', '正在加载更改'],
   ['"Loading changes"', '正在加载更改'],
@@ -20,4 +24,4 @@ for (const [en, zh] of rules) {
   console.log((g > 0 ? 'G' : ' ') + (d > 0 ? 'D' : ' ') + '  ' + en.padEnd(30) + ' glass:' + g + ' desk:' + d);
 }
 console.log('--- Agent Mode title 翻译规则（应 false） ---');
-console.log(fs.readFileSync('src/i18n-core.js', 'utf8').includes("['title:\"Agent Mode\"'"));
+console.log(fs.readFileSync(path.join(__dirname, '..', 'src', 'i18n-core.js'), 'utf8').includes("['title:\"Agent Mode\"'"));

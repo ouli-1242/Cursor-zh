@@ -4,16 +4,18 @@ const path = require('path');
 const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'i18n-core.js'), 'utf8');
 
 // 提取 aux 数组（const auxiliaryInterfaceReplacements = [ ... ];）
+// 行级定位：不能用括号计数——条目字符串内带 `]`（minified JS 片段）会让
+// 括号计数提前归零、数组被错误截断（旧实现只拿到 171/2521 条）。
 function extractArray(src, startMarker) {
-  const start = src.indexOf(startMarker);
+  const lines = src.split('\n');
+  const start = lines.findIndex(l => l.includes(startMarker));
   if (start === -1) throw new Error('marker not found: ' + startMarker);
-  const open = src.indexOf('[', start);
-  let depth = 0, i = open;
-  for (; i < src.length; i++) {
-    if (src[i] === '[') depth++;
-    else if (src[i] === ']') { depth--; if (depth === 0) break; }
+  let end = start;
+  for (let i = start + 1; i < lines.length; i++) {
+    if (/^\s*\],?\s*$/.test(lines[i]) || /\];\s*$/.test(lines[i])) { end = i; break; }
   }
-  return src.slice(open, i + 1);
+  const block = lines.slice(start, end + 1).join('\n');
+  return block.slice(block.indexOf('['), block.lastIndexOf(']') + 1);
 }
 
 const auxSrc = extractArray(src, 'const auxiliaryInterfaceReplacements = ');
@@ -36,8 +38,11 @@ function unescapeStr(s) {
 const auxRules = parseRules(auxSrc);
 const scopedRules = parseRules(scopedSrc);
 
-const glass = fs.readFileSync('D:/Program Files/cursor/resources/app/out/vs/workbench/workbench.glass.main.js', 'utf8');
-const desk = fs.readFileSync('D:/Program Files/cursor/resources/app/out/vs/workbench/workbench.desktop.main.js', 'utf8');
+// Cursor 安装根目录（默认 D: 盘，可用 argv[2] 覆盖）
+const APP_ROOT = process.argv[2] || 'D:/Program Files/cursor/resources/app';
+const WB = path.join(APP_ROOT, 'out/vs/workbench');
+const glass = fs.readFileSync(path.join(WB, 'workbench.glass.main.js'), 'utf8');
+const desk = fs.readFileSync(path.join(WB, 'workbench.desktop.main.js'), 'utf8');
 
 function count(src, en) {
   let i = src.indexOf(en), n = 0;
