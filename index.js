@@ -237,6 +237,22 @@ async function runSilent(action) {
 // 交互模式（用户双击/终端运行入口）
 // ═══════════════════════════════════════════════
 
+const FAQ = [
+    ['汉化后界面没变化？', '请完全退出并重启 Cursor；确认定位的是正在使用的安装目录；Cursor 更新后需重新运行汉化。'],
+    ['提示"安装已损坏"？', '工具已自动修复校验值。若仍出现，先"恢复英文"再重新汉化，或检查是否被安全软件阻止写入。'],
+    ['模型参数（如 Thinking intensity）过一会儿恢复英文？', '工具已注入显示层映射，一般不会再恢复。若出现，重新运行汉化即可。'],
+    ['如何完全退出 Cursor？', '右键托盘图标选择"退出"，并在任务管理器中确认 Cursor.exe 已结束。'],
+];
+
+async function showFaq() {
+    console.log(ui.section('常见问题'));
+    for (const [q, a] of FAQ) {
+        console.log(`  ${chalk.white.bold(q)}`);
+        console.log(`    ${chalk.gray(a)}`);
+        console.log('');
+    }
+}
+
 async function runInteractive() {
     console.log(ui.banner(version));
 
@@ -262,40 +278,66 @@ async function runInteractive() {
     ]));
     console.log(ui.divider());
 
-    const { action } = await inquirer.prompt([
-        {
-            type: 'list',
-            name: 'action',
-            message: chalk.white.bold('请选择操作：'),
-            choices: [
-                { name: chalk.green('🚀 一键汉化'), value: 'translate' },
-                { name: chalk.yellow('⏪ 恢复英文'), value: 'restore' },
-                new inquirer.Separator(),
-                { name: chalk.gray('❌ 退出'), value: 'exit' },
-            ],
-        },
-    ]);
+    // ── 步骤 2: 确认操作 ──
+    console.log(ui.step(2, 3, '确认操作'));
+    const targets = [
+        ['主窗口', paths.mainJsPath],
+        ['附加窗口（Agent/Glass）', paths.glassJsPath],
+        ['原生提示文案', paths.nlsMessagesPath],
+        ['托盘菜单', paths.mainProcessJsPath],
+        ['校验值文件', paths.productJsonPath],
+    ].filter(([, p]) => p && fs.existsSync(p));
+    console.log(ui.info('将处理以下文件：'));
+    console.log(ui.fileList(targets.map(([name, p]) => ({ left: ui.info(name), right: path.basename(p) }))));
+    console.log(ui.info('其他：clp 语言包缓存 / 用户扩展 / state.vscdb（按需自动处理）'));
+    console.log('');
+
+    // ── 操作选择 ──
+    let action;
+    while (true) {
+        const res = await inquirer.prompt([
+            {
+                type: 'list',
+                name: 'action',
+                message: chalk.white.bold('请选择操作：'),
+                choices: [
+                    { name: chalk.green('🚀 一键汉化'), value: 'translate' },
+                    { name: chalk.yellow('⏪ 恢复英文'), value: 'restore' },
+                    { name: chalk.cyan('📖 查看常见问题'), value: 'faq' },
+                    new inquirer.Separator(),
+                    { name: chalk.gray('❌ 退出'), value: 'exit' },
+                ],
+            },
+        ]);
+        action = res.action;
+        if (action === 'faq') {
+            await showFaq();
+            continue; // 返回菜单
+        }
+        break;
+    }
 
     if (action === 'exit') {
         console.log(chalk.gray('\n  再见！👋'));
         return;
     }
 
+    // ── 步骤 3: 执行 ──
+    console.log(ui.step(3, 3, action === 'translate' ? '执行汉化' : '恢复英文'));
     const needElevation = !hasWritePermission(paths.mainJsPath);
-
     if (needElevation) {
+        console.log(ui.warn('修改 Cursor 核心文件需要管理员权限。'));
+        console.log(ui.info('请在系统弹窗中确认授权，授权后会自动继续。'));
         console.log('');
-        console.log(chalk.yellow('  🔒 需要管理员权限才能修改 Cursor 核心文件。'));
-        console.log(chalk.yellow('  ⏳ 正在请求提权，请在弹出的系统提示中确认...'));
-        console.log('');
-
         try {
             await elevateAndRun(action, paths.appPath);
             console.log('');
-            console.log(chalk.green.bold('  ✅ 操作已在管理员权限下完成！'));
+            console.log(`${ui.ok(chalk.green.bold('操作已在管理员权限下完成！'))}\n`);
         } catch (e) {
             console.log('');
-            console.log(chalk.red.bold('  ❌ 提权失败或用户取消: ') + chalk.red(e.message));
+            console.log(`${ui.err(chalk.red.bold('提权失败或用户取消'))} ${chalk.red(e.message)}\n`);
+            await waitForExit();
+            return;
         }
     } else {
         if (action === 'translate') {
@@ -305,6 +347,16 @@ async function runInteractive() {
         }
     }
 
+    // ── 完成引导 ──
+    console.log(ui.section(action === 'translate' ? '汉化完成，接下来…' : '还原完成，接下来…'));
+    if (action === 'translate') {
+        console.log(ui.warn('请完全退出并重启 Cursor，界面文案才会更新。'));
+        console.log(`  ${chalk.gray('验证：')} 设置页、菜单、Agent 窗口应出现中文。`);
+        console.log(`  ${chalk.gray('备份：')} 原版文件保存在 .backup 文件旁。`);
+        console.log(`  ${chalk.gray('还原：')} 随时可再次运行本工具选"恢复英文"。`);
+    } else {
+        console.log(ui.ok('已还原英文原版，重启 Cursor 生效。'));
+    }
     console.log('');
     await waitForExit();
 }
