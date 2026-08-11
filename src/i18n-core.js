@@ -186,11 +186,11 @@ function createProgress(totalPhases) {
         update() {},
         step(label, detail) {
             current = Math.min(totalPhases, current + 1);
-            console.log(`  ✔ ${label}${detail ? `：${compactText(detail)}` : ''}`);
+            console.log(`  ✅ ${label}${detail ? `：${compactText(detail)}` : ''}`);
         },
         finish(label, detail) {
             current = totalPhases;
-            console.log(`  ✔ ${label}${detail ? `：${compactText(detail)}` : ''}`);
+            console.log(`  ✅ ${label}${detail ? `：${compactText(detail)}` : ''}`);
         },
     };
 }
