@@ -1280,6 +1280,10 @@ const auxiliaryInterfaceReplacements = [
     ['Chat context summarized', '对话上下文已总结'],
     ['Unable to open', '无法打开'],
     ['Read attempted', '已尝试读取'],
+    // ── composer 状态提示（composerMessagesTypes.js 常量，带 \u2026 省略号转义）──
+    ['"Preparing\\u2026"', '"正在准备…"'],
+    ['"Warming up\\u2026"', '"正在预热…"'],
+    ['"Updating canvas\\u2026"', '"正在更新画布…"'],
     // ── 内联差异 / 自动保留 ──
     ['Disable Inline Diffs', '禁用内联差异'],
     ['Enable auto-keep to have changes be updated automatically', '启用自动保留，使更改自动更新'],
@@ -4851,6 +4855,10 @@ function translate(paths) {
         ['loading:"Listing"', 'loading:"正在列出"'],
         ['loading:"Grepping"', 'loading:"正在搜索"'],
         ['loading:"Exploring"', 'loading:"正在探索"'],
+        // ── composer 状态提示（composerMessagesTypes.js 常量，带 \u2026 省略号转义）──
+        ['"Preparing\\u2026"', '"正在准备…"'],
+        ['"Warming up\\u2026"', '"正在预热…"'],
+        ['"Updating canvas\\u2026"', '"正在更新画布…"'],
         ['Chat context summarized', '对话上下文已总结'],
         ['Unable to open', '无法打开'],
         ['Read attempted', '已尝试读取'],

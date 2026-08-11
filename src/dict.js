@@ -1785,7 +1785,16 @@ const riskyShortWords = {
     "Copy Path": "复制路径",
     "Copy Relative Path": "复制相对路径",
     "Search Files": "搜索文件",
-    "Set Log Level...": "设置日志级别..."
+    "Set Log Level...": "设置日志级别...",
+
+    // ── 2026-08-11 停止/取消 Agent 弹窗（来自 nls.messages.json 索引 4030-4052）──
+    "Agent is still working": "Agent 仍在工作",
+    "Stopping now will cancel the current task.": "立即停止将取消当前任务。",
+    "{0} agents are still working": "{0} 个 Agent 仍在工作",
+    "Stopping now will cancel their current tasks.": "立即停止将取消它们的当前任务。",
+    "This agent is still working. Archiving will stop it and cancel the current task.": "该 Agent 仍在工作。归档将停止它并取消当前任务。",
+    "Stopping now will kill the background terminal.": "立即停止将终止后台终端。",
+    "Stopping now will kill the background terminals.": "立即停止将终止多个后台终端。"
 };
 
 module.exports = { safeGlobalDict, nativeNlsDict, riskyShortWords };
