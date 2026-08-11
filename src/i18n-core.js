@@ -2773,6 +2773,9 @@ const auxiliaryInterfaceReplacements = [
     ['children:"Try Cloud Agent"', 'children:"试试云智能体"'],
     ['children:"Upgrade to Pro"', 'children:"升级到 Pro"'],
     ['auto (default)', '自动（默认）'],
+    // ── 2026-08-11: 插件页 Results/Suggested 标题三元（变量名随构建变化，取无变量名依赖形态）──
+    ['?"Results":"Suggested"', '?"结果":"推荐"'],
+    ['title:"Results"', 'title:"结果"'],
     // ── 2026-08-10: 设置页/升级引导/数据共享/主页 文案 ──
     ['Entry-level plan with access to premium models, unlimited Tab completions, and more.', '入门级套餐，可使用高级模型、无限 Tab 补全及更多功能。'],
     ['Data Sharing Enabled', '数据共享已启用'],
@@ -6153,6 +6156,9 @@ function translate(paths) {
         ['n.textContent="Model"', 'n.textContent="模型"'],
         ['o.textContent=n?"Unsnooze":"Snooze"', 'o.textContent=n?"取消暂停":"暂停"'],
         ['Sqn="auto (default)"', 'Sqn="自动（默认）"'],
+        // ── 2026-08-11: 当前构建变量为 Zqn（旧 Sqn 失效）；Results/Suggested 三元变量为 Te（旧形态失效）──
+        ['auto (default)', '自动（默认）'],
+        ['?"Results":"Suggested"', '?"结果":"推荐"'],
         ['"Disable globally"', '"全局禁用"'],
         ['"No commit has been scored yet"', '"暂无已评分的提交"'],
         ['"$(git-commit) No commit scored"', '"$(git-commit) 无提交评分"'],
