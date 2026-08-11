@@ -2478,7 +2478,12 @@ const safeGlobalDict = {
     "Don't revert": "不要还原",
 
     // ── 2026-08-11 用户反馈：面包屑操作按钮 Undo File（children:"Undo File"）──
-    "Undo File": "撤销文件"
+    "Undo File": "撤销文件",
+
+    // ── 2026-08-11 用户反馈：对话密度预览残留 Preview（"Conversation Density"子串先命中）──
+    "Conversation Density Preview": "对话密度预览",
+    "对话密度 Preview": "对话密度预览",
+    "Markdown Preview": "Markdown 预览"
 };
 
 // 原生工作台菜单与加载状态来自 nls.messages.json。它们是短词，不能加入
