@@ -18,7 +18,15 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const chalk = require('chalk');
 const { execSync } = require('child_process');
+
+// 统一状态圆点图标（与 i18n-core.js 一致）
+const ICON = {
+    ok: chalk.green('●'),
+    warn: chalk.yellow('●'),
+    info: chalk.cyan('●'),
+};
 
 // ─────────────────────────────────────────────
 // 模式描述翻译字典
@@ -94,12 +102,12 @@ function isCursorRunning() {
 function translateModes(appPath, dbPathOverride) {
     const dbPath = getDbPath(dbPathOverride);
     if (!fs.existsSync(dbPath)) {
-        console.log('  ℹ️  state.vscdb 不存在，跳过用户存储汉化。');
+        console.log(`  ${ICON.info} state.vscdb 不存在，跳过用户存储汉化。`);
         return;
     }
 
     if (isCursorRunning()) {
-        console.log('  ⚠️  Cursor 正在运行，无法安全修改 state.vscdb。');
+        console.log(`  ${ICON.warn} Cursor 正在运行，无法安全修改 state.vscdb。`);
         console.log('     请先完全退出 Cursor，再重新运行汉化。');
         return;
     }
@@ -110,7 +118,7 @@ function translateModes(appPath, dbPathOverride) {
         const sqlite3Path = path.join(appPath, 'node_modules', '@vscode', 'sqlite3');
         sqlite3 = require(sqlite3Path);
     } catch (e) {
-        console.log('  ⚠️  无法加载 @vscode/sqlite3:', e.message);
+        console.log(`  ${ICON.warn} 无法加载 @vscode/sqlite3: ${e.message}`);
         console.log('     跳过用户存储汉化（非致命）。');
         return;
     }
@@ -120,27 +128,27 @@ function translateModes(appPath, dbPathOverride) {
     if (!fs.existsSync(backupPath)) {
         try {
             fs.copyFileSync(dbPath, backupPath);
-            console.log('  ✅ 已备份 state.vscdb');
+            console.log(`  ${ICON.ok} 已备份 state.vscdb`);
         } catch (e) {
-            console.log('  ⚠️  备份失败:', e.message);
+            console.log(`  ${ICON.warn} 备份失败: ${e.message}`);
             return;
         }
     }
 
     const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE, (err) => {
         if (err) {
-            console.log('  ⚠️  打开数据库失败:', err.message);
+            console.log(`  ${ICON.warn} 打开数据库失败: ${err.message}`);
             return;
         }
 
         db.get("SELECT value FROM ItemTable WHERE key = ?", [STORAGE_KEY], (err, row) => {
             if (err) {
-                console.log('  ⚠️  查询失败:', err.message);
+                console.log(`  ${ICON.warn} 查询失败: ${err.message}`);
                 db.close();
                 return;
             }
             if (!row) {
-                console.log('  ℹ️  未找到 applicationUser 键，跳过。');
+                console.log(`  ${ICON.info} 未找到 applicationUser 键，跳过。`);
                 db.close();
                 return;
             }
@@ -151,13 +159,13 @@ function translateModes(appPath, dbPathOverride) {
             try {
                 data = JSON.parse(content);
             } catch (e) {
-                console.log('  ⚠️  applicationUser JSON 解析失败:', e.message);
+                console.log(`  ${ICON.warn} applicationUser JSON 解析失败: ${e.message}`);
                 db.close();
                 return;
             }
 
             if (!data.composerState || !Array.isArray(data.composerState.modes4)) {
-                console.log('  ℹ️  composerState.modes4 不存在，跳过。');
+                console.log(`  ${ICON.info} composerState.modes4 不存在，跳过。`);
                 db.close();
                 return;
             }
@@ -195,7 +203,7 @@ function translateModes(appPath, dbPathOverride) {
             }
 
             if (modeChanged + paramChanged === 0) {
-                console.log('  ℹ️  模式描述与参数定义已是中文，无需修改。');
+                console.log(`  ${ICON.info} 模式描述与参数定义已是中文，无需修改。`);
                 db.close();
                 return;
             }
@@ -203,9 +211,9 @@ function translateModes(appPath, dbPathOverride) {
             const newContent = JSON.stringify(data);
             db.run("UPDATE ItemTable SET value = ? WHERE key = ?", [newContent, STORAGE_KEY], (err) => {
                 if (err) {
-                    console.log('  ⚠️  更新失败:', err.message);
+                    console.log(`  ${ICON.warn} 更新失败: ${err.message}`);
                 } else {
-                    console.log(`  ✅ 已汉化 ${modeChanged} 个模式描述 + ${paramChanged} 个参数定义（Thinking intensity 等）`);
+                    console.log(`  ${ICON.ok} 已汉化 ${modeChanged} 个模式描述 + ${paramChanged} 个参数定义（Thinking intensity 等）`);
                 }
                 db.close();
             });
@@ -268,7 +276,7 @@ function restoreModes(appPath, dbPathOverride) {
         return Promise.resolve(false);
     }
     if (isCursorRunning()) {
-        console.log('  ⚠️  Cursor 正在运行，无法还原 state.vscdb。');
+        console.log(`  ${ICON.warn} Cursor 正在运行，无法还原 state.vscdb。`);
         return Promise.resolve(false);
     }
 
@@ -280,7 +288,7 @@ function restoreModes(appPath, dbPathOverride) {
         } catch (e) { /* 尝试下一步 */ }
     }
     if (!sqlite3) {
-        console.log('  ⚠️  无法加载 @vscode/sqlite3，无法进行字段级还原（需 --app-path 指定 Cursor 安装路径）。');
+        console.log(`  ${ICON.warn} 无法加载 @vscode/sqlite3，无法进行字段级还原（需 --app-path 指定 Cursor 安装路径）。`);
         console.log('     已跳过还原，未改动数据库（避免整库覆盖丢失近期对话）。');
         return Promise.resolve(false);
     }
@@ -290,14 +298,14 @@ function restoreModes(appPath, dbPathOverride) {
             // 1. 读备份英文原文
             const backupData = await dbGetValue(sqlite3, backupPath, sqlite3.OPEN_READONLY, STORAGE_KEY);
             if (!backupData) {
-                console.log('  ℹ️  备份中无 applicationUser 键，跳过字段级还原。');
+                console.log(`  ${ICON.info} 备份中无 applicationUser 键，跳过字段级还原。`);
                 return false;
             }
 
             // 2. 读当前库
             const currentData = await dbGetValue(sqlite3, dbPath, sqlite3.OPEN_READWRITE, STORAGE_KEY);
             if (!currentData) {
-                console.log('  ℹ️  当前库无 applicationUser 键，跳过。');
+                console.log(`  ${ICON.info} 当前库无 applicationUser 键，跳过。`);
                 return false;
             }
 
@@ -362,7 +370,7 @@ function restoreModes(appPath, dbPathOverride) {
             }
 
             if (modeChanged + paramChanged === 0) {
-                console.log('  ℹ️  未发现需还原的汉化字段（已是英文或被手动修改，保持现状）。');
+                console.log(`  ${ICON.info} 未发现需还原的汉化字段（已是英文或被手动修改，保持现状）。`);
                 return false;
             }
 
@@ -371,10 +379,10 @@ function restoreModes(appPath, dbPathOverride) {
 
             // 5. 还原完成，移除备份（下次汉化会重新备份英文原文）
             fs.unlinkSync(backupPath);
-            console.log(`  ✅ 已还原 ${modeChanged} 个模式描述 + ${paramChanged} 个参数定义（回到英文），对话数据未受影响。`);
+            console.log(`  ${ICON.ok} 已还原 ${modeChanged} 个模式描述 + ${paramChanged} 个参数定义（回到英文），对话数据未受影响。`);
             return true;
         } catch (e) {
-            console.log('  ⚠️  还原失败:', e.message);
+            console.log(`  ${ICON.warn} 还原失败: ${e.message}`);
             console.log('     数据库未被改动，可重试。');
             return false;
         }
@@ -414,9 +422,9 @@ if (require.main === module) {
         }
         restoreModes(appPath, dbPathOverride).then(ok => {
             if (ok) {
-                console.log('  ✅ 已还原 state.vscdb');
+                console.log(`  ${ICON.ok} 已还原 state.vscdb`);
             } else {
-                console.log('  ℹ️  未还原（无备份或无需还原）。');
+                console.log(`  ${ICON.info} 未还原（无备份或无需还原）。`);
             }
         });
     } else {

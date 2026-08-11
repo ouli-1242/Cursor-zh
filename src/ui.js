@@ -16,10 +16,10 @@ function step(index, total, label) {
     return `\n  ${chalk.cyan.bold(`── 步骤 ${index}/${total}  ${label} ──`)}\n`;
 }
 
-const ok = (msg) => `${chalk.green('✅')} ${msg}`;
-const warn = (msg) => `${chalk.yellow('❗')} ${msg}`;
-const err = (msg) => `${chalk.red('❌')} ${msg}`;
-const info = (msg) => `${chalk.cyan('ℹ️')} ${msg}`;
+const ok = (msg) => `${chalk.green('●')} ${msg}`;
+const warn = (msg) => `${chalk.yellow('●')} ${msg}`;
+const err = (msg) => `${chalk.red('●')} ${msg}`;
+const info = (msg) => `${chalk.cyan('●')} ${msg}`;
 
 function section(title) {
     return `\n  ${chalk.blue.bold(title)}\n  ${chalk.blue('─'.repeat(Math.max(20, /* 全角对齐 */ title.length * 2)))}\n`;

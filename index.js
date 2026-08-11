@@ -105,11 +105,11 @@ async function promptSelectPath(candidates, preselected) {
 
     choices.push(new inquirer.Separator());
     choices.push({
-        name: chalk.cyan('📁 手动输入其他路径...'),
+        name: chalk.cyan('● 手动输入其他路径...'),
         value: '__manual__',
     });
     choices.push({
-        name: chalk.gray('🔍 重新自动搜索'),
+        name: chalk.gray('● 重新自动搜索'),
         value: '__rescan__',
     });
 
@@ -137,9 +137,9 @@ async function promptConfirmOrChange(paths) {
             name: 'choice',
             message: chalk.white.bold('已定位 Cursor，是否使用此路径？'),
             choices: [
-                { name: chalk.green(`✓ 使用: ${paths.appPath}`), value: 'use' },
-                { name: chalk.cyan('📁 手动指定其他路径'), value: 'manual' },
-                { name: chalk.gray('🔍 重新自动搜索'), value: 'rescan' },
+                { name: chalk.green(`● 使用: ${paths.appPath}`), value: 'use' },
+                { name: chalk.cyan('● 手动指定其他路径'), value: 'manual' },
+                { name: chalk.gray('● 重新自动搜索'), value: 'rescan' },
             ],
         },
     ]);
@@ -160,7 +160,7 @@ async function obtainCursorPaths(options = {}) {
     if (cliPath && !forceRescan) {
         const fromCli = resolveCursorPath({ cliPath });
         if (fromCli) return fromCli;
-        console.log(chalk.red.bold('  ❌ 命令行指定的 Cursor 路径无效！'));
+        console.log(chalk.red.bold('  ● 命令行指定的 Cursor 路径无效！'));
         console.log(chalk.yellow(`  参数: ${cliPath}`));
         console.log(chalk.gray(`  提示: ${pathHint()}`));
         return null;
@@ -184,11 +184,11 @@ async function obtainCursorPaths(options = {}) {
         }
     }
 
-    console.log(chalk.yellow('  🔍 正在自动搜索 Cursor 安装路径...'));
+    console.log(chalk.cyan('  ● 正在自动搜索 Cursor 安装路径...'));
     const candidates = findAllCursorCandidates();
 
     if (candidates.length === 0) {
-        console.log(chalk.red.bold('  ❌ 未在默认位置找到 Cursor。'));
+        console.log(chalk.red.bold('  ● 未在默认位置找到 Cursor。'));
         console.log(chalk.gray(`  可手动指定安装目录（${pathHint()}）`));
         console.log(chalk.gray(`  配置将保存至: ${CONFIG_FILE}`));
         console.log('');
@@ -215,7 +215,7 @@ async function runSilent(action) {
     const paths = resolveCursorPath({ cliPath: cliPath || undefined });
 
     if (!paths) {
-        console.error('❌ 找不到 Cursor 安装目录！');
+        console.error('● 找不到 Cursor 安装目录！');
         console.error('请使用 --cursor-path 指定路径，例如：');
         console.error('  node index.js --action=translate --cursor-path="C:\\Users\\你\\AppData\\Local\\Programs\\cursor"');
         process.exit(1);
@@ -226,7 +226,7 @@ async function runSilent(action) {
     } else if (action === 'restore') {
         restore(paths);
     } else {
-        console.error(`❌ 未知操作: ${action}`);
+        console.error(`● 未知操作: ${action}`);
         process.exit(1);
     }
 
@@ -299,11 +299,11 @@ async function runInteractive() {
                 name: 'action',
                 message: chalk.white.bold('请选择操作：'),
                 choices: [
-                    { name: chalk.green('🚀 一键汉化'), value: 'translate' },
-                    { name: chalk.yellow('⏪ 恢复英文'), value: 'restore' },
-                    { name: chalk.cyan('📖 查看常见问题'), value: 'faq' },
+                    { name: chalk.green('● 一键汉化'), value: 'translate' },
+                    { name: chalk.yellow('● 恢复英文'), value: 'restore' },
+                    { name: chalk.cyan('● 查看常见问题'), value: 'faq' },
                     new inquirer.Separator(),
-                    { name: chalk.gray('❌ 退出'), value: 'exit' },
+                    { name: chalk.gray('● 退出'), value: 'exit' },
                 ],
             },
         ]);
@@ -316,7 +316,7 @@ async function runInteractive() {
     }
 
     if (action === 'exit') {
-        console.log(chalk.gray('\n  再见！👋'));
+        console.log(chalk.gray('\n  再见！'));
         return;
     }
 
@@ -378,13 +378,13 @@ async function waitForExit() {
 const silentAction = parseAction();
 if (silentAction) {
     runSilent(silentAction).catch(err => {
-        console.error(chalk.red('❌ 操作失败: ') + err.message);
+        console.error(chalk.red('● 操作失败: ') + err.message);
         console.error(chalk.yellow('  可尝试运行还原操作恢复英文原版。'));
         process.exit(1);
     });
 } else {
     runInteractive().catch(err => {
-        console.error(chalk.red('❌ 发生未预料的错误: ') + err.message);
+        console.error(chalk.red('● 发生未预料的错误: ') + err.message);
         process.exit(1);
     });
 }

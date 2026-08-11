@@ -6,9 +6,21 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
+const chalk = require('chalk');
 const { execSync } = require('child_process');
 const { safeGlobalDict, nativeNlsDict, riskyShortWords } = require('./dict');
 const { PLATFORM } = require('./platform');
+
+// 统一状态圆点图标（不同颜色区分语义）
+const ICON = {
+    ok: chalk.green('●'),
+    warn: chalk.yellow('●'),
+    err: chalk.red('●'),
+    info: chalk.cyan('●'),
+    proc: chalk.blue('●'),
+    backup: chalk.magenta('●'),
+    note: chalk.gray('●'),
+};
 
 // 辅助：转义正则特殊字符
 const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -186,11 +198,11 @@ function createProgress(totalPhases) {
         update() {},
         step(label, detail) {
             current = Math.min(totalPhases, current + 1);
-            console.log(`  ✅ ${label}${detail ? `：${compactText(detail)}` : ''}`);
+            console.log(`  ${ICON.ok} ${label}${detail ? `：${compactText(detail)}` : ''}`);
         },
         finish(label, detail) {
             current = totalPhases;
-            console.log(`  ✅ ${label}${detail ? `：${compactText(detail)}` : ''}`);
+            console.log(`  ${ICON.ok} ${label}${detail ? `：${compactText(detail)}` : ''}`);
         },
     };
 }
@@ -241,10 +253,10 @@ function createChangeTracker(maxSamples = 5) {
         },
         print() {
             const total = [...groupCounts.values()].reduce((sum, count) => sum + count, 0);
-            console.log(`  ✅ 汉化替换完成，共修改 ${total} 处。`);
+            console.log(`  ${ICON.ok} 汉化替换完成，共修改 ${total} 处。`);
 
             if (groupCounts.size > 0) {
-                console.log('  🧾 修改内容摘要：');
+                console.log(`  ${ICON.note} 修改内容摘要：`);
                 for (const [group, count] of groupCounts.entries()) {
                     console.log(`    - ${group}: ${count} 处`);
                 }
@@ -252,7 +264,7 @@ function createChangeTracker(maxSamples = 5) {
 
             if (samples.length > 0) {
                 const more = totalRecorded - samples.length;
-                console.log(`  🔎 本次命中的部分内容${more > 0 ? `（另 ${more} 处省略）` : ''}：`);
+                console.log(`  ${ICON.info} 本次命中的部分内容${more > 0 ? `（另 ${more} 处省略）` : ''}：`);
                 samples.forEach(({ group, from, to, count }) => {
                     console.log(`    - ${group}: ${formatReplacementDetail(from, to, count)}`);
                 });
@@ -295,16 +307,16 @@ function backupFile(filePath, productJsonPath) {
             if (currentVersion) {
                 try { fs.writeFileSync(metaPath, JSON.stringify({ version: currentVersion }), 'utf8'); } catch { /* ignore */ }
             }
-            return `🔄 ${fileName}: 检测到 Cursor 升级（${backupVersion} → ${currentVersion}），已更新备份`;
+            return `${fileName}: 检测到 Cursor 升级（${backupVersion} → ${currentVersion}），已更新备份`;
         }
-        return `🧩 ${fileName}: 已发现原版备份，保留当前文件继续汉化`;
+        return `${fileName}: 已发现原版备份，保留当前文件继续汉化`;
     } else if (fs.existsSync(filePath)) {
         // 首次运行 → 创建备份
         fs.copyFileSync(filePath, backupPath);
         if (currentVersion) {
             try { fs.writeFileSync(metaPath, JSON.stringify({ version: currentVersion }), 'utf8'); } catch { /* ignore */ }
         }
-        return `💾 ${fileName}: 已备份纯净原版文件`;
+        return `${fileName}: 已备份纯净原版文件`;
     }
     return null;
 }
@@ -428,22 +440,22 @@ function fixMacGatekeeper(appPath) {
     const appBundlePath = appPath.split('/Contents/')[0];
     if (!appBundlePath || !appBundlePath.endsWith('.app')) return;
 
-    console.log('🍎 正在修复 macOS Gatekeeper 签名...');
+    console.log(`${ICON.proc} 正在修复 macOS Gatekeeper 签名...`);
 
     // 1. 清除隔离属性
     try {
         execSync(`xattr -cr "${appBundlePath}"`, { stdio: 'pipe' });
-        console.log('  ✅ 已清除隔离属性 (xattr -cr)');
+        console.log(`  ${ICON.ok} 已清除隔离属性 (xattr -cr)`);
     } catch (e) {
-        console.log('  ⚠️ 清除隔离属性失败: ' + e.message);
+        console.log(`  ${ICON.warn} 清除隔离属性失败: ${e.message}`);
     }
 
     // 2. 重签名（容错：用户可能未安装 Xcode 命令行工具）
     try {
         execSync(`codesign --force --deep --sign - "${appBundlePath}"`, { stdio: 'pipe' });
-        console.log('  ✅ 已完成本地重签名 (codesign)');
+        console.log(`  ${ICON.ok} 已完成本地重签名 (codesign)`);
     } catch (e) {
-        console.log('  ⚠️ codesign 重签名失败（可能未安装 Xcode 命令行工具），不影响使用: ' + e.message);
+        console.log(`  ${ICON.warn} codesign 重签名失败（可能未安装 Xcode 命令行工具），不影响使用: ${e.message}`);
     }
 }
 
@@ -3899,7 +3911,7 @@ function translateAuxiliaryJsFile(filePath, productJsonPath) {
     if (!filePath || !fs.existsSync(filePath)) return { processed: false, hashFixed: false };
 
     const fileName = path.basename(filePath);
-    console.log(`\n⚙️  正在处理附加窗口代码: ${fileName}`);
+    console.log(`\n${ICON.proc} 正在处理附加窗口代码: ${fileName}`);
 
     let jsContent = fs.readFileSync(filePath, 'utf8');
     const progress = createProgress(5);
@@ -3960,7 +3972,7 @@ function translateAuxiliaryJsFile(filePath, productJsonPath) {
     const hashFixed = fixProductHash(jsContent, productJsonPath, fileName);
     progress.finish('附加窗口代码处理完成');
     changes.print();
-    console.log(`✅ ${fileName} 智能汉化完成！`);
+    console.log(`${ICON.ok} ${fileName} 智能汉化完成！`);
 
     return { processed: true, hashFixed };
 }
@@ -3968,7 +3980,7 @@ function translateAuxiliaryJsFile(filePath, productJsonPath) {
 function translateNlsMessagesFile(filePath, { title = '正在处理原生提示文案: nls.messages.json', isSub = false } = {}) {
     if (!filePath || !fs.existsSync(filePath)) return { processed: false };
 
-    console.log(isSub ? `  ↳ ${title}` : `\n⚙️  ${title}`);
+    console.log(isSub ? `  ↳ ${title}` : `\n${ICON.proc} ${title}`);
 
     let messages;
     try {
@@ -3978,7 +3990,7 @@ function translateNlsMessagesFile(filePath, { title = '正在处理原生提示�
     }
 
     if (!Array.isArray(messages)) {
-        console.log('ℹ️  nls.messages.json 不是数组格式，已跳过。');
+        console.log(`${ICON.info} nls.messages.json 不是数组格式，已跳过。`);
         return { processed: false };
     }
 
@@ -4053,7 +4065,7 @@ function translateNlsMessagesFile(filePath, { title = '正在处理原生提示�
 
     progress.finish('原生提示处理完成');
     changes.print();
-    console.log(isSub ? '  ✅ 语言包缓存汉化完成！' : '✅ nls.messages.json 汉化完成！');
+    console.log(isSub ? `  ${ICON.ok} 语言包缓存汉化完成！` : `${ICON.ok} nls.messages.json 汉化完成！`);
 
     return { processed: true };
 }
@@ -4084,7 +4096,7 @@ function getClpRoot() {
 function translateClpLanguagePacks() {
     const clpRoot = getClpRoot();
     if (!fs.existsSync(clpRoot)) {
-        console.log('\nℹ️  未找到语言包缓存目录（clp），已跳过。');
+        console.log(`\n${ICON.info} 未找到语言包缓存目录（clp），已跳过。`);
         return { processed: false };
     }
 
@@ -4105,13 +4117,13 @@ function translateClpLanguagePacks() {
             if (!fs.existsSync(backupPath)) {
                 fs.copyFileSync(nlsPath, backupPath);
             }
-            console.log(`\n⚙️  正在处理语言包缓存: ${path.relative(clpRoot, nlsPath)}`);
+            console.log(`\n${ICON.proc} 正在处理语言包缓存: ${path.relative(clpRoot, nlsPath)}`);
             translateNlsMessagesFile(nlsPath, { isSub: true });
         }
     }
 
     if (visited === 0) {
-        console.log('\nℹ️  语言包缓存中未找到 nls.messages.json，已跳过。');
+        console.log(`\n${ICON.info} 语言包缓存中未找到 nls.messages.json，已跳过。`);
     }
     return { processed: visited > 0 };
 }
@@ -4136,11 +4148,11 @@ function restoreClpLanguagePacks() {
                 try {
                     fs.copyFileSync(p, target);
                     const rel = path.relative(clpRoot, target);
-                    console.log(`  ✅ 已还原 clp 语言包缓存: ${rel}`);
+                    console.log(`  ${ICON.ok} 已还原 clp 语言包缓存: ${rel}`);
                     fs.unlinkSync(p);
                     restored++;
                 } catch (err) {
-                    console.log(`  ⚠️  还原 clp 缓存失败 ${p}: ${err.message}`);
+                    console.log(`  ${ICON.warn} 还原 clp 缓存失败 ${p}: ${err.message}`);
                 }
             }
         }
@@ -4173,7 +4185,7 @@ const mainProcessReplacements = [
 function translateMainJsFile(filePath) {
     if (!filePath || !fs.existsSync(filePath)) return { processed: false };
 
-    console.log('\n⚙️  正在处理主进程文件: main.js（系统托盘菜单）');
+    console.log(`\n${ICON.proc} 正在处理主进程文件: main.js（系统托盘菜单）`);
 
     let jsContent = fs.readFileSync(filePath, 'utf8');
     const progress = createProgress(2);
@@ -4201,7 +4213,7 @@ function translateMainJsFile(filePath) {
 
     progress.finish('主进程文件处理完成');
     changes.print();
-    console.log('✅ main.js 汉化完成！');
+    console.log(`${ICON.ok} main.js 汉化完成！`);
 
     return { processed: true };
 }
@@ -4239,7 +4251,7 @@ function translateUserExtensions() {
     const extDir = path.join(homeDir, '.cursor', 'extensions');
     if (!fs.existsSync(extDir)) return { processed: 0 };
 
-    console.log('\n⚙️  正在处理用户扩展: 远程开发命令面板');
+    console.log(`\n${ICON.proc} 正在处理用户扩展: 远程开发命令面板`);
     const remotePrefixes = ['anysphere.remote-containers', 'anysphere.remote-ssh', 'anysphere.remote-wsl'];
     let processed = 0;
 
@@ -4258,7 +4270,7 @@ function translateUserExtensions() {
         try {
             pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
         } catch {
-            console.log(`  ⚠️  无法解析 ${entry.name}/package.json，已跳过`);
+            console.log(`  ${ICON.warn} 无法解析 ${entry.name}/package.json，已跳过`);
             continue;
         }
 
@@ -4299,9 +4311,9 @@ function translateUserExtensions() {
     }
 
     if (processed > 0) {
-        console.log(`  ✅ 已汉化 ${processed} 个远程扩展的命令面板条目`);
+        console.log(`  ${ICON.ok} 已汉化 ${processed} 个远程扩展的命令面板条目`);
     } else {
-        console.log('  ℹ️  未发现需要汉化的远程扩展（可能尚未安装）。');
+        console.log(`  ${ICON.info} 未发现需要汉化的远程扩展（可能尚未安装）。`);
     }
     return { processed };
 }
@@ -4334,7 +4346,7 @@ function restoreUserExtensions() {
  * @param {string} appPath Cursor app 路径（含 node_modules/@vscode/sqlite3）
  */
 function translateUserStorage(appPath) {
-    console.log('\n⚙️  正在处理用户存储 (state.vscdb)...');
+    console.log(`\n${ICON.proc} 正在处理用户存储 (state.vscdb)...`);
 
     // 定位 Cursor 内置 node（仅 Windows/macOS 有）
     const nodeCandidates = process.platform === 'win32'
@@ -4345,13 +4357,13 @@ function translateUserStorage(appPath) {
 
     const nodeExe = nodeCandidates.find(p => fs.existsSync(p));
     if (!nodeExe) {
-        console.log('  ℹ️  未找到 Cursor 内置 node，跳过用户存储汉化。');
+        console.log(`  ${ICON.info} 未找到 Cursor 内置 node，跳过用户存储汉化。`);
         return;
     }
 
     const storageScript = path.join(__dirname, 'storage.js');
     if (!fs.existsSync(storageScript)) {
-        console.log('  ℹ️  storage.js 不存在，跳过用户存储汉化。');
+        console.log(`  ${ICON.info} storage.js 不存在，跳过用户存储汉化。`);
         return;
     }
 
@@ -4363,9 +4375,9 @@ function translateUserStorage(appPath) {
     });
 
     if (result.error) {
-        console.log('  ⚠️  用户存储汉化执行失败:', result.error.message);
+        console.log(`  ${ICON.warn} 用户存储汉化执行失败: ${result.error.message}`);
     } else if (result.status !== 0) {
-        console.log('  ⚠️  用户存储汉化异常退出（非致命）。');
+        console.log(`  ${ICON.warn} 用户存储汉化异常退出（非致命）。`);
     }
 }
 
@@ -4395,14 +4407,14 @@ function restoreUserStorage(appPath) {
                 timeout: 30000
             });
             if (result.error) {
-                console.log('  ⚠️  用户存储还原执行失败:', result.error.message);
+                console.log(`  ${ICON.warn} 用户存储还原执行失败: ${result.error.message}`);
             } else if (result.status !== 0) {
-                console.log('  ⚠️  用户存储还原异常退出（非致命）。');
+                console.log(`  ${ICON.warn} 用户存储还原异常退出（非致命）。`);
             }
             return;
         }
     }
-    console.log('  ℹ️  未找到 Cursor 内置 node，跳过用户存储还原（字段级还原需加载 @vscode/sqlite3）。');
+    console.log(`  ${ICON.info} 未找到 Cursor 内置 node，跳过用户存储还原（字段级还原需加载 @vscode/sqlite3）。`);
 }
 
 
@@ -4434,10 +4446,10 @@ function translate(paths) {
     if (backedUp) parts.push(`已备份纯净原版文件 ${backedUp} 个`);
     if (reused) parts.push(`复用已有备份 ${reused} 个`);
     if (upgraded) parts.push(`随 Cursor 升级更新备份 ${upgraded} 个`);
-    console.log(`  💾 ${parts.join('，')}（.backup）`);
+    console.log(`  ${ICON.backup} ${parts.join('，')}（.backup）`);
 
     // 2. 读取核心 JS
-    console.log('\n⚙️  正在读取并处理核心代码...');
+    console.log(`\n${ICON.proc} 正在读取并处理核心代码...`);
     let jsContent = fs.readFileSync(mainJsPath, 'utf8');
     const progress = createProgress(6);
     const changes = createChangeTracker();
@@ -6961,23 +6973,23 @@ function translate(paths) {
         }
         throw err;
     }
-    console.log('✅ 核心 JS 文件智能汉化完成！');
+    console.log(`${ICON.ok} 核心 JS 文件智能汉化完成！`);
 
     // 8. 修复 Hash（使用内存内容，不依赖写回后再次打开主 JS）
-    console.log('\n🛠️  正在重新计算指纹并修复文件完整性...');
+    console.log(`\n${ICON.proc} 正在重新计算指纹并修复文件完整性...`);
     const hashFixed = fixProductHash(jsContent, productJsonPath);
     if (hashFixed) {
-        console.log('✅ 已更新 product.json 校验值，消除「安装已损坏」警告。');
+        console.log(`${ICON.ok} 已更新 product.json 校验值，消除「安装已损坏」警告。`);
     } else {
-        console.log('⚠️  未找到对应的校验项，可能无需更新。');
+        console.log(`${ICON.warn} 未找到对应的校验项，可能无需更新。`);
     }
 
     const auxiliaryResult = translateAuxiliaryJsFile(glassJsPath, productJsonPath);
     if (auxiliaryResult.processed) {
         if (auxiliaryResult.hashFixed) {
-            console.log('✅ 已更新附加窗口 JS 校验值。');
+            console.log(`${ICON.ok} 已更新附加窗口 JS 校验值。`);
         } else {
-            console.log('ℹ️  附加窗口 JS 未发现校验项，已跳过 product.json 更新。');
+            console.log(`${ICON.info} 附加窗口 JS 未发现校验项，已跳过 product.json 更新。`);
         }
     }
 
@@ -6996,17 +7008,17 @@ function translate(paths) {
     try {
         translateUserExtensions();
     } catch (e) {
-        console.log(`  ⚠️  用户扩展汉化跳过: ${e.message}`);
+        console.log(`  ${ICON.warn} 用户扩展汉化跳过: ${e.message}`);
     }
 
     // 11. 用户存储（state.vscdb 中的 modes4 描述，需 Cursor 已关闭）
     try {
         translateUserStorage(appPath);
     } catch (e) {
-        console.log(`  ⚠️  用户存储汉化跳过: ${e.message}`);
+        console.log(`  ${ICON.warn} 用户存储汉化跳过: ${e.message}`);
     }
 
-    console.log('\n🎉 汉化完成！请重启 Cursor 查看中文设置页。');
+    console.log(`\n${ICON.ok} 汉化完成！请重启 Cursor 查看中文设置页。`);
 }
 
 
@@ -7027,14 +7039,14 @@ function restore(paths) {
         }
     }
     if (coreRestored.length > 0) {
-        console.log(`  ✅ 已还原核心文件 ${coreRestored.length} 个（${coreRestored.join('、')}）`);
+        console.log(`  ${ICON.ok} 已还原核心文件 ${coreRestored.length} 个（${coreRestored.join('、')}）`);
     }
 
     // 还原用户扩展
     const extRestored = restoreUserExtensions();
     restored += extRestored;
     if (extRestored > 0) {
-        console.log(`  ✅ 已还原远程开发扩展 ${extRestored} 个`);
+        console.log(`  ${ICON.ok} 已还原远程开发扩展 ${extRestored} 个`);
     }
 
     // 还原用户存储（state.vscdb，字段级：仅改汉化字段，对话不受影响）
@@ -7045,9 +7057,9 @@ function restore(paths) {
     restored += clpRestored;
 
     if (restored > 0) {
-        console.log('\n🎉 已恢复英文原版！请重启 Cursor 生效。');
+        console.log(`\n${ICON.ok} 已恢复英文原版！请重启 Cursor 生效。`);
     } else {
-        console.log('\n⚠️  未找到备份文件，无法还原。请确认之前是否执行过汉化。');
+        console.log(`\n${ICON.warn} 未找到备份文件，无法还原。请确认之前是否执行过汉化。`);
     }
 }
 
