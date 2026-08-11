@@ -2466,7 +2466,11 @@ const safeGlobalDict = {
     "MCP Logs": "MCP 日志",
     "Login to Cursor": "登录 Cursor",
     "Import VS Code Configuration": "导入 VS Code 配置",
-    "Extension Host": "扩展宿主"
+    "Extension Host": "扩展宿主",
+
+    // ── 2026-08-11 角落错误提示最终扫描（62+8+5 条候选，仅 2 条真实用户可见）──
+    "Self-driving is not enabled for this build.": "此构建未启用自驱动。",
+    "Stream failed": "流传输失败"
 };
 
 // 原生工作台菜单与加载状态来自 nls.messages.json。它们是短词，不能加入
