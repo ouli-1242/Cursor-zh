@@ -4345,7 +4345,7 @@ function restoreUserExtensions() {
 const BUILTIN_EXT_NLS = [
     {
         dirName: 'markdown-language-features',
-        zhFile: path.join(__dirname, '..', 'assets', 'ext-nls', 'markdown-language-features.zh-cn.json'),
+        zhFile: path.join(__dirname, 'markdown-language-features.zh-cn.json'),
     },
 ];
 
