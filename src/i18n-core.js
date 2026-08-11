@@ -7039,7 +7039,7 @@ function restore(paths) {
         }
     }
     if (coreRestored.length > 0) {
-        console.log(`  ${ICON.ok} 已还原核心文件 ${coreRestored.length} 个（${coreRestored.join('、')}）`);
+        console.log(`  ${ICON.ok} 已还原核心文件 ${coreRestored.length} 个`);
     }
 
     // 还原用户扩展
