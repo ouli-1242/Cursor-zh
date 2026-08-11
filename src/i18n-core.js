@@ -180,33 +180,17 @@ function formatReplacementDetail(from, to, count) {
  */
 function createProgress(totalPhases) {
     let current = 0;
-    const isTTY = Boolean(process.stdout.isTTY);
-
-    const render = (label, detail = '') => {
-        const percent = Math.min(100, Math.round((current / totalPhases) * 100));
-        const filled = Math.round((percent / 100) * PROGRESS_BAR_WIDTH);
-        const bar = '█'.repeat(filled) + '░'.repeat(PROGRESS_BAR_WIDTH - filled);
-        const line = `  [${bar}] ${String(percent).padStart(3)}% ${label}${detail ? `：${compactText(detail)}` : ''}`;
-
-        if (isTTY) {
-            process.stdout.write(`\r\x1b[K${line}`);
-        } else if (current > 0) {
-            console.log(line);
-        }
-    };
 
     return {
-        update(label, detail) {
-            if (isTTY) render(label, detail);
-        },
+        // update 仅作内部状态记录，不输出：避免每条替换刷一行
+        update() {},
         step(label, detail) {
             current = Math.min(totalPhases, current + 1);
-            render(label, detail);
+            console.log(`  ✔ ${label}${detail ? `：${compactText(detail)}` : ''}`);
         },
         finish(label, detail) {
             current = totalPhases;
-            render(label, detail);
-            process.stdout.write('\n');
+            console.log(`  ✔ ${label}${detail ? `：${compactText(detail)}` : ''}`);
         },
     };
 }
@@ -240,15 +224,17 @@ function replaceStringWithCount(content, search, replacement) {
     return { content: parts.join(replacement), count };
 }
 
-function createChangeTracker(maxSamples = 12) {
+function createChangeTracker(maxSamples = 5) {
     const groupCounts = new Map();
     const samples = [];
+    let totalRecorded = 0;
 
     return {
         record(group, from, to, count) {
             if (count <= 0) return;
 
             groupCounts.set(group, (groupCounts.get(group) || 0) + count);
+            totalRecorded += count;
             if (samples.length < maxSamples) {
                 samples.push({ group, from, to, count });
             }
@@ -265,7 +251,8 @@ function createChangeTracker(maxSamples = 12) {
             }
 
             if (samples.length > 0) {
-                console.log('  🔎 本次命中的部分内容：');
+                const more = totalRecorded - samples.length;
+                console.log(`  🔎 本次命中的部分内容${more > 0 ? `（另 ${more} 处省略）` : ''}：`);
                 samples.forEach(({ group, from, to, count }) => {
                     console.log(`    - ${group}: ${formatReplacementDetail(from, to, count)}`);
                 });
@@ -3978,10 +3965,10 @@ function translateAuxiliaryJsFile(filePath, productJsonPath) {
     return { processed: true, hashFixed };
 }
 
-function translateNlsMessagesFile(filePath) {
+function translateNlsMessagesFile(filePath, { title = '正在处理原生提示文案: nls.messages.json', isSub = false } = {}) {
     if (!filePath || !fs.existsSync(filePath)) return { processed: false };
 
-    console.log('\n⚙️  正在处理原生提示文案: nls.messages.json');
+    console.log(isSub ? `  ↳ ${title}` : `\n⚙️  ${title}`);
 
     let messages;
     try {
@@ -4066,7 +4053,7 @@ function translateNlsMessagesFile(filePath) {
 
     progress.finish('原生提示处理完成');
     changes.print();
-    console.log('✅ nls.messages.json 汉化完成！');
+    console.log(isSub ? '  ✅ 语言包缓存汉化完成！' : '✅ nls.messages.json 汉化完成！');
 
     return { processed: true };
 }
@@ -4119,7 +4106,7 @@ function translateClpLanguagePacks() {
                 fs.copyFileSync(nlsPath, backupPath);
             }
             console.log(`\n⚙️  正在处理语言包缓存: ${path.relative(clpRoot, nlsPath)}`);
-            translateNlsMessagesFile(nlsPath);
+            translateNlsMessagesFile(nlsPath, { isSub: true });
         }
     }
 
@@ -4265,8 +4252,7 @@ function translateUserExtensions() {
         if (!fs.existsSync(pkgPath)) continue;
 
         // 备份
-        const backupMsg = backupFile(pkgPath);
-        if (backupMsg) console.log(`  ${backupMsg}`);
+        backupFile(pkgPath);
 
         let pkg;
         try {
@@ -4308,12 +4294,13 @@ function translateUserExtensions() {
 
         if (changed) {
             writeFileSafe(pkgPath, JSON.stringify(pkg, null, 2), 'utf8');
-            console.log(`  ✅ ${entry.name}: 已汉化命令面板条目`);
             processed++;
         }
     }
 
-    if (processed === 0) {
+    if (processed > 0) {
+        console.log(`  ✅ 已汉化 ${processed} 个远程扩展的命令面板条目`);
+    } else {
         console.log('  ℹ️  未发现需要汉化的远程扩展（可能尚未安装）。');
     }
     return { processed };
@@ -4331,7 +4318,6 @@ function restoreUserExtensions() {
         if (!entry.name.startsWith('anysphere.remote-')) continue;
         const pkgPath = path.join(extDir, entry.name, 'package.json');
         if (restoreFromBackup(pkgPath)) {
-            console.log(`  ✅ 已还原: ${entry.name}/package.json`);
             restored++;
         }
     }
@@ -4441,7 +4427,14 @@ function translate(paths) {
         mainProcessJsPath && fs.existsSync(mainProcessJsPath) ? backupFile(mainProcessJsPath, productJsonPath) : null,
         backupFile(productJsonPath, productJsonPath),
     ].filter(Boolean);
-    msgs.forEach(m => console.log(`  ${m}`));
+    const backedUp = msgs.filter(m => m.includes('已备份纯净原版文件')).length;
+    const reused = msgs.filter(m => m.includes('已发现原版备份')).length;
+    const upgraded = msgs.filter(m => m.includes('检测到 Cursor 升级')).length;
+    const parts = [];
+    if (backedUp) parts.push(`已备份纯净原版文件 ${backedUp} 个`);
+    if (reused) parts.push(`复用已有备份 ${reused} 个`);
+    if (upgraded) parts.push(`随 Cursor 升级更新备份 ${upgraded} 个`);
+    console.log(`  💾 ${parts.join('，')}（.backup）`);
 
     // 2. 读取核心 JS
     console.log('\n⚙️  正在读取并处理核心代码...');
@@ -7026,16 +7019,23 @@ function restore(paths) {
 
     console.log('');
     let restored = 0;
+    const coreRestored = [];
     for (const filePath of [htmlPath, mainJsPath, glassJsPath, nlsMessagesPath, mainProcessJsPath, productJsonPath].filter(Boolean)) {
         if (restoreFromBackup(filePath)) {
-            console.log(`  ✅ 已还原: ${path.basename(filePath)}`);
+            coreRestored.push(path.basename(filePath));
             restored++;
         }
+    }
+    if (coreRestored.length > 0) {
+        console.log(`  ✅ 已还原核心文件 ${coreRestored.length} 个（${coreRestored.join('、')}）`);
     }
 
     // 还原用户扩展
     const extRestored = restoreUserExtensions();
     restored += extRestored;
+    if (extRestored > 0) {
+        console.log(`  ✅ 已还原远程开发扩展 ${extRestored} 个`);
+    }
 
     // 还原用户存储（state.vscdb，字段级：仅改汉化字段，对话不受影响）
     restoreUserStorage(paths.appPath);

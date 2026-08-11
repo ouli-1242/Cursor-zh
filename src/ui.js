@@ -4,17 +4,11 @@
  */
 const chalk = require('chalk');
 
-const LOGO = [
-    ' ###  #   # ####   ###   ###  ####        ##### #   # ',
-    '#     #   # #   # #     #   # #   #          #  #   # ',
-    '#     #   # #   #  ###  #   # #   # #####   #   ##### ',
-    '#     #   # #  #      # #   # #  #         #    #   # ',
-    ' ###   ###  #   #  ###   ###  #   #       ##### #   # ',
-];
-
 function banner(version) {
-    return `\n${LOGO.map(l => chalk.cyan(l)).join('\n')}\n\n`
-        + `${chalk.white.bold('  Cursor-zh')} ${chalk.gray(`v${version || '?'}`)}\n`
+    const line = chalk.cyan('═'.repeat(46));
+    return `\n  ${line}\n`
+        + `  ${chalk.cyan('║')}  ${chalk.white.bold('Cursor-zh')} ${chalk.gray(`v${version || '?'}`)}${' '.repeat(Math.max(0, 36 - 12 - String(version || '?').length))}${chalk.cyan('║')}\n`
+        + `  ${line}\n`
         + `${chalk.gray('  Cursor 本地汉化工具 · 一键汉化 / 随时还原')}\n`;
 }
 

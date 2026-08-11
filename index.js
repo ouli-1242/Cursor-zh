@@ -287,9 +287,9 @@ async function runInteractive() {
         ['托盘菜单', paths.mainProcessJsPath],
         ['校验值文件', paths.productJsonPath],
     ].filter(([, p]) => p && fs.existsSync(p));
-    console.log(ui.info('将处理以下文件：'));
+    console.log('  ' + ui.info('将处理以下文件：'));
     console.log(ui.fileList(targets.map(([name, p]) => ({ left: ui.info(name), right: path.basename(p) }))));
-    console.log(ui.info('其他：clp 语言包缓存 / 用户扩展 / state.vscdb（按需自动处理）'));
+    console.log('  ' + ui.info('其他：clp 语言包缓存 / 用户扩展 / state.vscdb（按需自动处理）'));
     console.log('');
 
     // ── 操作选择 ──
