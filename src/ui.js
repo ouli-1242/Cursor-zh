@@ -17,7 +17,7 @@ function step(index, total, label) {
 }
 
 const ok = (msg) => `${chalk.green('✅')} ${msg}`;
-const warn = (msg) => `${chalk.yellow('⚠️')} ${msg}`;
+const warn = (msg) => `${chalk.yellow('❗')} ${msg}`;
 const err = (msg) => `${chalk.red('❌')} ${msg}`;
 const info = (msg) => `${chalk.cyan('ℹ️')} ${msg}`;
 
