@@ -271,8 +271,8 @@ async function runInteractive() {
         { left: ui.ok('安装路径'), right: paths.appPath },
         { left: ui.info('版本号'), right: ver ? `Cursor ${ver}` : chalk.gray('未知') },
         { left: writable ? ui.ok('写入权限') : ui.warn('写入权限'), right: writable ? '可直接修改' : '将请求管理员权限' },
-        { left: running ? ui.warn('运行状态') : ui.info('运行状态'), right: running ? 'Cursor 正在运行，汉化前请先完全退出' : '未运行' },
-        { left: translated ? ui.warn('汉化状态') : ui.info('汉化状态'), right: translated ? '当前已汉化，可恢复英文后重新汉化' : '当前为英文原版' },
+        { left: running ? ui.warn('运行状态') : ui.ok('运行状态'), right: running ? 'Cursor 正在运行，汉化前请先完全退出' : '未运行' },
+        { left: ui.info('汉化状态'), right: translated ? '当前已汉化，可恢复英文后重新汉化' : '当前为英文原版' },
     ]));
     console.log(ui.divider());
 
