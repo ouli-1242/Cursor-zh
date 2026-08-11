@@ -3,21 +3,13 @@
  * 无业务逻辑、无副作用，便于测试与复用。
  */
 const chalk = require('chalk');
+const figlet = require('figlet');
 
 function banner(version) {
-    const W = 44; // 框内容区宽度（不含边框）
-    const center = (s) => {
-        const dw = displayWidth(s);
-        const left = Math.max(0, Math.floor((W - dw) / 2));
-        const right = Math.max(0, W - dw - left);
-        return ' '.repeat(left) + s + ' '.repeat(right);
-    };
-    const bar = chalk.cyan('═'.repeat(W));
-    const line = `  ${chalk.cyan('╔')}${bar}${chalk.cyan('╗')}`;
-    const title = `  ${chalk.cyan('║')} ${chalk.white.bold(center(`Cursor-zh  v${version || '?'}`))} ${chalk.cyan('║')}`;
-    const sub = `  ${chalk.cyan('║')} ${chalk.gray(center('Cursor 本地汉化工具 · 一键汉化 / 随时还原'))} ${chalk.cyan('║')}`;
-    const bottom = `  ${chalk.cyan('╚')}${bar}${chalk.cyan('╝')}`;
-    return `\n${line}\n${title}\n${sub}\n${bottom}\n`;
+    // 标准 figlet ANSI Shadow 字体（块状粗体大字，字形标准、各终端等宽对齐）
+    const logo = figlet.textSync('Cursor-zh', { font: 'ANSI Shadow' });
+    return `\n${logo.split('\n').map(l => chalk.cyan(l)).join('\n')}\n\n`
+        + `${chalk.white.bold('  Cursor-zh')} ${chalk.gray(`v${version || '?'}`)}   ${chalk.gray('Cursor 本地汉化工具 · 一键汉化 / 随时还原')}\n`;
 }
 
 function step(index, total, label) {
