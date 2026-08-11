@@ -4355,7 +4355,7 @@ const BUILTIN_EXT_NLS = [
  * @param {string} appPath Cursor app 路径
  */
 function translateBuiltinExtensions(appPath) {
-    const extRoot = path.join(appPath, 'resources', 'app', 'extensions');
+    const extRoot = path.join(appPath, 'extensions');
     if (!fs.existsSync(extRoot)) return { processed: 0 };
 
     let processed = 0;
@@ -4387,7 +4387,7 @@ function translateBuiltinExtensions(appPath) {
  * @returns {number} 移除数量
  */
 function restoreBuiltinExtensions(appPath) {
-    const extRoot = path.join(appPath, 'resources', 'app', 'extensions');
+    const extRoot = path.join(appPath, 'extensions');
     if (!fs.existsSync(extRoot)) return 0;
 
     let restored = 0;
