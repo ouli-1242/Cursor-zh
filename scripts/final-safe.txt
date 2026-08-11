@@ -1,0 +1,234 @@
+Loading conversation
+Authenticating
+Upgrade Available
+User Input Required
+Current cycle
+Previous cycle
+Spend limit
+Included Usage
+Configure gateway
+Commit & Open Pull Request
+Create PR
+Open Background Agent Overview
+Verify Dockerfile in Chat
+with warnings
+No icons found
+No matches
+No models available
+Share Now
+Review next file
+Mark as fixed
+Publish Skill
+Unpublish Skill
+Secret saved
+Live Preview
+Go to Plugin
+Keep File
+Indexing failed
+Canvas needs to be updated
+Canvas not found
+Changelog
+Copy output
+Created by
+Created Plan
+Maybe Later
+More Themes
+Local folder
+Allow CLI to access desktop agents
+Allow Members to Publish
+About Allowlist
+Allowlist Options
+Always Apply
+Apply to Specific Files
+Approve this server
+Approve this tool
+Ask Sidechat
+Ask question
+Authenticate MCP
+Auto-Run on Agent Finish
+Automation name
+Await task
+Cancel Edits
+Cleaning up browser views
+Clear Notification
+CLI Credentials
+Closing Shadow Workspace
+Commit on Main
+Composer Session End Hooks
+Computer use
+Copy Base Branch Name
+Copy prompt
+Copy worktree path
+Create Chat
+Create New Branch
+Create plan
+Cursor Blame
+Cursor File Blame
+Cursor Review
+Date with time
+Disable Privacy Mode
+Do not use browser
+Download Git
+Download Video
+Edit file
+Edit Selection
+Edit Team Defaults
+Embedding Model
+Enable Storage
+Fetch webpage
+Filter Operator
+Filter Value
+Find and Replace
+Find files
+Full Local
+Generate image
+Generic Secret
+Get MCP tools
+GitHub Auth Notification
+GitHub Token
+Go to Next Change
+Go to Next Diff File
+Go to Previous Change
+Go to Previous Diff File
+Go to Settings
+Group PRs by status
+Group PRs like Projects
+IDE Layout
+Ignore branch difference
+Import from GitHub/GitLab
+Install 'code'
+Install 'cursor'
+Investigate Error in Chat
+Keep This Computer Awake
+List directory
+Local Only
+Mark ready for review
+Markdown Plan Editor
+MCP Notification
+Mermaid Editor
+Microsoft Entra ID
+Myself
+Network Access Notification
+Never show again
+New MCP Configuration
+On-Demand
+Open environment.json
+Open Existing
+Open in Cursor Browser
+Open new window in worktree
+Open Rule
+Open terminal in worktree
+Pause goal
+Persist Instant Grep setting
+Preview Box for Terminal Cmd/Ctrl+K
+Production
+Read Access
+Read Allowlist
+Read file
+Read lints
+Read MCP resource
+Refresh Status
+Reject Partial Edit
+Resize All Heights
+Resize canvas list
+Resubmit
+Resume goal
+Run Everything Mode Warning
+Running Capabilities
+Semantic search
+Serve Marketplace From Cursor
+Show View Zone When Preview Box Is Clipped
+Squash merge
+Start onboarding
+Too slow
+Tool call
+Undo Lexical
+Update todos
+Use AWS Bedrock
+Use Azure OpenAI
+Use OpenAI API key
+Use team AWS Bedrock
+View Hooks
+web searches
+Checking out branch
+Checkpoint persistence failed
+Cloud Agent Environment Required
+Cloud Agent requires code storage
+Cloud Agents require a Git repo
+Code selections
+Commit on Main Branch
+Confirm Marketplace Deletion
+Confirm Plugin Removal
+Continue here
+Conversation data missing
+Crash Reporting
+Created by Cursor
+Cumulative Spend
+Delegate Work to Subagents
+Delete Command
+Delete MCP Server
+Delete Skill
+Delete Subagent
+Desktop Bridge
+Diff with Main Branch
+Disable HTTP/1.1 SSE
+Drag to adjust maximum
+Editor Mode
+Enable usage-based pricing
+Environment File Not Synced
+Environment File Outdated
+Error Output
+Error resuming chat
+Export Chat
+Extend Cursor with Plugins
+Extension Security
+Failed to collect conversation history
+Failed to push branch
+Failed to retry Cloud Agent
+Failed to switch to Cloud Agent
+Failed to update privacy settings
+Files changed outside of conversations
+Fuzzy search
+Git Not Initialized
+Go to Definition
+Guide Agent with Rules
+Incorrect Repository
+Limit Reached
+MCP App
+Migrated User Rules
+Model Status
+Nearby definitions
+No branches
+No Git Remote
+No plugins yet
+Not in Cursor Enterprise team
+Open marketplace repository
+Plugins give your agents important context
+Register Close Tooltip
+Save Error
+Supplemental sidebar
+Third-Party Imports
+Video preview
+Workspace Disconnected
+Workspace Not at Git Root
+Apply changes locally
+Blocked by cycle
+Click to switch backend server
+Collapse Composer
+Keep all pending changes
+Mark chat as unread
+Open chat in a new tab
+Open exported chat
+Open pull request in browser
+Open the generated rule file
+Reload the window
+Remote Control Agent
+Rename chat
+Rename cloud agent
+Reset Composer Position
+Restore chat
+Resubmit for all agents
+Self-hosted Agent
+Show History
+Squash all commits into one
+Undo all pending changes

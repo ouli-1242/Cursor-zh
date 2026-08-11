@@ -1,0 +1,30 @@
+Loading plugin configuration
+Waiting for environment
+No usage data found
+Daily usage charts
+Data Sharing is paused
+This chart shows
+This track will
+The latest refresh
+We were unable to load
+Unsupported type
+Rendering Mermaid preview
+Which response is better
+Diff too large
+Cmd+K: Escape
+Learn More
+Refreshing
+Applying changes locally
+Blocked URL
+Bulk Import Chats
+Capturing snapshot
+Choose a folder
+Close Running Tab
+Delete Codebase Index
+Discard all changes
+Index Link
+Loading cloud agent data
+Opening background composer
+Processing voice input
+Switch Privacy Mode
+This site can

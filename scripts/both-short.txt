@@ -1,0 +1,469 @@
+children: /mo Confirm
+children: \xA0
+children: & Agent
+children: Accept & Run
+children: Add Suggestions
+children: Add your own MCP server
+children: All MCP servers from this plugin are already added.
+children: Anyone with the link
+children: Authenticating…
+children: Canvas needs to be updated
+children: Canvas not found
+children: Change type
+children: Changelog
+children: Choose Custom Sound...
+children: Choose folder…
+children: Commit & Open Pull Request
+children: Configure gateway
+children: Continue Update
+children: Copied
+children: Copy output
+children: Create PR
+children: Created by
+children: Created Plan
+children: Current cycle
+children: cursor desktop
+children: Custom MCP
+children: Custom Modes
+children: Daily usage charts are only available for billing periods starting on or after Nov 20, 2025.
+children: Data Sharing is paused for your first day of usage.
+children: Deprecated Feature:
+children: Diff too large to display
+children: Download Cursor Private Inference
+children: Enter to send Esc to skip
+children: Failed to load
+children: Generating
+children: Go to Plugin
+children: Included Usage
+children: Indexing failed
+children: INTERNAL
+children: Keep File
+children: Live Preview
+children: Loading conversation
+children: Loading plugin configuration...
+children: Local folder
+children: Logout
+children: Mark as fixed
+children: MAX Only
+children: Maybe Later
+children: More Themes
+children: No icons found
+children: No items.
+children: No matches
+children: No models available
+children: No usage data found for this billing period.
+children: Open Background Agent Overview
+children: per month
+children: Previous cycle
+children: Project Database Could Not Be Rendered
+children: Publish
+children: Publish Skill
+children: Rendering Mermaid preview...
+children: Repository
+children: Review next file
+children: Screenshot
+children: Secret saved
+children: Select…
+children: Share Now
+children: Show all models…
+children: Spend limit
+children: Submit
+children: The latest refresh failed. Retry to fetch the newest usage.
+children: This chart shows on-demand usage only for request-based users. Included usage is not shown.
+children: This track will silently download and install updates without prompting whenever Cursor is closed.
+children: Undo Apply
+children: Undo File
+children: Unlink
+children: Unpublish
+children: Unpublish Skill
+children: Unsupported type. Exit preview to edit.
+children: Upgrade Available
+children: User Input Required
+children: Verify Dockerfile in Chat
+children: View All Models
+children: Waiting for environment…
+children: We were unable to load your usage metrics. Please try again later.
+children: web dashboard
+children: When data sharing is enabled, Cursor learns from code to help your team get the best experience possible.
+children: Which response is better?
+children: with warnings
+emptyStateText: No commands found
+hintText: Accept all cells
+hintText: Add image
+hintText: Apply changes to the main working directory
+hintText: Cancel Cloud Agent
+hintText: Clear goal
+hintText: Clear logs
+hintText: Create a new chat with the summary of this conversation
+hintText: Dismiss Issue
+hintText: Edit goal
+hintText: Edit queued message
+hintText: Keep all pending changes and save files
+hintText: Keep changes in this file
+hintText: Next question
+hintText: Open in GitHub
+hintText: Open or refocus the canvas tab
+hintText: Previous question
+hintText: Reject all cells
+hintText: Remove from queue
+hintText: Skip this step
+hintText: Stop Agent
+hintText: Stop voice recording
+hintText: Undo changes in this file
+label: .NET Core
+label: \\angl
+label: \\fbox
+label: 1 hour
+label: 1 minute
+label: 15 minutes
+label: 3 hours
+label: 30 minutes
+label: 30d
+label: 3mo
+label: 5 minutes
+label: A row measurement was rejected as stale or oscillating
+label: About Allowlist
+label: Accept Cursor Tab Suggestion
+label: Accept Partial Edit
+label: Agent Decides When to Apply
+label: Allow CLI to access desktop agents
+label: Allow Members to Publish
+label: Allowlist Options
+label: Always Apply
+label: Apply to Specific Files
+label: Applying
+label: Approve this server
+label: Approve this tool
+label: Ask
+label: Ask question
+label: Ask Sidechat
+label: Authenticate MCP
+label: auto_switch
+label: Auto-Run on Agent Finish
+label: Automation name
+label: automationId
+label: Await
+label: Await task
+label: Blue
+label: Board
+label: Brand
+label: Bubble Data Map
+label: Cancel Edits
+label: Capture Snapshot
+label: Checkbox
+label: Claude Code
+label: Cleaning up browser views
+label: clear
+label: Clear Notification
+label: CLI Credentials
+label: closed
+label: Closed
+label: Closing Shadow Workspace
+label: Cmd+K: Escape Focuses the Editor When You Have a Diff
+label: Collapse
+label: Commit on Main
+label: Completed
+label: Composer Session End Hooks
+label: Computer use
+label: Connect GitHub
+label: Continue Locally
+label: Conversation switch scroll gate is active
+label: Convert
+label: Copy Base Branch Name
+label: Copy prompt
+label: Copy to Clipboard
+label: Copy worktree path
+label: Cpp Control Token
+label: Create Chat
+label: Create New Branch
+label: Create plan
+label: Cursor
+label: Cursor Blame
+label: Cursor File Blame
+label: Cursor Review
+label: Custom Modes
+label: Cyan
+label: Date with time
+label: Decline
+label: Degraded
+label: Disable Privacy Mode
+label: Do not use browser
+label: Download Git
+label: Download Video
+label: draft
+label: Draft
+label: edit
+label: Edit file
+label: Edit Selection
+label: Edit Team Defaults
+label: editor
+label: Embedding Model
+label: Enable Storage
+label: enabled
+label: false
+label: Fetch webpage
+label: Filter Operator
+label: Filter Value
+label: Find and Replace
+label: Find files
+label: Force View Zones
+label: Full Local
+label: Generate image
+label: Generating
+label: Generic Secret
+label: Get MCP tools
+label: GitHub
+label: GitHub Auth Notification
+label: GitHub Token
+label: Go to Next Change
+label: Go to Next Diff File
+label: Go to Previous Change
+label: Go to Previous Diff File
+label: Go to Settings
+label: Graphite
+label: Green
+label: Group PRs by status
+label: Group PRs like Projects
+label: Handle
+label: hard_block
+label: https://tokens.bottlerocket.tesla.com/personal-tokens/
+label: human
+label: IDE Layout
+label: Ignore
+label: Ignore branch difference
+label: Import from GitHub/GitLab
+label: Importing
+label: includeDisabled
+label: Incomplete
+label: Incorrect
+label: inMemory
+label: Install 'code'
+label: Install 'cursor'
+label: Investigate Error in Chat
+label: Keep This Computer Awake
+label: Learn More...
+label: limited
+label: List directory
+label: live browser data
+label: Local Only
+label: loud
+label: Magenta
+label: Mark ready for review
+label: Markdown Plan Editor
+label: maven
+label: MCP Notification
+label: Measured row height drift is large
+label: merged
+label: Merged
+label: Mermaid Editor
+label: Microsoft Entra ID
+label: MSBuild
+label: Multitask
+label: Myself
+label: Network Access Notification
+label: Never show again
+label: New MCP Configuration
+label: New Project
+label: On-Demand
+label: Open environment.json
+label: Open Existing
+label: Open in Cursor Browser
+label: Open new window in worktree
+label: Open Rule
+label: Open terminal in worktree
+label: Orange
+label: panel
+label: Pause goal
+label: Persist Instant Grep setting
+label: Pod ready
+label: Pod requested
+label: Preview Box for Terminal Cmd/Ctrl+K
+label: Production
+label: Projects
+label: Purple
+label: query
+label: quiet
+label: Read Access
+label: Read Allowlist
+label: Read file
+label: Read lints
+label: Read MCP resource
+label: Ready
+label: Red
+label: Redo Lexical
+label: Refresh Status
+label: Refreshing...
+label: Reject Partial Edit
+label: Render View Zone
+label: replaceWorkflow
+label: Report with Comment
+label: Resize All Heights
+label: Resize canvas list
+label: Resubmit
+label: result
+label: Resume goal
+label: Revert
+label: root
+label: Run Everything Mode Warning
+label: Running Capabilities
+label: Semantic search
+label: Serve Marketplace From Cursor
+label: session data
+label: Show View Zone When Preview Box Is Clipped
+label: Squash merge
+label: Start onboarding
+label: Stopped
+label: Tail row is not mounted
+label: teamId
+label: templateId
+label: Too slow
+label: Tool call
+label: Tool Call
+label: Tracing
+label: true
+label: Undo & Apply
+label: Undo Lexical
+label: unspecified
+label: UNSPECIFIED
+label: Update Ghost Text
+label: Update todos
+label: Use AWS Bedrock
+label: Use Azure OpenAI
+label: Use OpenAI API key
+label: Use team AWS Bedrock
+label: View Hooks
+label: web searches
+label: workspaceContains
+label: Yellow
+subtitle: Customize your Cursor experience
+subtitle: Generating...
+subtitle: Help improve Cursor for everyone
+subtitle: I am fine with Cursor learning from my code!
+subtitle: I do not want to enable data sharing.
+subtitle: Move this agent to the Cloud to run longer without your computer open.
+subtitle: You’re in control of how your data is used
+title: Always ask
+title: Applying changes locally…
+title: Blocked URL:
+title: Bug
+title: Bulk Import Chats — pick directory of exported chats
+title: Capturing snapshot. The window may briefly freeze.
+title: Checking out branch…
+title: Checkpoint persistence failed
+title: Choose a folder for your new project
+title: Close Running Tab?
+title: Cloud Agent Environment Required
+title: Cloud Agent requires code storage
+title: Cloud Agents require a Git repo
+title: Code selections
+title: Commit on Main Branch
+title: Composer
+title: Confirm Marketplace Deletion
+title: Confirm Plugin Removal
+title: Connect GitHub
+title: Continue here
+title: Continue running in Cloud?
+title: Conversation data missing
+title: Crash Reporting
+title: Created by Cursor
+title: Cumulative Spend
+title: Cursor
+title: Definitions
+title: Delegate Work to Subagents
+title: Delete Codebase Index?
+title: Delete Command
+title: Delete MCP Server
+title: Delete Skill
+title: Delete Subagent
+title: Desktop Bridge
+title: Diff with Main Branch
+title: Direction
+title: Disable HTTP/1.1 SSE
+title: Discard all changes up to this checkpoint?
+title: Drag to adjust maximum
+title: Editor Mode
+title: Enable usage-based pricing
+title: Enable usage-based pricing for premium models
+title: Environment File Not Synced
+title: Environment File Outdated
+title: Environments
+title: Error Output
+title: Error resuming chat
+title: Export Chat
+title: Extend Cursor with Plugins
+title: Extension Security
+title: Failed to collect conversation history
+title: Failed to push branch
+title: Failed to retry Cloud Agent
+title: Failed to start Cloud Agent
+title: Failed to switch to Cloud Agent
+title: Failed to update privacy settings
+title: Files changed outside of conversations
+title: Fuzzy search
+title: Git Not Initialized
+title: Go to Definition
+title: Guide Agent with Rules
+title: Idea
+title: Incorrect Repository
+title: Index Link ⏎
+title: Internal
+title: Limit Reached
+title: Loading cloud agent data...
+title: MCP App
+title: Migrated User Rules
+title: Model
+title: Model Status
+title: Nearby definitions
+title: New worktree
+title: No branches
+title: No Git Remote
+title: No plugins yet
+title: Not in Cursor Enterprise team
+title: Open marketplace repository
+title: Opening background composer in external window...
+title: Plugins give your agents important context
+title: Processing voice input…
+title: Projects
+title: Property
+title: Register Close Tooltip
+title: Save Error
+title: Show all models…
+title: Supplemental sidebar
+title: Switch Privacy Mode?
+title: Third-Party Imports
+title: This site can&#39;t be reached
+title: Tracing
+title: Urgent
+title: Video preview
+title: Workspace Disconnected
+title: Workspace Not at Git Root
+title: Workspaces
+tooltip: --ui-portal-layer-z-index-tooltip
+tooltip: Apply changes locally
+tooltip: Blocked
+tooltip: Blocked by cycle
+tooltip: Claude Code
+tooltip: Click to switch backend server
+tooltip: Collapse Composer
+tooltip: Convert draft PR to open PR
+tooltip: false
+tooltip: Keep all pending changes
+tooltip: Mark chat as unread
+tooltip: Open chat in a new tab
+tooltip: Open exported chat
+tooltip: Open pull request in browser
+tooltip: Open the generated rule file
+tooltip: Reload the window
+tooltip: Remote Control Agent
+tooltip: Rename chat
+tooltip: Rename Chat
+tooltip: Rename cloud agent
+tooltip: Reset Composer Position
+tooltip: Restore chat
+tooltip: Resubmit for all agents
+tooltip: Self-hosted Agent
+tooltip: Show History
+tooltip: Squash all commits into one
+tooltip: true
+tooltip: Undo all pending changes
+tooltip: Worktree
