@@ -2475,7 +2475,10 @@ const safeGlobalDict = {
     // ── 2026-08-11 用户反馈：提交历史消息确认弹窗（desk 未覆盖，改走 safe 全局）──
     "Submit from a previous message?": "从之前的消息提交？",
     "Submitting from a previous message will revert file changes to before this message and clear the messages after this one.": "从之前的消息提交将把文件更改还原到该消息之前，并清除该消息之后的消息。",
-    "Don't revert": "不要还原"
+    "Don't revert": "不要还原",
+
+    // ── 2026-08-11 用户反馈：面包屑操作按钮 Undo File（children:"Undo File"）──
+    "Undo File": "撤销文件"
 };
 
 // 原生工作台菜单与加载状态来自 nls.messages.json。它们是短词，不能加入
