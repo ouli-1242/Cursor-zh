@@ -1685,7 +1685,16 @@ const safeGlobalDict = {
     "Show History": "显示历史",
     "Squash all commits into one": "将所有提交压缩为一个",
     "Undo all pending changes": "撤销所有待处理更改",
-    "Applying changes locally. This may take a few seconds.": "正在本地应用更改。这可能需要几秒钟。"
+    "Applying changes locally. This may take a few seconds.": "正在本地应用更改。这可能需要几秒钟。",
+
+    // ── 2026-08-11 官方清单中频词条（gen-untranslated-md 中频 7 条，均为引号内完整字面量）──
+    "web dashboard": "Web 仪表盘",
+    "Link PR": "关联 PR",
+    "Manage Processes": "管理进程",
+    "Continue on": "继续于",
+    "Set Anyrun Cluster": "设置 Anyrun 集群",
+    "Wait indefinitely; otherwise skip prompts after 30 seconds": "无限期等待；否则 30 秒后跳过提示",
+    "Enter an Anyrun cluster for background composers.": "为后台 Composer 输入 Anyrun 集群。"
 };
 
 // 原生工作台菜单与加载状态来自 nls.messages.json。它们是短词，不能加入
