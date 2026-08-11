@@ -4338,6 +4338,76 @@ function restoreUserExtensions() {
 
 
 // ═══════════════════════════════════════════════
+// 内置扩展本地化（md 预览等 UI 文案来自 app/extensions/*/package.nls.json）
+// ═══════════════════════════════════════════════
+
+/** 内置扩展 → 项目内中文语言文件映射 */
+const BUILTIN_EXT_NLS = [
+    {
+        dirName: 'markdown-language-features',
+        zhFile: path.join(__dirname, '..', 'assets', 'ext-nls', 'markdown-language-features.zh-cn.json'),
+    },
+];
+
+/**
+ * 部署内置扩展中文语言包（package.nls.zh-cn.json）。
+ * 界面语言为 zh-cn 时扩展自动加载该文件，不修改英文原版（英文包另存 .backup 备查）。
+ * @param {string} appPath Cursor app 路径
+ */
+function translateBuiltinExtensions(appPath) {
+    const extRoot = path.join(appPath, 'resources', 'app', 'extensions');
+    if (!fs.existsSync(extRoot)) return { processed: 0 };
+
+    let processed = 0;
+    for (const item of BUILTIN_EXT_NLS) {
+        const extDir = path.join(extRoot, item.dirName);
+        const enPath = path.join(extDir, 'package.nls.json');
+        const zhPath = path.join(extDir, 'package.nls.zh-cn.json');
+        if (!fs.existsSync(enPath) || !fs.existsSync(item.zhFile)) continue;
+
+        // 备份英文原版（首次）
+        const backupPath = enPath + '.backup';
+        if (!fs.existsSync(backupPath)) {
+            fs.copyFileSync(enPath, backupPath);
+        }
+        fs.copyFileSync(item.zhFile, zhPath);
+        processed++;
+    }
+
+    if (processed > 0) {
+        console.log(`\n${ICON.proc} 正在部署内置扩展中文语言包（${processed} 个）...`);
+        console.log(`  ${ICON.ok} 已部署 ${processed} 个扩展语言包（package.nls.zh-cn.json）`);
+    }
+    return { processed };
+}
+
+/**
+ * 移除部署的内置扩展中文语言包，恢复英文显示。
+ * @param {string} appPath Cursor app 路径
+ * @returns {number} 移除数量
+ */
+function restoreBuiltinExtensions(appPath) {
+    const extRoot = path.join(appPath, 'resources', 'app', 'extensions');
+    if (!fs.existsSync(extRoot)) return 0;
+
+    let restored = 0;
+    for (const item of BUILTIN_EXT_NLS) {
+        const zhPath = path.join(extRoot, item.dirName, 'package.nls.zh-cn.json');
+        if (fs.existsSync(zhPath)) {
+            try {
+                fs.unlinkSync(zhPath);
+                restored++;
+            } catch { /* ignore */ }
+        }
+    }
+    if (restored > 0) {
+        console.log(`  ${ICON.ok} 已移除内置扩展中文语言包 ${restored} 个`);
+    }
+    return restored;
+}
+
+
+// ═══════════════════════════════════════════════
 // 用户存储汉化 (state.vscdb → composerState.modes4)
 // ═══════════════════════════════════════════════
 
@@ -7011,6 +7081,14 @@ function translate(paths) {
         console.log(`  ${ICON.warn} 用户扩展汉化跳过: ${e.message}`);
     }
 
+    // 10.5 内置扩展本地化（md 预览等 UI 文案来自 app/extensions/*/package.nls.json，
+    //     部署 package.nls.zh-cn.json 后，中文界面 locale 会自动加载）
+    try {
+        translateBuiltinExtensions(appPath);
+    } catch (e) {
+        console.log(`  ${ICON.warn} 内置扩展本地化跳过: ${e.message}`);
+    }
+
     // 11. 用户存储（state.vscdb 中的 modes4 描述，需 Cursor 已关闭）
     try {
         translateUserStorage(appPath);
@@ -7048,6 +7126,9 @@ function restore(paths) {
     if (extRestored > 0) {
         console.log(`  ${ICON.ok} 已还原远程开发扩展 ${extRestored} 个`);
     }
+
+    // 还原内置扩展中文语言包
+    restored += restoreBuiltinExtensions(appPath);
 
     // 还原用户存储（state.vscdb，字段级：仅改汉化字段，对话不受影响）
     restoreUserStorage(paths.appPath);
