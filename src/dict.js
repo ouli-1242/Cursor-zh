@@ -2483,7 +2483,12 @@ const safeGlobalDict = {
     // ── 2026-08-11 用户反馈：对话密度预览残留 Preview（"Conversation Density"子串先命中）──
     "Conversation Density Preview": "对话密度预览",
     "对话密度 Preview": "对话密度预览",
-    "Markdown Preview": "Markdown 预览"
+    "Markdown Preview": "Markdown 预览",
+
+    // ── 2026-08-12 消息预览占位（desk/glass 的 uEm/pPb 分支：空消息/过长/图片视频/终端选区）──
+    "Empty message...": "空消息...",
+    "Message is too long to display": "消息内容过长，无法显示",
+    "Using terminal selections": "正在使用终端选区"
 };
 
 // 原生工作台菜单与加载状态来自 nls.messages.json。它们是短词，不能加入
@@ -2614,6 +2619,15 @@ const nativeNlsDict = {
     "Capture and Send Debugging Data": "捕获并发送调试数据",
     "Developer": "开发者",
     "Delete Old Chats...": "删除旧聊天...",
+
+    // ── 2026-08-11 停止/取消 Agent 弹窗（来自 nls.messages.json 索引 4030-4052）──
+    "Agent is still working": "Agent 仍在工作",
+    "Stopping now will cancel the current task.": "立即停止将取消当前任务。",
+    "{0} agents are still working": "{0} 个 Agent 仍在工作",
+    "Stopping now will cancel their current tasks.": "立即停止将取消它们的当前任务。",
+    "This agent is still working. Archiving will stop it and cancel the current task.": "该 Agent 仍在工作。归档将停止它并取消当前任务。",
+    "Stopping now will kill the background terminal.": "立即停止将终止后台终端。",
+    "Stopping now will kill the background terminals.": "立即停止将终止多个后台终端。",
 };
 
 const riskyShortWords = {
@@ -2819,15 +2833,6 @@ const riskyShortWords = {
     "Copy Relative Path": "复制相对路径",
     "Search Files": "搜索文件",
     "Set Log Level...": "设置日志级别...",
-
-    // ── 2026-08-11 停止/取消 Agent 弹窗（来自 nls.messages.json 索引 4030-4052）──
-    "Agent is still working": "Agent 仍在工作",
-    "Stopping now will cancel the current task.": "立即停止将取消当前任务。",
-    "{0} agents are still working": "{0} 个 Agent 仍在工作",
-    "Stopping now will cancel their current tasks.": "立即停止将取消它们的当前任务。",
-    "This agent is still working. Archiving will stop it and cancel the current task.": "该 Agent 仍在工作。归档将停止它并取消当前任务。",
-    "Stopping now will kill the background terminal.": "立即停止将终止后台终端。",
-    "Stopping now will kill the background terminals.": "立即停止将终止多个后台终端。",
 
     // ── 2026-08-11 残留 UI 短词（both-short.txt 手工挑选，均已在 UI 属性上下文验证）──
     "Copied": "已复制",

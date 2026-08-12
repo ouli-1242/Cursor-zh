@@ -3198,6 +3198,20 @@ const auxInterfaceMegaRegex = new RegExp(
 
 const trickyReplacements = [
     {
+        // 攻克 0：对话框默认取消按钮（动态拼接 label + " (esc)"，无显式 label 时用默认值）
+        regex: /\|\|"Cancel"|\?\?"Cancel"/g,
+        zh: (m) => m === '||"Cancel"' ? '||"取消"' : '??"取消"'
+    },
+    {
+        // 攻克 -1：消息预览占位模板（desk/glass 的 uEm/pPb 分支，count===1 时用单数词）
+        regex: new RegExp("Using \\$\\{[a-z]\\.count===1\\?\"image\":`\\$\\{[a-z]\\.count\\} images`}", 'g'),
+        zh: () => '正在使用图片'
+    },
+    {
+        regex: new RegExp("Using \\$\\{[a-z]\\.count===1\\?\"video\":`\\$\\{[a-z]\\.count\\} videos`}", 'g'),
+        zh: () => '正在使用视频'
+    },
+    {
         // 攻克 1：Reset "Don't Ask Again" Dialogs 
         // 魔法解析：(?:'|\\'|\\u2019|’|&#39;) 涵盖了前端所有的单引号变体，(?:\\?["']|\\u0022|&quot;) 兼容所有双引号变体
         regex: /Reset\s+(?:\\?["']|\\u201[CD]|\\u0022|&quot;)Don(?:'|\\'|\\u2019|’|&#39;)t\s+Ask\s+Again(?:\\?["']|\\u201[CD]|\\u0022|&quot;)\s+Dialogs/gi,
